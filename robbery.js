@@ -11,7 +11,6 @@ const TIMEZONE_START_INDEX = 6;
 const DAYS = Object.freeze(
     {
         'ПН': {
-            yesterday: 'ВС',
             tomorrow: 'ВТ'
         },
         'ВТ': {
@@ -19,24 +18,7 @@ const DAYS = Object.freeze(
             tomorrow: 'СР'
         },
         'СР': {
-            yesterday: 'ВТ',
-            tomorrow: 'ЧТ'
-        },
-        'ЧТ': {
-            yesterday: 'СР',
-            tomorrow: 'ПТ'
-        },
-        'ПТ': {
-            yesterday: 'ЧТ',
-            tomorrow: 'СБ'
-        },
-        'СБ': {
-            yesterday: 'ПТ',
-            tomorrow: 'ВС'
-        },
-        'ВС': {
-            yesterday: 'СБ',
-            tomorrow: 'ПН'
+            yesterday: 'ВТ'
         }
     });
 
@@ -46,24 +28,57 @@ function getNormilizedToBankTimezoneDT(strDateTime, bankTimeZone) {
 
     let dt = {
         day: day,
-        hours: parseInt(time.split(':')[0]),
-        minutes: parseInt(time.split(':')[1]),
-        timeZone: time.substring(TIMEZONE_START_INDEX)
+        hours: getConvertedToIntTime(time.split(':')[0]),
+        minutes: getConvertedToIntTime(time.split(':')[1]),
+        timeZone: parseInt(time.substring(TIMEZONE_START_INDEX))
     };
 
     if (dt.timeZone !== bankTimeZone) {
-        const diffedHours = dt.timeZone + (bankTimeZone - dt.timeZone);
+        const diffedHours = dt.hours + (bankTimeZone - dt.timeZone);
+
         if (diffedHours < 0) {
             dt.hours = 24 + diffedHours;
             dt.day = DAYS[dt.day].yesterday;
-        } else if (diffedHours > 0) {
-            dt.hours = 0 + diffedHours;
+        } else if (diffedHours > 24) {
+            dt.hours = diffedHours - 24;
             dt.day = DAYS[dt.day].tomorrow;
         }
+        dt.timeZone = bankTimeZone;
     }
 
     return dt;
 }
+
+function getConvertedToIntTime(time) {
+    return time.startsWith('0')
+        ? parseInt(time.substr(1))
+        : parseInt(time);
+}
+
+function convertToMinutes(hours, minutes) {
+    return hours * 60 + minutes;
+}
+
+function isOutOfBoundPeriod(convertedFrom, period, convertedTo) {
+    return convertedFrom > period.toInMinutes ||
+        convertedTo < period.fromInMinutes;
+}
+
+function isFullInnerPeriod(convertedFrom, period, convertedTo) {
+    return convertedFrom > period.fromInMinutes &&
+        convertedTo < period.toInMinutes;
+}
+
+function isPeriodThroutBoundLeft(convertedFrom, period, convertedTo) {
+    return convertedFrom < period.fromInMinutes &&
+        convertedTo < period.toInMinutes;
+}
+
+function isPeriodThroutBoundRight(convertedFrom, period, convertedTo) {
+    return convertedFrom < period.toInMinutes &&
+        convertedTo > period.toInMinutes;
+}
+
 
 /**
  * @param {Object} schedule – Расписание Банды
@@ -98,33 +113,78 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            const bankTimeZone = workingHours.from.substring(TIMEZONE_START_INDEX);
-            console.info(bankTimeZone);
+            const bankTimeZone = parseInt(workingHours.from.substring(TIMEZONE_START_INDEX));
+            console.info(workingHours.from);
 
-            let busyTimes = [];
+            const bankDTFrom = workingHours.from.substring(0, 5).split(':');
+            const bankDTTo = workingHours.to.substring(0, 5).split(':');
+
+            const fromHours = getConvertedToIntTime(bankDTFrom[0]);
+            const fromMinutes = getConvertedToIntTime(bankDTFrom[1]);
+            const toHours = getConvertedToIntTime(bankDTTo[0]);
+            const toMinutes = getConvertedToIntTime(bankDTTo[1]);
+
+            let freeTimes = {
+                'ПН': [{
+                    fromInMinutes: convertToMinutes(fromHours, fromMinutes),
+                    toInMinutes: convertToMinutes(toHours, toMinutes)
+                }],
+                'ВТ': [{
+                    fromInMinutes: convertToMinutes(fromHours, fromMinutes),
+                    toInMinutes: convertToMinutes(toHours, toMinutes)
+                }],
+                'СР': [{
+                    fromInMinutes: convertToMinutes(fromHours, fromMinutes),
+                    toInMinutes: convertToMinutes(toHours, toMinutes)
+                }]
+            };
+
+            function test(robber, fromDT) {
+                return robber === 'Linus' && fromDT.day === 'СР';
+            }
 
             Object.keys(schedule).forEach((robber) => {
-                robber.forEach((busyDuration) => {
+                schedule[robber].forEach((busyDuration) => {
                     const fromDT = getNormilizedToBankTimezoneDT(busyDuration.from, bankTimeZone);
                     const toDT = getNormilizedToBankTimezoneDT(busyDuration.to, bankTimeZone);
 
-                    if (fromDT.day !== toDT.day) {
-                        busyTimes[fromDT.day].push({
-                            fromInMinutes: fromDT.hours * 60 + fromDT.minutes,
-                            toInMinutes: 24 * 60
-                        });
+                    if (fromDT.day === toDT.day) {
+                        freeTimes[fromDT.day].forEach((period) => {
+                            const convertedFrom = convertToMinutes(fromDT.hours, fromDT.minutes);
+                            const convertedTo = convertToMinutes(toDT.hours, toDT.minutes);
 
-                        busyTimes[toDT.day].push({
-                            fromInMinutes: 0,
-                            toInMinutes: toDT.hours * 60 + toDT.minutes
-                        });
-                    } else {
-                        busyTimes[fromDT.day].push({
-                            fromInMinutes: fromDT.hours * 60 + fromDT.minutes,
-                            toInMinutes: toDT.hours * 60 + toDT.minutes
+                            if (test(robber, fromDT)) {
+                                console.info(period);
+                                console.info(convertedFrom);
+                                console.info(convertedTo);
+                            }
+
+                            if (isOutOfBoundPeriod(convertedFrom, period, convertedTo)) {
+                                console.info('');
+                            } else if (isFullInnerPeriod(convertedFrom, period, convertedTo)) {
+                                const newPeriod = {
+                                    fromInMinutes: convertedTo,
+                                    toInMinutes: period.toInMinutes
+                                };
+
+                                period.toInMinutes = convertedFrom;
+                                freeTimes[fromDT.day].push(newPeriod);
+                            } else if (
+                                isPeriodThroutBoundLeft(convertedFrom, period, convertedTo)) {
+
+                                period.fromInMinutes = convertedFrom;
+                            } else if (
+                                isPeriodThroutBoundRight(convertedFrom, period, convertedTo)) {
+
+                                period.toInMinutes = convertedTo;
+                            }
                         });
                     }
                 });
+
+                console.info('finish robber - ' + robber);
+                console.info(freeTimes);
+                console.info('-------------------------------');
             });
 
             return false;
