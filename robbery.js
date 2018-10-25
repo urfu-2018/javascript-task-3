@@ -6,6 +6,7 @@
  */
 const isStar = true;
 
+let heistDuration;
 const weekDays = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
 const minutesInHour = 60;
 const minutesInDay = 1440;
@@ -58,6 +59,60 @@ function removeTimeZone(timeZone, workingHours) {
     return bankTimeZone - timeZone;
 }
 
+function existTime(busyDates, workingHoursInMinute) {
+    let goodTime = [];
+    busyDates.forEach(element => {
+        goodTime = contained(element, workingHoursInMinute, busyDates);
+    });
+
+    return goodTime;
+}
+
+function contained(element, workingHoursInMinute, busyDates) {
+    let result = [];
+    if (workingHoursInMinute[0] < element[0] &&
+    workingHoursInMinute[0] < element[0] - heistDuration) {
+        if (!intersect(element, 0, busyDates)) {
+            result.push([element[0], 0]);
+        }
+    }
+    if (workingHoursInMinute[1] > element[1] &&
+    workingHoursInMinute[1] > element[1] + heistDuration) {
+        if (!intersect(element, 1, busyDates)) {
+            result.push([element[1], 1]);
+        }
+    }
+
+    return result;
+}
+
+function intersect(element, index, busyDates) {
+    busyDates.forEach(element2 => {
+        if (method(element, index, element2, 0) || method(element, index, element2, 1)) {
+            return true;
+        }
+    });
+
+    return false;
+}
+
+function method(element, index, element2, index2) {
+    if (index === 0) {
+        if (element2[index2] < element[index] &&
+        element2[index2] > element[index] - heistDuration) {
+            return true;
+        }
+    }
+    if (index === 1) {
+        if (element2[index2] > element[index] &&
+        element2[index2] < element[index] + heistDuration) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 /**
  * @param {Object} schedule – Расписание Банды
  * @param {Number} duration - Время на ограбление в минутах
@@ -66,8 +121,8 @@ function removeTimeZone(timeZone, workingHours) {
  * @param {String} workingHours.to – Время закрытия, например, "18:00+5"
  * @returns {Object}
  */
-// Пустое расписание, нет 3 друзей в расписании,
 function getAppropriateMoment(schedule, duration, workingHours) {
+    heistDuration = duration;
     console.info(schedule, duration, workingHours);
     let busyDates = []; // Когда заняты
     for (let key of Object.keys(schedule)) {
@@ -76,6 +131,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         });
     }
     let workingHoursInMinute = convertToMinute(workingHours, workingHours);
+    // тут тупа вывод для меня
     console.info(workingHoursInMinute);
     busyDates.forEach(element => {
         console.info(element);
@@ -88,6 +144,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
+            if (existTime(busyDates, workingHoursInMinute).length !== 0) {
+                return true;
+            }
 
             return false;
         },
