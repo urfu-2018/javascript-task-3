@@ -6,7 +6,6 @@
  */
 const isStar = true;
 
-let heistDuration;
 const weekDays = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
 const minutesInHour = 60;
 const minutesInDay = 1440;
@@ -24,11 +23,11 @@ function convert(date, workingHours) {
     let timeZone;
     let hoursAndMinutes = date.match(/\d{2}[:]\d{2}/);
     let str = hoursAndMinutes[0].split(':');
-    scheduleInMinute += getWeekDayTime(date) * minutesInDay;
+    scheduleInMinute += parseInt(getWeekDayTime(date)) * minutesInDay;
     scheduleInMinute += parseInt(str[0]) * minutesInHour;
     scheduleInMinute += parseInt(str[1]);
     timeZone = getTimeZone(date);
-    scheduleInMinute += removeTimeZone(timeZone, workingHours) * minutesInHour;
+    scheduleInMinute += parseInt(removeTimeZone(timeZone, workingHours)) * minutesInHour;
     date = scheduleInMinute;
 
     return date;
@@ -59,58 +58,42 @@ function removeTimeZone(timeZone, workingHours) {
     return bankTimeZone - timeZone;
 }
 
-function existTime(busyDates, workingHoursInMinute) {
-    let goodTime = [];
-    busyDates.forEach(element => {
-        goodTime = contained(element, workingHoursInMinute, busyDates);
-    });
+function mergeIntersections(element, busyDates) {
+    let preResult = [1, 0];// 1просто так, 0 ложное значение для проверок
+    for (let index = busyDates.indexOf(element); index < busyDates.length; index++) {
+        if (preResult[1]) { // если мы дошли до отрезка который не входит в текущий,
+            // то значит и все остальные тоже лишние (sort)
+            break;
+        }
+        if (element === busyDates[index] || busyDates[index].length !== 2) {
+            continue;
+        }
+        preResult = toCombine(element, busyDates[index], preResult[1]);
+        element = preResult[0];
+        if (!preResult[1]) {
+            delete busyDates[index];
+        }
+    }
 
-    return goodTime;
+    return element;
 }
 
-function contained(element, workingHoursInMinute, busyDates) {
-    let result = [];
-    if (workingHoursInMinute[0] < element[0] &&
-    workingHoursInMinute[0] < element[0] - heistDuration) {
-        if (!intersect(element, 0, busyDates)) {
-            result.push([element[0], 0]);
+function toCombine(element, element2, flag) {
+    if (element[0] <= element2[0] && element2[0] <= element[1]) {
+        if (element2[1] > element[1]) {
+            element[1] = element2[1];
         }
+
+        return [element, flag];
     }
-    if (workingHoursInMinute[1] > element[1] &&
-    workingHoursInMinute[1] > element[1] + heistDuration) {
-        if (!intersect(element, 1, busyDates)) {
-            result.push([element[1], 1]);
-        }
+    if (element[0] <= element2[1] && element2[1] <= element[1]) {
+        element[0] = element2[0];
+
+        return [element, flag];
     }
+    flag = true;
 
-    return result;
-}
-
-function intersect(element, index, busyDates) {
-    busyDates.forEach(element2 => {
-        if (method(element, index, element2, 0) || method(element, index, element2, 1)) {
-            return true;
-        }
-    });
-
-    return false;
-}
-
-function method(element, index, element2, index2) {
-    if (index === 0) {
-        if (element2[index2] < element[index] &&
-        element2[index2] > element[index] - heistDuration) {
-            return true;
-        }
-    }
-    if (index === 1) {
-        if (element2[index2] > element[index] &&
-        element2[index2] < element[index] + heistDuration) {
-            return true;
-        }
-    }
-
-    return false;
+    return [element, flag];
 }
 
 /**
@@ -122,7 +105,6 @@ function method(element, index, element2, index2) {
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    heistDuration = duration;
     console.info(schedule, duration, workingHours);
     let busyDates = []; // Когда заняты
     for (let key of Object.keys(schedule)) {
@@ -131,9 +113,22 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         });
     }
     let workingHoursInMinute = convertToMinute(workingHours, workingHours);
-    // тут тупа вывод для меня
-    console.info(workingHoursInMinute);
+    let combinedDates = [];
+    busyDates.sort((a, b) => {
+        return a[0] - b[0];
+    });
     busyDates.forEach(element => {
+        console.info(element);
+    });
+    busyDates.forEach(element => {
+        element = mergeIntersections(element, busyDates);
+        if (element.length !== 0) {
+            combinedDates.push(element);
+        }
+    });
+    // тут тупа вывод для меня
+    console.info(workingHoursInMinute + '       ETO VREMYA BANKA');
+    combinedDates.forEach(element => {
         console.info(element);
     });
 
@@ -144,9 +139,6 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            if (existTime(busyDates, workingHoursInMinute).length !== 0) {
-                return true;
-            }
 
             return false;
         },
