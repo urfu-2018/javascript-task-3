@@ -25,7 +25,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
     const weekEnum = Object.freeze({
         'ПН': 0, 'ВТ': 1, 'СР': 2, 'ЧТ': 3, 'ПТ': 4, 'СБ': 5, 'ВС': 6,
-        0: 'ПН', 1: 'ВТ', 2: 'СР' , 3: 'ЧТ', 4: 'ПТ', 5: 'СБ', 6: 'ВС'
+        0: 'ПН', 1: 'ВТ', 2: 'СР', 3: 'ЧТ', 4: 'ПТ', 5: 'СБ', 6: 'ВС'
     });
 
     /**
@@ -60,7 +60,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         const timezoneShift = (TARGET_TIME_ZONE - parseInt(intervalPartsFrom[3])) * 60;
 
         return { from: dayFrom + timeFrom + timezoneShift,
-            to: dayTo + timeTo + timezoneShift};
+            to: dayTo + timeTo + timezoneShift };
     }
 
     /**
@@ -129,20 +129,43 @@ function getAppropriateMoment(schedule, duration, workingHours) {
      * 4 - пересекаются и b вложен в a
      * @param {Object} a
      * @param {Object} b
-     * @return {Number}
+     * @returns {Number}
      */
     function getIntersectionType(a, b) {
+
+        /**
+         * Проверяет, содержится ли интервал а в b.
+         * @param {Object} c
+         * @param {Object} d
+         * @returns {boolean}
+         */
+        function contains(c, d) {
+            return c.from >= d.from && c.to <= d.to;
+        }
+
+        /**
+         * Эта функция проверяет, лежит ли число d между с1 и с2
+         * Эта функция здесь написана только потому, что я не знаю, как еще сократить complexity.
+         * @param {Number} c1
+         * @param {Number} d
+         * @param {Number} c2
+         * @returns {Boolean}
+         */
+        function liesInBetween(c1, d, c2) {
+            return c1 <= d && c2 >= d;
+        }
+
         let intersectionType = 0;
-        if (a.from <= b.from && a.to >= b.from) {
+        if (liesInBetween(a.from, b.from, a.to)) {
             intersectionType = 1;
         }
-        if (a.from <= b.to && a.to >= b.to) {
+        if (liesInBetween(a.from, b.to, a.to)) {
             intersectionType = 2;
         }
-        if (a.from >= b.from && a.to <= b.to) {
+        if (contains(a, b)) {
             return 3;
         }
-        if (a.from <= b.from && a.to >= b.to) {
+        if (contains(b, a)) {
             return 4;
         }
 
@@ -157,7 +180,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
      */
     function subtractIntervals(a, b) {
         switch (getIntersectionType(a, b)) {
-            case 0:
+            default:
                 return [a];
             case 1:
                 return [{
@@ -180,15 +203,16 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         }
     }
 
-    function intersectIntervals2electricBoogalo(schedule) {
-        for (let interval of schedule.people) {
+    function intersectIntervals2electricBoogalo(fullSchedule) {
+        for (let interval of fullSchedule.people) {
             let leftovers = [];
-            for (let day of schedule.bank) {
+            for (let day of fullSchedule.bank) {
                 leftovers = leftovers.concat(subtractIntervals(day, interval));
             }
-            schedule.bank = leftovers;
+            fullSchedule.bank = leftovers;
         }
-        return schedule.bank;
+
+        return fullSchedule.bank;
     }
 
     /**
@@ -233,8 +257,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     // }
 
     const candidates = intersectIntervals2electricBoogalo(congregateIntervals())
-            .filter(interval => (interval.to - interval.from) >= duration)
-            .sort((a, b) => (a.from > b.from));
+        .filter(interval => (interval.to - interval.from) >= duration)
+        .sort((a, b) => (a.from > b.from));
     let firstCandidate = candidates[0];
 
     return {
@@ -289,6 +313,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             }
             if (firstCandidate === undefined) {
                 firstCandidate = backup;
+
                 return false;
             }
 
