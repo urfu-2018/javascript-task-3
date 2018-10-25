@@ -200,15 +200,11 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            const oldValue = availableStartPoints[startPointer];
-            for (let i = startPointer + 1; i < availableStartPoints.length; i++) {
-                const newValue = availableStartPoints[i];
-                if ((newValue - oldValue) / MILLS_IN_MIN >= 30) {
-                    startPointer = i;
-
-                    return true;
-                }
+            startPointer++;
+            if (this.exists()) {
+                return true;
             }
+            startPointer--;
 
             return false;
         }
