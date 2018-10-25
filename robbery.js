@@ -65,7 +65,7 @@ function addBankIntervals(schedule, bankFrom, bankTo) {
     }
 }
 
-function buildTimeIntervals(schedule, bank, timeZone) {
+function buildBusySchedule(schedule, bankOpeningTime, bankClosingTime, timeZone) {
     const newSchedule = [];
     const timeIntervals = schedule.Danny.concat(schedule.Rusty).concat(schedule.Linus);
 
@@ -74,7 +74,7 @@ function buildTimeIntervals(schedule, bank, timeZone) {
         const nextTo = getTimeObject(value.to, timeZone).timeStamp;
         unionTimeIntervals(newSchedule, { from: nextFrom, to: nextTo });
     });
-    addBankIntervals(newSchedule, bank.from.timeStamp, bank.to.timeStamp);
+    addBankIntervals(newSchedule, bankOpeningTime, bankClosingTime);
     newSchedule.sort(function (a, b) {
         if (a.from < b.from) {
             return -1;
@@ -89,6 +89,19 @@ function buildTimeIntervals(schedule, bank, timeZone) {
     return newSchedule;
 }
 
+function buildFreeSchedule(schedule, bankOpeningTime, bankClosingTime, timeZone) {
+    const busySchedule = buildBusySchedule(schedule, bankOpeningTime, bankClosingTime, timeZone);
+
+    // От списка "занятых" временных промежутков перешли к списку "свободных" временных промежутков
+    return busySchedule.reduce(function (result, value, index, array) {
+        if (index < array.length - 1) {
+            result.push({ to: array[index].to, from: array[index + 1].from });
+        }
+
+        return result;
+    }, []);
+}
+
 function addStartPointIfAvailable(startPoints, startInterval, endInterval, timeRequired) {
     let freeTime = endInterval - startInterval;
     if (freeTime >= timeRequired) {
@@ -98,6 +111,22 @@ function addStartPointIfAvailable(startPoints, startInterval, endInterval, timeR
     }
     // Попытаемся сдвинуть время ограбления на пол часа вперед
     addStartPointIfAvailable(startPoints, startInterval + LATER_VALUE, endInterval, timeRequired);
+}
+
+function getAvailableStartPoints(schedule, bank, timeZone, duration) {
+    const freeSchedule = buildFreeSchedule(schedule,
+        bank.from.timeStamp, bank.to.timeStamp,
+        timeZone);
+
+    const availableStartPoints = [];
+    const timeRequired = duration * MILLS_IN_MIN;
+    freeSchedule.forEach(function (interval) {
+        addStartPointIfAvailable(availableStartPoints,
+            interval.to, interval.from,
+            timeRequired);
+    });
+
+    return availableStartPoints;
 }
 
 function addPaddingZeros(value) {
@@ -127,25 +156,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     const bank = { from: getTimeObject(workingHours.from), to: getTimeObject(workingHours.to) };
     const timeZone = bank.from.timeZone;
 
-    const busySchedule = buildTimeIntervals(schedule, bank, timeZone);
-
-    // От списка "занятых" временных промежутков перешли к списку "свободных" временных промежутков
-    const freeSchedule = busySchedule.reduce(function (result, value, index, array) {
-        if (index < array.length - 1) {
-            result.push({ to: array[index].to, from: array[index + 1].from });
-        }
-
-        return result;
-    }, []);
-
-    const availableStartPoints = [];
-    const timeRequired = duration * MILLS_IN_MIN;
-
-    freeSchedule.forEach(function (interval) {
-        addStartPointIfAvailable(availableStartPoints,
-            interval.to, interval.from,
-            timeRequired);
-    });
+    const availableStartPoints = getAvailableStartPoints(schedule, bank, timeZone, duration);
 
     let startPointer = 0;
 
