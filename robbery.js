@@ -19,6 +19,7 @@ const HOURS_IN_DAY = 24;
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
+
     console.info(schedule, duration, workingHours);
 
     // Преобразовать расписание грабителей в интервалы в терминах минут
@@ -28,49 +29,12 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     const freeIntervals = findFreeIntervals(robberIntervals);
 
     // Преобразовать расписание банка в интервал
-    const bankWorkingInterval = getTimeInterval(bankWorkingHours);
+    const bankWorkingInterval = getBankWorkingInterval(bankWorkingHours);
 
-    const appropriateMoments = [];
+    // Найти пересечение рабочих часов банка и свободного времени грабителей
+    const overlaps = findAllOverlaps(freeIntervals, bankWorkingInterval);
 
-    // Найти все подходящие моменты
-    for (let i = 0; i < daysOfTheWeek.indexOf('ЧТ'); i++) {
-        // Найти пересечение свободного времени грабителей и рабочих часов банка в данный день
-        const overlaps = findOverlaps(freeIntervals, bankWorkingInterval, i);
-
-        for (let interval of overlaps) {
-            // Если интервал достаточно длинный, его можно использовать
-        }
-    }
-
-    return {
-
-        /**
-         * Найдено ли время
-         * @returns {Boolean}
-         */
-        exists: function () {
-            return false;
-        },
-
-        /**
-         * Возвращает отформатированную строку с часами для ограбления
-         * Например, "Начинаем в %HH:%MM (%DD)" -> "Начинаем в 14:59 (СР)"
-         * @param {String} template
-         * @returns {String}
-         */
-        format: function (template) {
-            return template;
-        },
-
-        /**
-         * Попробовать найти часы для ограбления позже [*]
-         * @star
-         * @returns {Boolean}
-         */
-        tryLater: function () {
-            return false;
-        }
-    };
+    return makeAppropriateMomentObject(overlaps);
 }
 
 /*
@@ -174,6 +138,118 @@ function compareIntervals(a, b) {
         return 1;
     }
     else return 0;
+}
+
+/*
+ * Получить рабочий интервал банка
+ */
+function getBankWorkingInterval(bankWorkingHours) {
+
+    const from = parseMinutes(bankWorkingHours.from);
+    const to = parseMinutes(bankWorkingHours.to) - 1;
+
+    return createInterval(from, to);
+}
+
+/*
+ * Найти пересечение свободного времени грабителей и рабочих часов банка до четверга
+ */
+function findAllOverlaps(freeIntervals, bankWorkingInterval) {
+
+    const overlaps = [];
+    for (let i = 0; i < daysOfTheWeek.indexOf('ЧТ'); i++) {
+        const bankHoursToday = getBankHoursForDay(bankWorkingInterval, i);
+        const overlapsToday = findOverlapsForDay(freeIntervals, bankHoursToday);
+        overlaps.concat(overlapsToday);
+    }
+
+    return overlaps;
+}
+
+/*
+ * Найти интервал, соответствующий рабочим часам банка в конкретный день
+ */
+function getBankHoursForDay(bankWorkingInterval, weekday) {
+
+    const otherDaysMinutes = weekday * MINUTES_IN_HOUR * HOURS_IN_DAY;
+    const from = otherDaysMinutes + bankWorkingInterval.from;
+    const to = otherDaysMinutes + bankWorkingInterval.to;
+
+    return createInterval(from, to);
+}
+
+/*
+ * Найти пересечение свободного времени грабителей и рабочих часов банка
+ * в конкретный день
+ */
+function findOverlapsForDay(freeIntervals, bankWorkingInterval) {
+
+    const overlaps = [];
+
+    for (let i = 0; i < freeIntervals.length; i++) {
+        const currentInterval = freeIntervals[i];
+
+        // Если интервал закончился раньше начала работы банка
+        // или начался позже завершения работы банка,
+        // не рассматриваем его
+        if (currentInterval.to < bankWorkingInterval.from) {
+            continue;
+        }
+
+        // Найти границы интервала-пересечения
+        const from = Math.max(currentInterval.from, bankWorkingInterval.from);
+        const to = Math.min(currentInterval.to, bankWorkingInterval.to);
+
+        overlaps.push(createInterval(from, to));
+    }
+
+    return overlaps;
+}
+
+function makeAppropriateMomentObject(overlaps) {
+
+    // Найти подходящий для ограбления момент
+    appropriateMoment = findAppropriateMoment(overlaps);
+
+    return {
+        overlaps,
+        appropriateMoment,
+
+        /**
+         * Найдено ли время
+         * @returns {Boolean}
+         */
+        exists: function () {
+            return false;
+        },
+
+        /**
+         * Возвращает отформатированную строку с часами для ограбления
+         * Например, "Начинаем в %HH:%MM (%DD)" -> "Начинаем в 14:59 (СР)"
+         * @param {String} template
+         * @returns {String}
+         */
+        format: function (template) {
+            return template;
+        },
+
+        /**
+         * Попробовать найти часы для ограбления позже [*]
+         * @star
+         * @returns {Boolean}
+         */
+        tryLater: function () {
+            return false;
+        }
+    };
+}
+
+function findAppropriateMoment(overlaps) {
+    for (let interval of overlaps) {
+        if (interval.to - interval.from >= duration) {
+            return interval.from;
+        }
+    }
 }
 
 module.exports = {
