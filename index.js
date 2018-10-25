@@ -2,6 +2,7 @@
 
 const robbery = require('./robbery');
 
+
 const gangSchedule = {
     Danny: [
         { from: 'ПН 12:00+5', to: 'ПН 17:00+5' },
