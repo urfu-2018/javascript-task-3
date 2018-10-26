@@ -22,46 +22,59 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
     console.info(schedule, duration, workingHours);
 
+    // Узнать часовой пояс банка
+    const bankTimezone = getBankTimezone(workingHours);
+
     // Преобразовать расписание грабителей в интервалы в терминах минут
-    const robberIntervals = getRobberIntervals(schedule);
+    const robberIntervals = getBusyIntervals(schedule, bankTimezone);
 
     // Найти моменты времени, когда ни один из грабителей не занят
     const freeIntervals = findFreeIntervals(robberIntervals);
 
     // Преобразовать расписание банка в интервал
-    const bankWorkingInterval = getBankWorkingInterval(bankWorkingHours);
+    const bankWorkingInterval = getBankWorkingInterval(workingHours);
 
     // Найти пересечение рабочих часов банка и свободного времени грабителей
     const overlaps = findAllOverlaps(freeIntervals, bankWorkingInterval);
 
-    return makeAppropriateMomentObject(overlaps);
+    // Найти подходящий для ограбления момент
+    const appropriateMoment = findAppropriateMoment(overlaps, duration);
+
+    return makeResult(overlaps, appropriateMoment);
+}
+
+function getBankTimezone(workingHours) {
+
+    return Number.parseInt(workingHours.from.substr(workingHours.from.indexOf('+') + 1));
 }
 
 /*
  * Преобразовывает расписание грабителей в массив временных интервалов
  */
-function getRobberIntervals(schedule) {
+function getBusyIntervals(schedule, bankTimezone) {
 
-    const busyIntervals = [];
+    let busyIntervals = [];
 
-    for (let robber of schedule) {
-        for (let busyHours of robber) {
-            const from = parseScheduleTime(busyHours.from);
-            const to = parseScheduleTime(busyHours.to);
+    for (let robber of Object.keys(schedule)) {
+        for (let busyHours of schedule[robber]) {
+            const from = parseScheduleTime(busyHours.from, bankTimezone);
+            const to = parseScheduleTime(busyHours.to, bankTimezone);
 
             busyIntervals.push(createInterval(from, to));
         }
     }
+
+    return busyIntervals;
 }
 
 /*
  * Преобразует описывающую время строку в расписании грабителей в количество минут с начала недели
  */
-function parseScheduleTime(input) {
+function parseScheduleTime(input, bankTimezone) {
 
-    const components = busyHours.split(' ');
+    const components = input.split(' ');
     const weekday = DAYS_OF_THE_WEEK.indexOf(components[0]);
-    const minutes = parseMinutes(components[1]);
+    const minutes = parseMinutes(components[1], bankTimezone);
 
     return (weekday * HOURS_IN_DAY * MINUTES_IN_HOUR + minutes);
 }
@@ -69,8 +82,15 @@ function parseScheduleTime(input) {
 /*
  * Парсит количество минут с начала дня из строки вида "10:00+5"
  */
-function parseMinutes(input) {
+function parseMinutes(input, bankTimezone) {
 
+    const inputComponents = input.split(/:|\+/);
+
+    const hour = Number.parseInt(inputComponents[0]);
+    const minute = Number.parseInt(inputComponents[1]);
+    const timezone = Number.parseInt(inputComponents[2]);
+
+    return (hour + bankTimezone - timezone) * MINUTES_IN_HOUR + minute;
 }
 
 /*
@@ -82,12 +102,12 @@ function findFreeIntervals(robberIntervals) {
     // в порядке возрастания
     robberIntervals.sort(compareIntervals);
 
-    const freeIntervals = [];
+    let freeIntervals = [];
 
     // Если грабители не заняты в начале недели,
     // добавить этот период в список свободных
     if (robberIntervals[0].from > 0) {
-        freeIntervals.push(createInterval(0, robberIntervals[0].from - 1));
+        freeIntervals.push(createInterval(0, robberIntervals[0].from));
     }
 
     // Поиск всех свободных интервалов между занятыми интервалами
@@ -96,11 +116,11 @@ function findFreeIntervals(robberIntervals) {
         const thisInterval = robberIntervals[i];
 
         if (maxTo < thisInterval.from) {
-            freeIntervals.push(createInterval(maxTo + 1, thisInterval.from - 1));
+            freeIntervals.push(createInterval(maxTo + 1, thisInterval.from));
         }
-        
+
         if (maxTo < thisInterval.to) {
-            maxTo = thisInterval.to;
+            maxTo = thisInterval.to - 1;
         }
     }
 
@@ -127,17 +147,15 @@ function createInterval(from, to) {
 function compareIntervals(a, b) {
     if (a.from < b.from) {
         return -1;
-    }
-    else if (a.from > b.from) {
+    } else if (a.from > b.from) {
         return 1;
-    }
-    else if (a.to < b.to) {
+    } else if (a.to < b.to) {
         return -1;
-    }
-    else if (a.to > b.to) {
+    } else if (a.to > b.to) {
         return 1;
     }
-    else return 0;
+
+    return 0;
 }
 
 /*
@@ -145,8 +163,10 @@ function compareIntervals(a, b) {
  */
 function getBankWorkingInterval(bankWorkingHours) {
 
-    const from = parseMinutes(bankWorkingHours.from);
-    const to = parseMinutes(bankWorkingHours.to) - 1;
+    const bankTimezone = getBankTimezone(bankWorkingHours);
+
+    const from = parseMinutes(bankWorkingHours.from, bankTimezone);
+    const to = parseMinutes(bankWorkingHours.to, bankTimezone);
 
     return createInterval(from, to);
 }
@@ -156,11 +176,11 @@ function getBankWorkingInterval(bankWorkingHours) {
  */
 function findAllOverlaps(freeIntervals, bankWorkingInterval) {
 
-    const overlaps = [];
-    for (let i = 0; i < daysOfTheWeek.indexOf('ЧТ'); i++) {
+    let overlaps = [];
+    for (let i = 0; i < DAYS_OF_THE_WEEK.indexOf('ЧТ'); i++) {
         const bankHoursToday = getBankHoursForDay(bankWorkingInterval, i);
         const overlapsToday = findOverlapsForDay(freeIntervals, bankHoursToday);
-        overlaps.concat(overlapsToday);
+        overlaps = overlaps.concat(overlapsToday);
     }
 
     return overlaps;
@@ -184,7 +204,7 @@ function getBankHoursForDay(bankWorkingInterval, weekday) {
  */
 function findOverlapsForDay(freeIntervals, bankWorkingInterval) {
 
-    const overlaps = [];
+    let overlaps = [];
 
     for (let i = 0; i < freeIntervals.length; i++) {
         const currentInterval = freeIntervals[i];
@@ -192,7 +212,8 @@ function findOverlapsForDay(freeIntervals, bankWorkingInterval) {
         // Если интервал закончился раньше начала работы банка
         // или начался позже завершения работы банка,
         // не рассматриваем его
-        if (currentInterval.to < bankWorkingInterval.from) {
+        if (currentInterval.to < bankWorkingInterval.from ||
+            currentInterval.from > bankWorkingInterval.to) {
             continue;
         }
 
@@ -206,10 +227,9 @@ function findOverlapsForDay(freeIntervals, bankWorkingInterval) {
     return overlaps;
 }
 
-function makeAppropriateMomentObject(overlaps) {
+function makeResult(overlaps, moment) {
 
-    // Найти подходящий для ограбления момент
-    appropriateMoment = findAppropriateMoment(overlaps);
+    const appropriateMoment =  makeAppropriateMomentObject(moment);
 
     return {
         overlaps,
@@ -220,7 +240,7 @@ function makeAppropriateMomentObject(overlaps) {
          * @returns {Boolean}
          */
         exists: function () {
-            return false;
+            return appropriateMoment !== undefined;
         },
 
         /**
@@ -230,7 +250,18 @@ function makeAppropriateMomentObject(overlaps) {
          * @returns {String}
          */
         format: function (template) {
-            return template;
+
+            if (appropriateMoment === undefined) {
+                return '';
+            }
+
+            const day = DAYS_OF_THE_WEEK[appropriateMoment.day];
+            const hour = toTwoDigitString(appropriateMoment.hour);
+            const minute = toTwoDigitString(appropriateMoment.minute);
+
+            return template.replace('%HH', hour)
+                .replace('%MM', minute)
+                .replace('%DD', day);
         },
 
         /**
@@ -244,12 +275,51 @@ function makeAppropriateMomentObject(overlaps) {
     };
 }
 
-function findAppropriateMoment(overlaps) {
+/*
+ * Найти начало интервала длины, достигающей необходимой (с учётом нижней границы),
+ * если такой имеется
+ */
+function findAppropriateMoment(overlaps, duration, beginFrom) {
     for (let interval of overlaps) {
-        if (interval.to - interval.from >= duration) {
+        const lowerBoundary = Math.max(interval.from, beginFrom);
+        if (interval.to - lowerBoundary >= duration) {
             return interval.from;
         }
     }
+}
+
+/*
+ * Создать объект, представляющий момент ограбления, из времени его наступления
+ */
+function makeAppropriateMomentObject(time) {
+
+    if (time === undefined) {
+        return undefined;
+    }
+
+    const day = Math.trunc(time / (MINUTES_IN_HOUR * HOURS_IN_DAY));
+    const hour = Math.trunc(time / MINUTES_IN_HOUR) % HOURS_IN_DAY;
+    const minute = time % MINUTES_IN_HOUR;
+
+    return {
+        day,
+        hour,
+        minute
+    };
+}
+
+/*
+ * Преобразовать число в строку из двух цифр
+ */
+function toTwoDigitString(number) {
+
+    let numberString = number.toString();
+
+    if (numberString.length === 1) {
+        numberString = '0' + numberString;
+    }
+
+    return numberString;
 }
 
 module.exports = {
