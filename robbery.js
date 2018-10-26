@@ -25,24 +25,28 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     // Узнать часовой пояс банка
     const bankTimezone = getBankTimezone(workingHours);
 
-    // Преобразовать расписание грабителей в интервалы в терминах минут
+    // Преобразовать расписание грабителей в интервалы
     const robberIntervals = getBusyIntervals(schedule, bankTimezone);
 
-    // Найти моменты времени, когда ни один из грабителей не занят
+    // Найти временные интервалы, когда ни один из грабителей не занят
     const freeIntervals = findFreeIntervals(robberIntervals);
 
     // Преобразовать расписание банка в интервал
     const bankWorkingInterval = getBankWorkingInterval(workingHours);
 
     // Найти пересечение рабочих часов банка и свободного времени грабителей
-    const overlaps = findAllOverlaps(freeIntervals, bankWorkingInterval);
+    // на протяжении всей недели
+    const overlaps = findOverlapsForWeek(freeIntervals, bankWorkingInterval);
 
     // Найти подходящий для ограбления момент
     const appropriateMoment = findAppropriateMoment(overlaps, duration);
 
-    return makeResult(overlaps, appropriateMoment);
+    return makeResult(duration, overlaps, appropriateMoment);
 }
 
+/*
+ * Узнать часовой пояс банка
+ */
 function getBankTimezone(workingHours) {
 
     return Number.parseInt(workingHours.from.substr(workingHours.from.indexOf('+') + 1));
@@ -174,7 +178,7 @@ function getBankWorkingInterval(bankWorkingHours) {
 /*
  * Найти пересечение свободного времени грабителей и рабочих часов банка до четверга
  */
-function findAllOverlaps(freeIntervals, bankWorkingInterval) {
+function findOverlapsForWeek(freeIntervals, bankWorkingInterval) {
 
     let overlaps = [];
     for (let i = 0; i < DAYS_OF_THE_WEEK.indexOf('ЧТ'); i++) {
@@ -227,11 +231,10 @@ function findOverlapsForDay(freeIntervals, bankWorkingInterval) {
     return overlaps;
 }
 
-function makeResult(overlaps, moment) {
-
-    const appropriateMoment =  makeAppropriateMomentObject(moment);
+function makeResult(duration, overlaps, appropriateMoment) {
 
     return {
+        duration,
         overlaps,
         appropriateMoment,
 
@@ -240,7 +243,7 @@ function makeResult(overlaps, moment) {
          * @returns {Boolean}
          */
         exists: function () {
-            return appropriateMoment !== undefined;
+            return this.appropriateMoment !== undefined;
         },
 
         /**
@@ -251,17 +254,17 @@ function makeResult(overlaps, moment) {
          */
         format: function (template) {
 
-            if (appropriateMoment === undefined) {
+            if (this.appropriateMoment === undefined) {
                 return '';
             }
 
-            const day = DAYS_OF_THE_WEEK[appropriateMoment.day];
-            const hour = toTwoDigitString(appropriateMoment.hour);
-            const minute = toTwoDigitString(appropriateMoment.minute);
+            const day = Math.trunc(this.appropriateMoment / (MINUTES_IN_HOUR * HOURS_IN_DAY));
+            const hour = Math.trunc(this.appropriateMoment / MINUTES_IN_HOUR) % HOURS_IN_DAY;
+            const minute = this.appropriateMoment % MINUTES_IN_HOUR;
 
-            return template.replace('%HH', hour)
-                .replace('%MM', minute)
-                .replace('%DD', day);
+            return template.replace('%HH', toTwoDigitString(hour))
+                .replace('%MM', toTwoDigitString(minute))
+                .replace('%DD', DAYS_OF_THE_WEEK[day]);
         },
 
         /**
@@ -270,7 +273,18 @@ function makeResult(overlaps, moment) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            return false;
+
+            const TIME_DIFFERENCE = 30;
+            const beginFrom = this.appropriateMoment + TIME_DIFFERENCE;
+            const newMoment = findAppropriateMoment(overlaps, duration, beginFrom);
+
+            if (newMoment === undefined) {
+                return false;
+            }
+
+            this.appropriateMoment = newMoment;
+
+            return true;
         }
     };
 }
@@ -281,31 +295,14 @@ function makeResult(overlaps, moment) {
  */
 function findAppropriateMoment(overlaps, duration, beginFrom) {
     for (let interval of overlaps) {
-        const lowerBoundary = Math.max(interval.from, beginFrom);
+        let lowerBoundary = interval.from;
+        if (beginFrom !== undefined) {
+            lowerBoundary = Math.max(interval.from, beginFrom);
+        }
         if (interval.to - lowerBoundary >= duration) {
-            return interval.from;
+            return lowerBoundary;
         }
     }
-}
-
-/*
- * Создать объект, представляющий момент ограбления, из времени его наступления
- */
-function makeAppropriateMomentObject(time) {
-
-    if (time === undefined) {
-        return undefined;
-    }
-
-    const day = Math.trunc(time / (MINUTES_IN_HOUR * HOURS_IN_DAY));
-    const hour = Math.trunc(time / MINUTES_IN_HOUR) % HOURS_IN_DAY;
-    const minute = time % MINUTES_IN_HOUR;
-
-    return {
-        day,
-        hour,
-        minute
-    };
 }
 
 /*
