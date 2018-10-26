@@ -57,6 +57,12 @@ function getConvertedToIntTime(time) {
         : parseInt(time);
 }
 
+function convertIntTimeToString(time) {
+    return time.toString().length === 1
+        ? `0${time}`
+        : time;
+}
+
 function convertToMinutes(hours, minutes) {
     return hours * 60 + minutes;
 }
@@ -94,7 +100,7 @@ function isPeriodCorrect(period) {
 
 function computeFreeTimeForPeriod(period, convertedFrom, convertedTo, currentDay) {
     if (isOutOfBoundPeriod(convertedFrom, period, convertedTo)) {
-        console.info('');
+        return;
     } else if (isFullInnerPeriod(convertedFrom, period, convertedTo)) {
         const newPeriod = {
             fromInMinutes: convertedTo,
@@ -119,8 +125,21 @@ function computeFreeTimeForPeriod(period, convertedFrom, convertedTo, currentDay
     }
 }
 
+function getBankWorkingPeriod(workingHours) {
+    const bankDTFrom = workingHours.from.substring(0, 5).split(':');
+    const bankDTTo = workingHours.to.substring(0, 5).split(':');
 
-/* eslint complexity: off */
+    const fromHours = getConvertedToIntTime(bankDTFrom[0]);
+    const fromMinutes = getConvertedToIntTime(bankDTFrom[1]);
+    const toHours = getConvertedToIntTime(bankDTTo[0]);
+    const toMinutes = getConvertedToIntTime(bankDTTo[1]);
+
+    return {
+        fromInMinutes: convertToMinutes(fromHours, fromMinutes),
+        toInMinutes: convertToMinutes(toHours, toMinutes)
+    };
+}
+
 
 /**
  * @param {Object} schedule – Расписание Банды
@@ -133,21 +152,100 @@ function computeFreeTimeForPeriod(period, convertedFrom, convertedTo, currentDay
 function getAppropriateMoment(schedule, duration, workingHours) {
     console.info(schedule, duration, workingHours);
 
-    /* {
-                Danny: [
-                    { from: 'ПН 12:00+5', to: 'ПН 17:00+5' },
-                    { from: 'ВТ 13:00+5', to: 'ВТ 16:00+5' }
-                ],
-                Rusty: [
-                    { from: 'ПН 11:30+5', to: 'ПН 16:30+5' },
-                    { from: 'ВТ 13:00+5', to: 'ВТ 16:00+5' }
-                ],
-                Linus: [
-                    { from: 'ПН 09:00+3', to: 'ПН 14:00+3' },
-                    { from: 'ПН 21:00+3', to: 'ВТ 09:30+3' },
-                    { from: 'СР 09:30+3', to: 'СР 15:00+3' }
-                ]
-            }*/
+    const bankWorkingPeriod = getBankWorkingPeriod(workingHours);
+
+    let freeTimes = [];
+    Object.keys(DAYS).forEach((day) => {
+        freeTimes[day] = [{
+            fromInMinutes: bankWorkingPeriod.fromInMinutes,
+            toInMinutes: bankWorkingPeriod.toInMinutes,
+            name: day
+        }];
+    });
+
+    Object.keys(schedule).forEach((robber) => {
+        schedule[robber].forEach((busyDuration) => {
+            const fromDT = getNormilizedToBankTimezoneDT(busyDuration.from,
+                parseInt(workingHours.from.substring(TIMEZONE_START_INDEX)));
+            const toDT = getNormilizedToBankTimezoneDT(busyDuration.to,
+                parseInt(workingHours.from.substring(TIMEZONE_START_INDEX)));
+
+            if (fromDT.day !== toDT.day) {
+                const convertedFromFirstDay =
+                    convertToMinutes(fromDT.hours, fromDT.minutes);
+                const convertedToFirstDay = 1440;
+                const convertedFromSecondDay = 0;
+                const convertedToSecondDay =
+                    convertToMinutes(toDT.hours, toDT.minutes);
+
+
+                freeTimes[fromDT.day].forEach(
+                    (period) => {
+                        computeFreeTimeForPeriod(period,
+                            convertedFromFirstDay,
+                            convertedToFirstDay,
+                            freeTimes[fromDT.day]);
+                    }
+                );
+                freeTimes[toDT.day].forEach(
+                    (period) => {
+                        computeFreeTimeForPeriod(period,
+                            convertedFromSecondDay,
+                            convertedToSecondDay,
+                            freeTimes[fromDT.day]);
+                    }
+                );
+            }
+            if (fromDT.day === toDT.day) {
+                const convertedFrom = convertToMinutes(fromDT.hours, fromDT.minutes);
+                const convertedTo = convertToMinutes(toDT.hours, toDT.minutes);
+
+                freeTimes[fromDT.day].forEach(
+                    (period) => {
+                        computeFreeTimeForPeriod(period,
+                            convertedFrom,
+                            convertedTo,
+                            freeTimes[fromDT.day]);
+                    }
+                );
+            }
+        });
+    });
+
+    const foundTimes = [];
+    Object.keys(freeTimes).forEach((day) => {
+        foundTimes.push(...freeTimes[day]
+            .filter((period) => {
+                return period.toInMinutes - period.fromInMinutes >= duration;
+            })
+            .map((period) => {
+                return {
+                    from: {
+                        DD: day,
+                        HH: Math.floor(period.fromInMinutes / 60),
+                        MM: period.fromInMinutes % 60
+                    },
+                    remainingFreeTimeInMinutes: period.toInMinutes - period.fromInMinutes
+                };
+            })
+        );
+    });
+
+    let CURRENT_ROBBERY_TIME_INDEX = 0;
+
+    console.info(foundTimes);
+
+    function calculateNextTime(CURRENT_ROBBERY_TIME) {
+        CURRENT_ROBBERY_TIME.remainingFreeTimeInMinutes -= 30;
+        const nextTimeMinutes = CURRENT_ROBBERY_TIME.from.MM + 30;
+        if (nextTimeMinutes >= 60) {
+            CURRENT_ROBBERY_TIME.from.HH += 1;
+            CURRENT_ROBBERY_TIME.from.MM = nextTimeMinutes - 60;
+        } else {
+            CURRENT_ROBBERY_TIME.from.MM = nextTimeMinutes;
+        }
+    }
+
     return {
 
         /**
@@ -155,105 +253,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            const bankTimeZone = parseInt(workingHours.from.substring(TIMEZONE_START_INDEX));
-            console.info(workingHours.from);
-
-            const bankDTFrom = workingHours.from.substring(0, 5).split(':');
-            const bankDTTo = workingHours.to.substring(0, 5).split(':');
-
-            const fromHours = getConvertedToIntTime(bankDTFrom[0]);
-            const fromMinutes = getConvertedToIntTime(bankDTFrom[1]);
-            const toHours = getConvertedToIntTime(bankDTTo[0]);
-            const toMinutes = getConvertedToIntTime(bankDTTo[1]);
-
-            let freeTimes = {
-                'ПН': [{
-                    fromInMinutes: convertToMinutes(fromHours, fromMinutes),
-                    toInMinutes: convertToMinutes(toHours, toMinutes),
-                    name: 'ПН'
-                }],
-                'ВТ': [{
-                    fromInMinutes: convertToMinutes(fromHours, fromMinutes),
-                    toInMinutes: convertToMinutes(toHours, toMinutes),
-                    name: 'ВТ'
-                }],
-                'СР': [{
-                    fromInMinutes: convertToMinutes(fromHours, fromMinutes),
-                    toInMinutes: convertToMinutes(toHours, toMinutes),
-                    name: 'СР'
-                }]
-            };
-
-            /* function test(robber, fromDT) {
-                return robber === 'Linus' && fromDT.day === 'ПН';
-            }
-
-            test(robber, fromDT);*/
-
-            Object.keys(schedule).forEach((robber) => {
-                schedule[robber].forEach((busyDuration) => {
-                    const fromDT = getNormilizedToBankTimezoneDT(busyDuration.from, bankTimeZone);
-                    const toDT = getNormilizedToBankTimezoneDT(busyDuration.to, bankTimeZone);
-
-                    if (fromDT.day !== toDT.day) {
-                        const convertedFromFirstDay =
-                            convertToMinutes(fromDT.hours, fromDT.minutes);
-                        const convertedToFirstDay = 1440;
-                        const convertedFromSecondDay = 0;
-                        const convertedToSecondDay =
-                            convertToMinutes(toDT.hours, toDT.minutes);
-
-
-                        freeTimes[fromDT.day].forEach(
-                            (period) => {
-                                computeFreeTimeForPeriod(period,
-                                    convertedFromFirstDay,
-                                    convertedToFirstDay,
-                                    freeTimes[fromDT.day]);
-                            }
-                        );
-                        freeTimes[toDT.day].forEach(
-                            (period) => {
-                                computeFreeTimeForPeriod(period,
-                                    convertedFromSecondDay,
-                                    convertedToSecondDay,
-                                    freeTimes[fromDT.day]);
-                            }
-                        );
-                    }
-                    if (fromDT.day === toDT.day) {
-                        const convertedFrom = convertToMinutes(fromDT.hours, fromDT.minutes);
-                        const convertedTo = convertToMinutes(toDT.hours, toDT.minutes);
-
-                        freeTimes[fromDT.day].forEach(
-                            (period) => {
-                                computeFreeTimeForPeriod(period,
-                                    convertedFrom,
-                                    convertedTo,
-                                    freeTimes[fromDT.day]);
-                            }
-                        );
-                    }
-                });
-
-                console.info('finish robber - ' + robber);
-                console.info(freeTimes);
-                console.info('-------------------------------');
-            });
-
-            freeTimes.reduce((isFound, day) => {
-                return day.reduce((accumulator, period) => {
-                    if (period.toInMinutes - period.fromInMinutes >= duration) {
-                        return {
-                            DD: day.name,
-                            HH: Math.floor(period.fromInMinutes / 60),
-                            MM: period.fromInMinutes % 60
-                        };
-                    }
-                }, null);
-            }, null);
-
-            return false;
+            return foundTimes.length;
         },
 
         /**
@@ -263,7 +263,16 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            return template;
+            if (!this.exists()) {
+                return '';
+            }
+
+            const firstFound = foundTimes[CURRENT_ROBBERY_TIME_INDEX].from;
+
+            return template
+                .replace('%DD', firstFound.DD)
+                .replace('%HH', convertIntTimeToString(firstFound.HH))
+                .replace('%MM', convertIntTimeToString(firstFound.MM));
         },
 
         /**
@@ -272,6 +281,26 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
+            for (let i = CURRENT_ROBBERY_TIME_INDEX; i < foundTimes.length; i++) {
+                if (CURRENT_ROBBERY_TIME_INDEX !== i) {
+                    CURRENT_ROBBERY_TIME_INDEX = i;
+
+                    return true;
+                }
+
+                if (foundTimes[i].remainingFreeTimeInMinutes - 30 < duration) {
+                    continue;
+                }
+
+                calculateNextTime(foundTimes[i]);
+                console.info(i);
+
+                CURRENT_ROBBERY_TIME_INDEX = i;
+
+                return true;
+            }
+
+
             return false;
         }
     };
