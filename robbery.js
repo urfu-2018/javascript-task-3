@@ -104,7 +104,7 @@ function findFreeIntervals(robberIntervals) {
 
     // Если грабители никогда не заняты, они всегда свободны :)
     if (robberIntervals.length === 0) {
-        return [createInterval(0, DAYS_OF_THE_WEEK.length * HOURS_IN_DAY * MINUTES_IN_HOUR) - 1];
+        return [createInterval(0, DAYS_OF_THE_WEEK.length * HOURS_IN_DAY * MINUTES_IN_HOUR - 1)];
     }
 
     // Для корректной работы алгоритма требуется отсортировать массив
