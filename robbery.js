@@ -102,6 +102,11 @@ function parseMinutes(input, bankTimezone) {
  */
 function findFreeIntervals(robberIntervals) {
 
+    // Если грабители никогда не заняты, они всегда свободны :)
+    if (robberIntervals.length === 0) {
+        return [createInterval(0, DAYS_OF_THE_WEEK.length * HOURS_IN_DAY * MINUTES_IN_HOUR) - 1];
+    }
+
     // Для корректной работы алгоритма требуется отсортировать массив
     // в порядке возрастания
     robberIntervals.sort(compareIntervals);
@@ -117,15 +122,10 @@ function findFreeIntervals(robberIntervals) {
     // Поиск всех свободных интервалов между занятыми интервалами
     let maxTo = robberIntervals[0].to;
     for (let i = 1; i < robberIntervals.length; i++) {
-        const thisInterval = robberIntervals[i];
-
-        if (maxTo < thisInterval.from) {
-            freeIntervals.push(createInterval(maxTo + 1, thisInterval.from));
+        if (maxTo < robberIntervals[i].from) {
+            freeIntervals.push(createInterval(maxTo + 1, robberIntervals[i].from));
         }
-
-        if (maxTo < thisInterval.to) {
-            maxTo = thisInterval.to - 1;
-        }
+        maxTo = Math.max(maxTo, robberIntervals[i].to - 1);
     }
 
     // Если в конце недели остаётся свободное время, добавить соответствующий интервал
@@ -137,6 +137,9 @@ function findFreeIntervals(robberIntervals) {
     return freeIntervals;
 }
 
+/*
+ * Создать объект, представляющий интервал
+ */
 function createInterval(from, to) {
 
     return {
