@@ -33,7 +33,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         ));
 
     let count = 0;
-    let timeToStart;
+    let timeToStart = null;
 
     for (let value = 0; value < (72 * 60); value++) {
         if (count === duration) {
@@ -59,7 +59,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            return Boolean(timeToStart);
+            return timeToStart !== null;
         },
 
         /**
@@ -73,7 +73,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 return '';
             }
 
-            return formatDate(timeToStart, template, bankTimeZone);
+            return formatDate(timeToStart + bankTimeZone * 60, template, bankTimeZone);
         },
 
         /**
@@ -137,7 +137,7 @@ function isValueInInterval(interval, value) {
     return interval[0] <= value && value < interval[1];
 }
 
-function formatDate(timeInMinutes, format, bankTimeZone) {
+function formatDate(timeInMinutes, format) {
     const days = {
         0: 'ПН',
         1: 'ВТ',
@@ -149,7 +149,7 @@ function formatDate(timeInMinutes, format, bankTimeZone) {
 
     return format
         .replace(/%DD/, days[day])
-        .replace(/%HH/, (hours + bankTimeZone).toString().padStart(2, '0'))
+        .replace(/%HH/, hours.toString().padStart(2, '0'))
         .replace(/%MM/, minutes.toString().padStart(2, '0'));
 }
 
