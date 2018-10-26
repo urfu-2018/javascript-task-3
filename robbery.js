@@ -69,7 +69,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            if (!timeToStart) {
+            if (timeToStart === null) {
                 return '';
             }
 
@@ -92,7 +92,11 @@ function getUTCTimeInMinutes(timeString) {
     const days = {
         ПН: 0,
         ВТ: 24 * 60,
-        СР: 48 * 60
+        СР: 48 * 60,
+        ЧТ: 72 * 60,
+        ПТ: 96 * 60,
+        СБ: 120 * 60,
+        ВС: 144 * 60
     };
     const timeInMinutes =
         Number(days[parts[1]]) + Number(parts[2]) * 60 +
@@ -141,7 +145,8 @@ function formatDate(timeInMinutes, format) {
     const days = {
         0: 'ПН',
         1: 'ВТ',
-        2: 'СР'
+        2: 'СР',
+        3: 'ЧТ'
     };
     const minutes = timeInMinutes % 60;
     const hours = ((timeInMinutes - minutes) / 60) % 24;
