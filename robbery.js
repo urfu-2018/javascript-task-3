@@ -9,6 +9,7 @@ const isStar = true;
 const weekDays = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
 const minutesInHour = 60;
 const minutesInDay = 1440;
+let appropriateMoment;
 
 function convertToMinute(element, workingHours) {
     let from = convert(element.from, workingHours);
@@ -58,7 +59,7 @@ function removeTimeZone(timeZone, workingHours) {
     return bankTimeZone - timeZone;
 }
 
-function mergeIntersections(element, busyDates) {
+/* function mergeIntersections(element, busyDates) {
     let preResult = [1, 0];// 1просто так, 0 ложное значение для проверок
     for (let index = busyDates.indexOf(element); index < busyDates.length; index++) {
         if (preResult[1]) { // если мы дошли до отрезка который не входит в текущий,
@@ -94,7 +95,7 @@ function toCombine(element, element2, flag) {
     flag = true;
 
     return [element, flag];
-}
+}*/
 
 /**
  * @param {Object} schedule – Расписание Банды
@@ -113,24 +114,27 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         });
     }
     let workingHoursInMinute = convertToMinute(workingHours, workingHours);
-    let combinedDates = [];
+    // let combinedDates = [];
     busyDates.sort((a, b) => {
         return a[0] - b[0];
     });
-    busyDates.forEach(element => {
+
+    /* busyDates.forEach(element => {
         console.info(element);
-    });
-    busyDates.forEach(element => {
+    });*/
+
+    /* busyDates.forEach(element => {
         element = mergeIntersections(element, busyDates);
         if (element.length !== 0) {
             combinedDates.push(element);
         }
-    });
+    });*/
     // тут тупа вывод для меня
-    console.info(workingHoursInMinute + '       ETO VREMYA BANKA');
-    combinedDates.forEach(element => {
+    // console.info(workingHoursInMinute + '       ETO VREMYA BANKA');
+
+    /* combinedDates.forEach(element => {
         console.info(element);
-    });
+    });*/
 
     return {
 
@@ -139,6 +143,10 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
+            appropriateMoment = getMoment(busyDates, duration, workingHoursInMinute);
+            if (typeof appropriateMoment !== 'undefined') {
+                return true;
+            }
 
             return false;
         },
@@ -150,7 +158,20 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            return template;
+            if (typeof appropriateMoment === 'undefined') {
+                return '';
+            }
+            appropriateMoment -= getTimeZone(workingHours.from) * minutesInHour;
+            let day = getAnswer(appropriateMoment, minutesInDay);
+            let timeWithoutDays = appropriateMoment - day * minutesInDay;
+            let hour = getAnswer(timeWithoutDays, minutesInHour);
+            let timeWithoutHours = timeWithoutDays - hour * minutesInHour;
+            let minute = timeWithoutHours;
+            console.info(minute);
+
+            return template.replace('%DD', weekDays[day])
+                .replace('%HH', toTwoElement(hour))
+                .replace('%MM', toTwoElement(minute));
         },
 
         /**
@@ -162,6 +183,88 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             return false;
         }
     };
+}
+
+function toTwoElement(element) {
+    element = element.toString();
+    if (element.length === 1) {
+        return '0' + element;
+    }
+
+    return element;
+}
+
+function getAnswer(time, divider) {
+    return Math.floor(time / divider);
+}
+
+function getMoment(busyDates, duration, workingHoursInMinute) {
+    let result = [];
+    for (let index = 0; index < 3; index++) {
+        let workingTime = [workingHoursInMinute[0] + index * minutesInDay,
+            workingHoursInMinute[1] + index * minutesInDay];
+        result = getGoodTiming(busyDates, duration, workingTime);
+        if (typeof result !== 'undefined') {
+            break;
+        }
+    }
+
+    return result;
+}
+
+function getGoodTiming(busyDates, duration, workingTime) {
+    for (let from = workingTime[0]; from <= workingTime[1] - duration; from += duration) {
+        let sector = [from, from + duration];
+        let result = getIntersections(busyDates, sector);
+        if (result[1]) {
+            return result[0][1] - duration;
+        }
+        from = result[0][1] - duration;
+    }
+}
+
+function getIntersections(busyDates, sector) {
+    let hasGoodTiming = true;
+    let countShift = 0;
+    busyDates.forEach(element => {
+        let result = hasIntersections(sector, element);
+        sector = result[0];
+        if (!result[1]) {
+            busyDates = shiftElements(busyDates, countShift);
+
+            return [sector, hasGoodTiming];
+        }
+        hasGoodTiming = false;
+        countShift++;
+    });
+
+    return [sector, hasGoodTiming];
+}
+
+function shiftElements(busyDates, countShift) {
+    while (countShift !== 0) {
+        busyDates.shift();
+        countShift--;
+    }
+
+    return busyDates;
+}
+
+function hasIntersections(element, element2) {
+    if (element[0] <= element2[0] && element2[0] <= element[1]) {
+        if (element2[1] > element[1]) {
+            element[1] = element2[1];
+        }
+
+        return [element, true];
+    }
+    if (element[0] <= element2[1] && element2[1] <= element[1]) {
+        element[1] = element2[1];
+
+        return [element, true];
+    }
+
+    return [element, false];
 }
 
 module.exports = {
