@@ -123,9 +123,9 @@ function findFreeIntervals(robberIntervals) {
     let maxTo = robberIntervals[0].to;
     for (let i = 1; i < robberIntervals.length; i++) {
         if (maxTo < robberIntervals[i].from) {
-            freeIntervals.push(createInterval(maxTo + 1, robberIntervals[i].from));
+            freeIntervals.push(createInterval(maxTo, robberIntervals[i].from));
         }
-        maxTo = Math.max(maxTo, robberIntervals[i].to - 1);
+        maxTo = Math.max(maxTo, robberIntervals[i].to);
     }
 
     // Если в конце недели остаётся свободное время, добавить соответствующий интервал
