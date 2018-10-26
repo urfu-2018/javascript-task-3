@@ -110,7 +110,7 @@ function getUTCTimeInMinutesForBank(timeString) {
 function invertIntervals(intervals, domain) {
     const inverted = [];
 
-    const isFirst = i => i === 0 && intervals[i][0] > 0;
+    const isFirst = i => i === 0 && intervals[i][0] > domain[0];
     const isLast = i => i === intervals.length && intervals[i - 1][1] < domain[1];
 
     for (let i = 0; i <= intervals.length; i++) {
