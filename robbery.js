@@ -17,11 +17,13 @@ const isStar = true;
 function getAppropriateMoment(schedule, duration, workingHours) {
     // рабочее время банка в виде массива интервалов со значениями в виде timestamp'а
     const WORKING_HOURS = getWorkingHoursIntervals(workingHours);
+    console.info(WORKING_HOURS);
 
-    // аналог schedule, но в значениях `from` и `to` не текстовое представление, а timestamp
+    // аналог schedule, но в значениях `from` и `to` timestamp, а вместо расписания занятости
+    // грабителей - расписание свободного времени
     const ROBBERS_SCHEDULE = getRobbersScheduleIntervals(schedule);
 
-    // пересечение расписаний и рабочего времени
+    // пересечение расписаний свободного времени грабителей и рабочего времени банка
     let APPROPRIATE_INTERVALS = getAppropriateIntervals(WORKING_HOURS, ROBBERS_SCHEDULE);
 
     // оставляем только те, что удовлетворяют необходимому времени на ограбление - duration
@@ -119,7 +121,7 @@ function getDateTimestamp(date) {
     const MINUTES = Number(date.replace(/.*?:0?(\d+).*/, '$1'));
     const TIMEZONE = getTimezone(date);
 
-    return DAY_BEGINNING + HOURS * MINUTES_IN_HOUR + MINUTES - TIMEZONE * MINUTES_IN_HOUR;
+    return DAY_BEGINNING + HOURS * MINUTES_IN_HOUR + MINUTES + TIMEZONE * MINUTES_IN_HOUR;
 }
 
 /**
@@ -142,7 +144,7 @@ function getRobbersScheduleIntervals(schedule) {
 const TIMESTAMP_UPPER_LIMIT = WEEK_DAYS.length * MINUTES_IN_DAY - 1;
 
 /**
- * Возвращает массив объектов-интервалов расписания свободного времени грабителя, где
+ * Возвращает массив объектов-интервалов свободного времени грабителя, где
  * полям `from` и `to` соответствует timestamp с началом отсчёта в ПН 00:00+0, а не
  * представление вида ПН 09:00+3
  * @param {Object} schedule - расписание грабителя
@@ -166,10 +168,14 @@ function getScheduleIntervals(schedule) {
     let previousTo = 0;
 
     return BUSY_INTERVALS.reduce((accumulator, interval, index, array) => {
-        accumulator.push({
-            from: previousTo,
-            to: interval.from
-        });
+        // пропускаем пустые интервалы (когда `from` и `to` равны)
+        if (previousTo !== interval.from) {
+            accumulator.push({
+                from: previousTo,
+                to: interval.from
+            });
+        }
+        // на последнем шаге добавляем интервал от конца расписания грабителя до СР 23:59
         if (index === array.length - 1 && interval.to < TIMESTAMP_UPPER_LIMIT) {
             accumulator.push({
                 from: interval.to,
@@ -288,7 +294,7 @@ function getRobberyMoments(intervals, duration, timezone) {
  * @returns {Object}
  */
 function getRobberyMomentData(timestamp, timezone) {
-    timestamp += timezone * MINUTES_IN_HOUR;
+    timestamp -= timezone * MINUTES_IN_HOUR;
     const WEEK_DAY = WEEK_DAYS[Math.floor(timestamp / MINUTES_IN_DAY)];
     timestamp -= WEEK_DAYS.indexOf(WEEK_DAY) * MINUTES_IN_DAY;
     const HOURS = Math.floor(timestamp / MINUTES_IN_HOUR);
