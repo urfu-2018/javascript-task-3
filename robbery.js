@@ -27,10 +27,13 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     const bankTimeZone = Number(workingHours.to.split('+')[1]);
 
     const gangTimes = Object.values(schedule)
-        .map(friend => invertIntervals(friend.map(timePeriodToInterval)
-            .sort((interval1, interval2) => interval1[0] > interval2[0]),
-        [-bankTimeZone * 60, 72 * 60 - bankTimeZone * 60]
-        ));
+        .map(
+            friend =>
+                invertIntervals(
+                    mergeIntersectedIntervals(
+                        friend.map(timePeriodToInterval),
+                    ), [-bankTimeZone * 60, 72 * 60 - bankTimeZone * 60]
+                ));
 
     let count = 0;
     let timeToStart = null;
@@ -112,6 +115,7 @@ function getUTCTimeInMinutesForBank(timeString) {
 }
 
 function invertIntervals(intervals, domain) {
+    intervals = intervals.sort((interval1, interval2) => interval1[0] > interval2[0]);
     const inverted = [];
 
     const isFirst = i => i === 0 && intervals[i][0] > domain[0];
@@ -128,6 +132,20 @@ function invertIntervals(intervals, domain) {
     }
 
     return inverted;
+}
+
+function mergeIntersectedIntervals(intervals) {
+    const unique = [intervals[0]];
+    for (let i = 1; i < intervals.length; i++) {
+        const previous = unique[unique.length - 1];
+        if (intervals[i][0] < previous[1]) {
+            previous[1] = intervals[i][1];
+        } else {
+            unique.push(intervals[i]);
+        }
+    }
+
+    return unique;
 }
 
 function timePeriodToInterval(timePeriod) {
