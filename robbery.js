@@ -188,7 +188,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
     const candidates = intersectIntervals(congregateIntervals())
         .filter(interval => (interval.to - interval.from) >= duration)
-        .sort((a, b) => (a.from > b.from));
+        .sort((a, b) => (a.from - b.from));
     let firstCandidate = candidates[0];
 
     return {
@@ -215,11 +215,11 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             const time = firstCandidate.from;
             const day = weekEnum[Math.floor(time / MINUTES_IN_DAY)];
             let hour = Math.floor((time % MINUTES_IN_DAY) / 60);
-            if (hour === 0 || hour === 24) {
+            if (hour === 0) {
                 hour = '00';
-            } // hour = 24 and minute = 60 probably redundant
+            }
             let minute = (time % MINUTES_IN_DAY) % 60;
-            if (minute === 0 || minute === 60) {
+            if (minute === 0) {
                 minute = '00';
             }
             template = template.replace('%DD', day);
