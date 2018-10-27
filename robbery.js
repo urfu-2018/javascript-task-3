@@ -6,7 +6,7 @@
  */
 const isStar = true;
 
-const DAYS_OF_THE_WEEK = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
+const DAYS_OF_THE_WEEK = ['ПН', 'ВТ', 'СР'];
 const MINUTES_IN_HOUR = 60;
 const HOURS_IN_DAY = 24;
 
@@ -122,7 +122,7 @@ function findFreeIntervals(robberIntervals) {
     // Поиск всех свободных интервалов между занятыми интервалами
     let maxTo = robberIntervals[0].to;
     for (let i = 1; i < robberIntervals.length; i++) {
-        if (maxTo < robberIntervals[i].from) {
+        if (maxTo <= robberIntervals[i].from) {
             freeIntervals.push(createInterval(maxTo, robberIntervals[i].from));
         }
         maxTo = Math.max(maxTo, robberIntervals[i].to);
@@ -131,7 +131,7 @@ function findFreeIntervals(robberIntervals) {
     // Если в конце недели остаётся свободное время, добавить соответствующий интервал
     const END_OF_THE_WEEK = MINUTES_IN_HOUR * HOURS_IN_DAY * DAYS_OF_THE_WEEK.length - 1;
     if (maxTo < END_OF_THE_WEEK) {
-        freeIntervals.push(createInterval(maxTo + 1, END_OF_THE_WEEK));
+        freeIntervals.push(createInterval(maxTo, END_OF_THE_WEEK));
     }
 
     return freeIntervals;
@@ -184,7 +184,7 @@ function getBankWorkingInterval(bankWorkingHours) {
 function findOverlapsForWeek(freeIntervals, bankWorkingInterval) {
 
     let overlaps = [];
-    for (let i = 0; i < DAYS_OF_THE_WEEK.indexOf('ЧТ'); i++) {
+    for (let i = 0; i < DAYS_OF_THE_WEEK.length; i++) {
         const bankHoursToday = getBankHoursForDay(bankWorkingInterval, i);
         const overlapsToday = findOverlapsForDay(freeIntervals, bankHoursToday);
         overlaps = overlaps.concat(overlapsToday);
