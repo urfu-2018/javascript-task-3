@@ -103,6 +103,8 @@ function getWorkingHoursIntervals(workingHours) {
     });
 }
 
+// максимальное смещение часового пояса для добавления к timestamp'у, чтобы он не уходил в минус
+const TIMEZONE_UPPER_LIMIT = 12;
 const WEEK_DAYS = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
 const MINUTES_IN_HOUR = 60;
 const HOURS_IN_DAY = 24;
@@ -119,7 +121,7 @@ function getDateTimestamp(date) {
     const DAY_BEGINNING = WEEK_DAYS.indexOf(WEEK_DAY) * MINUTES_IN_DAY;
     const HOURS = Number(date.replace(/.*?\s0?(\d+).*/, '$1'));
     const MINUTES = Number(date.replace(/.*?:0?(\d+).*/, '$1'));
-    const TIMEZONE = getTimezone(date);
+    const TIMEZONE = TIMEZONE_UPPER_LIMIT - getTimezone(date);
 
     return DAY_BEGINNING + HOURS * MINUTES_IN_HOUR + MINUTES + TIMEZONE * MINUTES_IN_HOUR;
 }
@@ -294,7 +296,7 @@ function getRobberyMoments(intervals, duration, timezone) {
  * @returns {Object}
  */
 function getRobberyMomentData(timestamp, timezone) {
-    timestamp -= timezone * MINUTES_IN_HOUR;
+    timestamp -= (TIMEZONE_UPPER_LIMIT - timezone) * MINUTES_IN_HOUR;
     const WEEK_DAY = WEEK_DAYS[Math.floor(timestamp / MINUTES_IN_DAY)];
     timestamp -= WEEK_DAYS.indexOf(WEEK_DAY) * MINUTES_IN_DAY;
     const HOURS = Math.floor(timestamp / MINUTES_IN_HOUR);
