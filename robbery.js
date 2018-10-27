@@ -56,6 +56,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 minutes = '0' + minutes;
             }
 
+            if (hours.length <= 1) {
+                hours = '0' + hours;
+            }
 
             return template.replace('%HH', hours)
                 .replace('%MM', minutes)
