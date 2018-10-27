@@ -7,6 +7,8 @@
 const isStar = true;
 
 const TIMEZONE_START_INDEX = 6;
+const START_OF_DAY_IN_MINUTES = 0;
+const END_OF_DAY_IN_MINUTES = 1440;
 
 const DAYS = Object.freeze(
     {
@@ -22,6 +24,12 @@ const DAYS = Object.freeze(
         }
     });
 
+/**
+ * Приводим дату и время в формат банка.
+ * @param {String} strDateTime – Время и дата в строке
+ * @param {Number} bankTimeZone - Часовой пояс банка
+ * @returns {Object}
+ */
 function getNormilizedToBankTimezoneDT(strDateTime, bankTimeZone) {
     const day = strDateTime.split(' ')[0];
     const time = strDateTime.split(' ')[1];
@@ -67,6 +75,8 @@ function convertToMinutes(hours, minutes) {
     return hours * 60 + minutes;
 }
 
+// Методы определения пересечения занятого и свободного периода времени.
+
 function isOutOfBoundPeriod(convertedFrom, period, convertedTo) {
     return convertedFrom > period.toInMinutes ||
         convertedTo < period.fromInMinutes;
@@ -87,6 +97,7 @@ function isPeriodThroutBoundRight(convertedFrom, period, convertedTo) {
         convertedTo > period.toInMinutes;
 }
 
+
 function removeElementFromArray(arr, element) {
     const index = arr.indexOf(element);
     if (index > -1) {
@@ -95,7 +106,7 @@ function removeElementFromArray(arr, element) {
 }
 
 function isPeriodCorrect(period) {
-    return period.fromInMinutes > period.toInMinutes;
+    return period.fromInMinutes < period.toInMinutes;
 }
 
 function computeFreeTimeForPeriod(period, convertedFrom, convertedTo, currentDay) {
@@ -120,7 +131,7 @@ function computeFreeTimeForPeriod(period, convertedFrom, convertedTo, currentDay
         period.toInMinutes = convertedFrom;
     }
 
-    if (isPeriodCorrect(period)) {
+    if (!isPeriodCorrect(period)) {
         removeElementFromArray(currentDay, period);
     }
 }
@@ -152,6 +163,9 @@ function getBankWorkingPeriod(workingHours) {
 function getAppropriateMoment(schedule, duration, workingHours) {
     console.info(schedule, duration, workingHours);
 
+    const FOUND_ROBBERY_TIMES = [];
+    let CURRENT_ROBBERY_TIME_INDEX = 0;
+
     const bankWorkingPeriod = getBankWorkingPeriod(workingHours);
 
     let freeTimes = [];
@@ -163,6 +177,13 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         }];
     });
 
+    // В общем суть алгоритма в разбиении дня на учатски свободного времени.
+    // Мы пробегаем циклом по всем занятым участкам времени грабителей и
+    // по свободному времени. В зависимости от того,
+    // как пересекаются интервалы занятого и свободного времени,
+    // меняем итервалы свободного времени (сдвигаем или разбиваем их).
+    // Сохранив все интервалы, далее импользуем их для вычиления более позднего времени.
+
     Object.keys(schedule).forEach((robber) => {
         schedule[robber].forEach((busyDuration) => {
             const fromDT = getNormilizedToBankTimezoneDT(busyDuration.from,
@@ -170,51 +191,41 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             const toDT = getNormilizedToBankTimezoneDT(busyDuration.to,
                 parseInt(workingHours.from.substring(TIMEZONE_START_INDEX)));
 
+            let convertedFromFirstDay;
+            let convertedToFirstDay;
+
             if (fromDT.day !== toDT.day) {
-                const convertedFromFirstDay =
-                    convertToMinutes(fromDT.hours, fromDT.minutes);
-                const convertedToFirstDay = 1440;
-                const convertedFromSecondDay = 0;
-                const convertedToSecondDay =
-                    convertToMinutes(toDT.hours, toDT.minutes);
+                convertedFromFirstDay = convertToMinutes(fromDT.hours, fromDT.minutes);
+                convertedToFirstDay = END_OF_DAY_IN_MINUTES;
+                const convertedFromSecondDay = START_OF_DAY_IN_MINUTES;
+                const convertedToSecondDay = convertToMinutes(toDT.hours, toDT.minutes);
 
-
-                freeTimes[fromDT.day].forEach(
-                    (period) => {
-                        computeFreeTimeForPeriod(period,
-                            convertedFromFirstDay,
-                            convertedToFirstDay,
-                            freeTimes[fromDT.day]);
-                    }
-                );
                 freeTimes[toDT.day].forEach(
                     (period) => {
                         computeFreeTimeForPeriod(period,
                             convertedFromSecondDay,
                             convertedToSecondDay,
-                            freeTimes[fromDT.day]);
+                            freeTimes[toDT.day]);
                     }
                 );
+            } else {
+                convertedFromFirstDay = convertToMinutes(fromDT.hours, fromDT.minutes);
+                convertedToFirstDay = convertToMinutes(toDT.hours, toDT.minutes);
             }
-            if (fromDT.day === toDT.day) {
-                const convertedFrom = convertToMinutes(fromDT.hours, fromDT.minutes);
-                const convertedTo = convertToMinutes(toDT.hours, toDT.minutes);
 
-                freeTimes[fromDT.day].forEach(
-                    (period) => {
-                        computeFreeTimeForPeriod(period,
-                            convertedFrom,
-                            convertedTo,
-                            freeTimes[fromDT.day]);
-                    }
-                );
-            }
+            freeTimes[fromDT.day].forEach(
+                (period) => {
+                    computeFreeTimeForPeriod(period,
+                        convertedFromFirstDay,
+                        convertedToFirstDay,
+                        freeTimes[fromDT.day]);
+                }
+            );
         });
     });
 
-    const foundTimes = [];
     Object.keys(freeTimes).forEach((day) => {
-        foundTimes.push(...freeTimes[day]
+        FOUND_ROBBERY_TIMES.push(...freeTimes[day]
             .filter((period) => {
                 return period.toInMinutes - period.fromInMinutes >= duration;
             })
@@ -231,21 +242,6 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         );
     });
 
-    let CURRENT_ROBBERY_TIME_INDEX = 0;
-
-    console.info(foundTimes);
-
-    function calculateNextTime(CURRENT_ROBBERY_TIME) {
-        CURRENT_ROBBERY_TIME.remainingFreeTimeInMinutes -= 30;
-        const nextTimeMinutes = CURRENT_ROBBERY_TIME.from.MM + 30;
-        if (nextTimeMinutes >= 60) {
-            CURRENT_ROBBERY_TIME.from.HH += 1;
-            CURRENT_ROBBERY_TIME.from.MM = nextTimeMinutes - 60;
-        } else {
-            CURRENT_ROBBERY_TIME.from.MM = nextTimeMinutes;
-        }
-    }
-
     return {
 
         /**
@@ -253,7 +249,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            return foundTimes.length;
+            return FOUND_ROBBERY_TIMES.length;
         },
 
         /**
@@ -267,7 +263,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 return '';
             }
 
-            const firstFound = foundTimes[CURRENT_ROBBERY_TIME_INDEX].from;
+            const firstFound = FOUND_ROBBERY_TIMES[CURRENT_ROBBERY_TIME_INDEX].from;
 
             return template
                 .replace('%DD', firstFound.DD)
@@ -281,19 +277,29 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            for (let i = CURRENT_ROBBERY_TIME_INDEX; i < foundTimes.length; i++) {
+            function calculateNextTime(CURRENT_ROBBERY_TIME) {
+                CURRENT_ROBBERY_TIME.remainingFreeTimeInMinutes -= 30;
+                const nextTimeMinutes = CURRENT_ROBBERY_TIME.from.MM + 30;
+                if (nextTimeMinutes >= 60) {
+                    CURRENT_ROBBERY_TIME.from.HH += 1;
+                    CURRENT_ROBBERY_TIME.from.MM = nextTimeMinutes - 60;
+                } else {
+                    CURRENT_ROBBERY_TIME.from.MM = nextTimeMinutes;
+                }
+            }
+
+            for (let i = CURRENT_ROBBERY_TIME_INDEX; i < FOUND_ROBBERY_TIMES.length; i++) {
                 if (CURRENT_ROBBERY_TIME_INDEX !== i) {
                     CURRENT_ROBBERY_TIME_INDEX = i;
 
                     return true;
                 }
 
-                if (foundTimes[i].remainingFreeTimeInMinutes - 30 < duration) {
+                if (FOUND_ROBBERY_TIMES[i].remainingFreeTimeInMinutes - 30 < duration) {
                     continue;
                 }
 
-                calculateNextTime(foundTimes[i]);
-                console.info(i);
+                calculateNextTime(FOUND_ROBBERY_TIMES[i]);
 
                 CURRENT_ROBBERY_TIME_INDEX = i;
 
