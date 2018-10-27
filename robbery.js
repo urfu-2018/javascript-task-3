@@ -22,8 +22,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     const TARGET_TIME_ZONE = parseInt(workingHours.from.split('+')[1]);
 
     const weekEnum = Object.freeze({
-        'ПН': 0, 'ВТ': 1, 'СР': 2, 'ЧТ': 3, 'ПТ': 4, 'СБ': 5, 'ВС': 6,
-        0: 'ПН', 1: 'ВТ', 2: 'СР', 3: 'ЧТ', 4: 'ПТ', 5: 'СБ', 6: 'ВС'
+        'ПН': 0, 'ВТ': 1, 'СР': 2,
+        0: 'ПН', 1: 'ВТ', 2: 'СР'
     });
 
     /**
@@ -33,7 +33,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     function congregateIntervals() {
 
         /**
-         * По интервалу в форме ПН: 09:35+5 возвращает интервал в минутах и приписывает имя
+         * По интервалу в форме from: ПН: 09:35+5, to: 'ВТ: 14:59+5'
+         * возвращает интервал в минутах и приписывает имя
          * @param {Object} interval
          * @returns {Object}
          */
@@ -41,34 +42,29 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             // 'ПН 09:35+5' => [ПН, 09, 35, 5]
             const regex = /^(.{2}) (\d{2}):(\d{2})+.(\d)+$/g;
 
-            // Для интервалов без даты, полагаем что с нуля (нужно для банка).
-            if (!interval.from.includes(' ')) {
-                interval.from = 'ПН ' + interval.from;
+            /**
+             * Выполняет эту операцию для одной из двух частей.
+              * @param {String} time
+             * @returns {number}
+             */
+            function parseInterval(time) {
+
+                // Для интервалов без дня, полагаем что с нуля (нужно для банка).
+                if (!time.includes(' ')) {
+                    time = 'ПН ' + time;
+                }
+                const intervalParts = time.split(regex).filter(e => e.length > 0);
+                const dayFrom = weekEnum[time.split(' ')[0]] * MINUTES_IN_DAY;
+                const timeFrom = parseInt(intervalParts[1]) * 60 + parseInt(intervalParts[2]);
+                const timezoneShift = (TARGET_TIME_ZONE - parseInt(intervalParts[3])) * 60;
+
+                return dayFrom + timeFrom + timezoneShift;
             }
 
-            if (!interval.to.includes(' ')) {
-                interval.to = 'ПН ' + interval.to;
-            }
-
-            // Да, я и сам думаю как вот ближайшие 5 вещей не писать два раза
-            const intervalPartsFrom = interval.from.split(regex).filter(e => e.length > 0);
-            const intervalPartsTo = interval.to.split(regex).filter(e => e.length > 0);
-
-            const dayFrom = weekEnum[interval.from.split(' ')[0]] * MINUTES_IN_DAY;
-            const dayTo = weekEnum[interval.to.split(' ')[0]] * MINUTES_IN_DAY;
-
-            const timeFrom = parseInt(intervalPartsFrom[1]) * 60 + parseInt(intervalPartsFrom[2]);
-            const timeTo = parseInt(intervalPartsTo[1]) * 60 + parseInt(intervalPartsTo[2]);
-
-            const timezoneShift = (TARGET_TIME_ZONE - parseInt(intervalPartsFrom[3])) * 60;
-
-            return { from: dayFrom + timeFrom + timezoneShift,
-                to: dayTo + timeTo + timezoneShift };
+            return { from: parseInterval(interval.from), to: parseInterval(interval.to) };
         }
 
         let bankTimes = [];
-        let busyTimes = [];
-
         const transformed = transformInterval(workingHours);
         for (let i = 0; i < 3; i ++) { // формируем расписание банка (3: до среды)
             bankTimes.push({
@@ -77,6 +73,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             });
         }
 
+        let busyTimes = [];
         for (let data of Object.values(schedule)) { // читаем расписание грабителей
             for (let interval of data) {
                 busyTimes.push(transformInterval(interval));
@@ -95,7 +92,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     function intersectIntervals(fullSchedule) {
 
         /**
-         * Производит вычитание интервалов (а - b)
+         * Производит вычитание интервалов (a - b)
          * @param {Object} intervalA
          * @param {Object} intervalB
          * @returns {Object[]}
@@ -105,7 +102,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             /**
              * Определяет тип пересечения интервалов.
              * 0 - не пересекаются,
-             * 1 - пересекаются и а начинаентся раньше b
+             * 1 - пересекаются и a начинаентся раньше b
              * 2 - пересекаются и b начинается раньше а
              * 3 - пересекаются и a вложен в b
              * 4 - пересекаются и b вложен в a
@@ -116,7 +113,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             function getIntersectionType(a, b) {
 
                 /**
-                 * Проверяет, содержится ли интервал а в b.
+                 * Проверяет, содержится ли интервал a в b.
                  * @param {Object} c
                  * @param {Object} d
                  * @returns {boolean}
@@ -126,7 +123,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 }
 
                 /**
-                 * Эта функция проверяет, лежит ли число d между с1 и с2
+                 * Эта функция проверяет, лежит ли число d между c1 и c2
                  * Она здесь написана только потому, что я не знаю, как еще сократить complexity.
                  * @param {Number} c1
                  * @param {Number} d
@@ -218,11 +215,11 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             const time = firstCandidate.from;
             const day = weekEnum[Math.floor(time / MINUTES_IN_DAY)];
             let hour = Math.floor((time % MINUTES_IN_DAY) / 60);
-            if (hour === 0) {
+            if (hour === 0 || hour === 24) {
                 hour = '00';
-            }
+            } // hour = 24 and minute = 60 probably redundant
             let minute = (time % MINUTES_IN_DAY) % 60;
-            if (minute === 0) {
+            if (minute === 0 || minute === 60) {
                 minute = '00';
             }
             template = template.replace('%DD', day);
@@ -242,7 +239,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (firstCandidate.to - firstCandidate.from >= (30 + duration)) {
                 firstCandidate.from = firstCandidate.from + 30;
             } else {
-                firstCandidate = candidates.filter(e => e.from >= firstCandidate.from + 30)[0];
+                firstCandidate = candidates.filter(e => (e.from >= firstCandidate.from + 30))[0];
             }
             if (firstCandidate === undefined) {
                 firstCandidate = backup;
