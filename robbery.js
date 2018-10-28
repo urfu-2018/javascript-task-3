@@ -98,7 +98,9 @@ function invertIntervals(start, intervals, end) {
         intervals.push(end);
     }
 
-    return intervals.reduce((a, c, i) => a.concat(i % 2 ? [[intervals[i - 1], c]] : []), []);
+    return intervals
+        .reduce((a, c, i) => a.concat(i % 2 ? [[intervals[i - 1], c]] : []), [])
+        .filter(x => x[0] !== x[1]);
 }
 
 function scheduleToTimeIntervals(schedule) {
