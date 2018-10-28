@@ -64,8 +64,7 @@ function getGangFreeTimeIntervals(schedule) {
     };
 
     gangMembers.forEach(gangMember => {
-        freeIntervals[gangMember].push(...parseTimePoints(schedule[gangMember])
-            .sort((a, b) => a > b));
+        freeIntervals[gangMember].push(...parseTimePoints(schedule[gangMember]));
         freeIntervals[gangMember].push(endOfWeek);
         freeIntervals[gangMember] =
             combineTimePoints(fixTimeTable(freeIntervals[gangMember]));
