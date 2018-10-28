@@ -31,7 +31,12 @@ function convertToMinutes(str) {
     const hours = parseInt(hh) - parseInt(timezone);
     const minutes = parseInt(mm);
 
-    return minutesFromWeekStart + hours * 60 + minutes;
+    let result = minutesFromWeekStart + hours * 60 + minutes;
+    if (result < 0) {
+        return 0;
+    }
+
+    return result;
 }
 
 function parseTimePoints(schedule) {
@@ -67,10 +72,18 @@ function getGangFreeTimeIntervals(schedule) {
         freeIntervals[gangMember].push(...parseTimePoints(schedule[gangMember]));
         freeIntervals[gangMember].push(endOfWeek);
         freeIntervals[gangMember] =
-            combineTimePoints(freeIntervals[gangMember].sort((a, b) => a > b));
+            combineTimePoints(fixTimeTable(freeIntervals[gangMember]));
     });
 
     return freeIntervals;
+}
+
+function fixTimeTable(timePoints) {
+    if (timePoints[0] === 0 && timePoints[1] === 0) {
+        return timePoints.slice(1);
+    }
+
+    return timePoints;
 }
 
 function findAllIntersections(schedules, robbingDeadlines, workingHours, duration) {
