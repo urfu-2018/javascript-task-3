@@ -234,9 +234,16 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         .throwOutBusyTime(rustyTime)
         .throwOutBusyTime(linusTime);
 
-    const timeBankStartWorking = robberySchedule.timeIntervals[0].start;
     const firstRobberyInterval = robberySchedule
-        .getCorrectIntervalAfterMoment(timeBankStartWorking, duration);
+        .getCorrectIntervalAfterMoment(
+            createTime(
+                'ПН',
+                bankWorkingTimeFrom.hours,
+                bankWorkingTimeFrom.minutes,
+                bankWorkingTimeFrom.timezone
+            ),
+            duration
+        );
 
     return {
 
