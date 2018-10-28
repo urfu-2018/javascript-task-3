@@ -27,7 +27,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     const bankTimeZone = getTimezone(workingHours.from);
     const bankSchedule = getBankSchedule(getBankScheduleInDatestamp(workingHours));
     const robberSchedule = getRobberSchedule(schedule, bankTimeZone);
-    const timeRangesToRobbery = getTimeToRobbery (robberSchedule, bankSchedule, duration);
+    let timeRangesToRobbery = getTimeToRobbery (robberSchedule, bankSchedule, duration);
+    timeRangesToRobbery.sort((a, b) => a.from - b.from);
 
     return {
 
@@ -65,7 +66,22 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            return false;
+            if (!this.exists()) {
+                return false;
+            }
+            const current = timeRangesToRobbery[0];
+            if (current.to - current.from - 30 >= duration) {
+                current.from = current.from + 30;
+
+                return true;
+            }
+
+            if (timeRangesToRobbery.length === 1) {
+                return false;
+            }
+            timeRangesToRobbery.shift();
+
+            return true;
         }
     };
 }
@@ -126,24 +142,35 @@ function getBankScheduleInDatestamp(workingHours) {
 }
 
 function getBankSchedule(schedule) {
+    const minutesSchedule = [];
+
     schedule.forEach(timeRange => {
-        timeRange.from = datestampToMinutes(timeRange.from);
-        timeRange.to = datestampToMinutes(timeRange.to);
+        const from = datestampToMinutes(timeRange.from);
+        const to = datestampToMinutes(timeRange.to);
+        minutesSchedule.push({ 'from': from, 'to': to });
     });
 
-    return schedule;
+    return minutesSchedule;
 }
 
 function getRobberSchedule(schedule, bankTimeZone) {
+    const minutesSchedule = {
+        Danny: [],
+        Rusty: [],
+        Linus: []
+    };
     Object.keys(schedule).forEach(robberSchedule => {
         schedule[robberSchedule].forEach(timeRange => {
-            timeRange.from = robberDatestampToMinutes(bankTimeZone, timeRange.from);
-            timeRange.to = robberDatestampToMinutes(bankTimeZone, timeRange.to);
+
+            minutesSchedule[robberSchedule].push(
+                { from: robberDatestampToMinutes(bankTimeZone, timeRange.from),
+                    to: robberDatestampToMinutes(bankTimeZone, timeRange.to)
+                });
         });
-        getFreeTime(schedule[robberSchedule]);
+        getFreeTime(minutesSchedule[robberSchedule]);
     });
 
-    return schedule;
+    return minutesSchedule;
 }
 
 function getFreeTime(robberSchedule) {
