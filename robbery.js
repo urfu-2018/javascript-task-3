@@ -40,13 +40,8 @@ class RobberyDate {
     }
 
     addMinutes(minutes) {
-        // console.info('addMinutes');
-        // console.info(this.time);
-        // console.info(this.timeInMinutes);
         this.timeInMinutes += minutes;
-        // console.info(this.timeInMinutes);
         this.setTime();
-        // console.info(this.time);
     }
 
     setTime() {
@@ -76,7 +71,8 @@ class RobberyDate {
 
     toString(template) {
         return template.replace(/%DD/, this.weekday)
-            .replace(/%HH:%MM/, this.time);
+            .replace(/%HH/, this.time.slice(0,2))
+            .replace(/%MM/, this.time.slice(3));
     }
 }
 
@@ -96,7 +92,6 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     let robsSchedule = getFreeSchedule(schedule, bankTimeZone);
     let workingTime = [new DateRange(new RobberyDate(`ПН 00:00+${bankTimeZone}`, bankTimeZone),
         new RobberyDate(`СР 23:59+${bankTimeZone}`, bankTimeZone))];
-    console.info(workingTime);
     let robTime = getSchedulesIntersection(workingTime, bankWorkingHours, duration);
     let schedulesIntersection = getAllSchedulesIntersection(robTime, robsSchedule, duration);
 
@@ -162,7 +157,6 @@ function getFreeSchedule(schedule, bankTimeZone) {
         }
         robsSchedule[name] = getFreeTimes(fullSchedule[name], bankTimeZone);
     }
-
     return robsSchedule;
 }
 
