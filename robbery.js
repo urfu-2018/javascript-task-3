@@ -26,10 +26,10 @@ function getMinutesFromWeekStart(day) {
 }
 
 function convertToMinutes(str) {
-    let [dayOfWeek, hh, mm, timezone] = /([А-Я]{2}) (\d\d):(\d\d)\+(\d)/.exec(str).slice(1);
-    let minutesFromWeekStart = getMinutesFromWeekStart(dayOfWeek);
-    let hours = parseInt(hh) - parseInt(timezone);
-    let minutes = parseInt(mm);
+    const [dayOfWeek, hh, mm, timezone] = /([А-Я]{2}) (\d\d):(\d\d)\+(\d)/.exec(str).slice(1);
+    const minutesFromWeekStart = getMinutesFromWeekStart(dayOfWeek);
+    const hours = parseInt(hh) - parseInt(timezone);
+    const minutes = parseInt(mm);
 
     return minutesFromWeekStart + hours * 60 + minutes;
 }
@@ -66,7 +66,8 @@ function getGangFreeTimeIntervals(schedule) {
     gangMembers.forEach(gangMember => {
         freeIntervals[gangMember].push(...parseTimePoints(schedule[gangMember]));
         freeIntervals[gangMember].push(endOfWeek);
-        freeIntervals[gangMember] = combineTimePoints(freeIntervals[gangMember]);
+        freeIntervals[gangMember] =
+            combineTimePoints(freeIntervals[gangMember].sort((a, b) => a > b));
     });
 
     return freeIntervals;
