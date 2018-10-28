@@ -4,9 +4,18 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = true;
+const isStar = false;
 const DAYS_KEYS= { 'ПН': 0, 'ВТ': 1, 'СР': 2, 'ЧТ': 3, 'ПТ': 4, 'СБ': 5, 'ВС': 6 };
 const NUMBER_KEYS = { 0: 'ПН', 1: 'ВТ', 2: 'СР', 3: 'ЧТ', 4: 'ПТ', 5: 'СБ', 6: 'ВС' };
+
+function clone(obj) {
+    if (null == obj || "object" != typeof obj) return obj;
+    var copy = obj.constructor();
+    for (var attr in obj) {
+        if (obj.hasOwnProperty(attr)) copy[attr] = obj[attr];
+    }
+    return copy;
+}
 
 function getDeltaTime(str) {
     return parseInt(str.match(/[+]\d+/).toString().substr(1));
@@ -52,7 +61,7 @@ function caseMinusDeltaTime(time, day, delta) {
 }
 
 function convertTimeZone(manSchedule, bankTimeDelta) {
-    const deltaMan = getDeltaTime(manSchedule[0].from);
+    let deltaMan = getDeltaTime(manSchedule[0].from);
     if (deltaMan == bankTimeDelta) {
         for (let i = 0; i < manSchedule.length; i++) {
             let fromStr = manSchedule[i].from;
@@ -84,14 +93,34 @@ function convertTimeZone(manSchedule, bankTimeDelta) {
     }
 }
 
+function convertOccupiedSchedule(scheduleMan) {
+    for (let i = 0; i < scheduleMan.length; i++) {
+        let fromStr = scheduleMan[i].from;
+        let toStr = scheduleMan[i].to;
+        let fromDay = getDayFromStr(fromStr);
+        let toDay = getDayFromStr(toStr);
+        let fromHour = getHoursFromStr(fromStr);
+        let toHour = getHoursFromStr(toStr);
+        let fromMinutes = getMinutesFromStr(fromStr);
+        let toMinutes = getMinutesFromStr(toStr);
+        let fromTime = fromHour*60 + fromMinutes;
+        let toTime = toHour*60 + toMinutes;
+        scheduleMan[i].from = fromDay + ' ' + fromTime;
+        scheduleMan[i].to = toDay + ' ' + toTime;
+    }
+    return scheduleMan;
+}
+
 function findRoberyTime(schedule, duration, workingHours) {
     const bankTimeDelta = getDeltaTime(workingHours.from);
-    /*console.info(convertTimeZone(schedule.Danny, bankTimeDelta));
-    console.info(convertTimeZone(schedule.Rusty, bankTimeDelta));
-    console.info(convertTimeZone(schedule.Linus, bankTimeDelta));*/
     schedule.Danny = convertTimeZone(schedule.Danny, bankTimeDelta);
     schedule.Rusty = convertTimeZone(schedule.Rusty, bankTimeDelta);
     schedule.Linus = convertTimeZone(schedule.Linus, bankTimeDelta);
+    let kek = clone(schedule);
+    kek.Danny = convertOccupiedSchedule(schedule.Danny);
+    kek.Rusty = convertOccupiedSchedule(schedule.Rusty);
+    kek.Linus = convertOccupiedSchedule(schedule.Linus);
+    console.info(kek);
 }
 /**
  * @param {Object} schedule – Расписание Банды
@@ -102,8 +131,9 @@ function findRoberyTime(schedule, duration, workingHours) {
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    //console.info(schedule, duration, workingHours);
-    findRoberyTime(schedule, duration, workingHours);
+    console.info(schedule, duration, workingHours);
+    let kek = clone(schedule);
+    findRoberyTime(kek, duration, workingHours);
     return {
         /**
          * Найдено ли время
