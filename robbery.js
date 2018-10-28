@@ -146,6 +146,7 @@ function getMoment(busyDates, duration, workingHoursInMinute) {
         let workingTime = [workingHoursInMinute[0] + index * minutesInDay,
             workingHoursInMinute[1] + index * minutesInDay];
         busyDates = removePreviouslyDates(busyDates, workingTime[0]);
+        console.info('следующий день        ' + workingTime);
         resultTo = getGoodTiming(busyDates, duration, workingTime);
         if (typeof resultTo !== 'undefined') {
             return {
@@ -174,6 +175,7 @@ function getGoodTiming(busyDates, duration, workingTime) {
     while (from <= workingTime[1]) {
         let sector = [from, from + duration];
         let result = mergeIntersections(busyDates, sector, workingTime, duration);
+        busyDates = hasNewDates(result.busyDates, busyDates);
         if (result.sector[1] + duration > workingTime[1] && !result.hasGoodTiming) {
             break;
         }
@@ -186,9 +188,25 @@ function getGoodTiming(busyDates, duration, workingTime) {
     }
 }
 
+function hasNewDates(newDates, busyDates) {
+    if (typeof newDates !== 'undefined') {
+        return newDates;
+    }
+
+    return busyDates;
+}
+
+function canDelete(hasIntersect, dateTo, nextStart) {
+    if (hasIntersect && dateTo < nextStart) {
+        return true;
+    }
+
+    return false;
+}
+
 function mergeIntersections(busyDates, sector, workingTime, duration) {
     let hasGoodTiming = true;
-    let countShift = 0;
+    let intersectsIndex = new Map();
     for (let element of busyDates) {
         let result = hasIntersections(sector, element);
         sector = result.sector;
@@ -198,17 +216,18 @@ function mergeIntersections(busyDates, sector, workingTime, duration) {
                 hasGoodTiming: false
             };
         }
+        if (canDelete(result.hasIntersect, sector[1], workingTime[0] + minutesInDay)) {
+            intersectsIndex.set(busyDates.indexOf(element), element);
+            hasGoodTiming = false;
+        }
         if (!result.hasIntersect) {
-            busyDates = shiftElements(busyDates, countShift);
+            busyDates = removeIntersects(intersectsIndex, busyDates);
 
             return {
                 sector: sector,
-                hasGoodTiming: hasGoodTiming
+                hasGoodTiming: hasGoodTiming,
+                busyDates: busyDates
             };
-        }
-        if (sector[1] < workingTime[0] + minutesInDay) {
-            hasGoodTiming = false;
-            countShift++;
         }
     }
 
@@ -218,13 +237,27 @@ function mergeIntersections(busyDates, sector, workingTime, duration) {
     };
 }
 
-function shiftElements(busyDates, countShift) {
-    while (countShift !== 0) {
-        busyDates.shift();
-        countShift--;
+function removeIntersects(intersectsIndex, busyDates) {
+    let result = [];
+    console.info(intersectsIndex);
+    for (let element of busyDates) {
+        if (!isEqually(element, intersectsIndex)) {
+            result.push(element);
+        }
+    }
+    console.info(result);
+
+    return result;
+}
+
+function isEqually(element, intersectsIndex) {
+    for (let element2 of intersectsIndex) {
+        if (element[0] === element2[1][0] && element[1] === element2[1][1]) {
+            return true;
+        }
     }
 
-    return busyDates;
+    return false;
 }
 
 function hasIntersections(element, element2) {
