@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = true;
+const isStar = false;
 const days = ['ПН', 'ВТ', 'СР', 'ЧТ'];
 
 function dataSort(date1, date2) {
