@@ -22,7 +22,7 @@ const START_OF_WEEK = dateFactory(DAYS_OF_WEEK[0], 0, 0);
 const END_OF_WEEK = dateFactory(DAYS_OF_WEEK[DAYS_OF_WEEK.length - 1], 23, 59);
 const ROBBERY_TIME_INTERVAL = intervalFactory(
     dateFactory('ПН', 0, 0),
-    dateFactory('СР', 23, 59)
+    dateFactory('ЧТ', 0, 0)
 );
 
 function timeFactory(hours, minutes, zone) {
