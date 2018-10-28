@@ -29,13 +29,15 @@ class Time {
     }
 
     getTime() {
-        const day = Math.trunc(this.minutes / (24 * 60));
-        const hours = Math.trunc(this.minutes / 60) - day * 24;
-        const minutes = this.minutes % 60;
+        const minutesInTimezone = this.minutes + this.timezone * 60;
+
+        const day = Math.trunc(minutesInTimezone / (24 * 60));
+        const hours = Math.trunc(minutesInTimezone / 60) - day * 24;
+        const minutes = minutesInTimezone % 60;
 
         return {
             day: days[day % 7],
-            hours: hours + this.timezone,
+            hours: hours,
             minutes: minutes,
             timezone: this.timezone
         };
