@@ -139,23 +139,19 @@ function findGoodIntervals(schedule, workingHours) {
         { from: 'ВТ ' + workingHours.from, to: 'ВТ ' + workingHours.to },
         { from: 'СР ' + workingHours.from, to: 'СР ' + workingHours.to }
     ];
-    const minTime = 'ПН ' + workingHours.from;
-    const maxTime = 'СР ' + workingHours.to;
+    const minTime = dateToTicks('ПН ' + workingHours.from);
+    const maxTime = dateToTicks('СР ' + workingHours.to);
 
     return invertIntervals(
-        dateToTicks(minTime),
+        minTime,
         unionOfIntervals(
-            invertIntervals(
-                dateToTicks(minTime),
-                scheduleToTimeIntervals(bankSchedule),
-                dateToTicks(maxTime)
-            ).concat(
+            invertIntervals(minTime, scheduleToTimeIntervals(bankSchedule), maxTime).concat(
                 scheduleToTimeIntervals(
                     schedule.Danny.concat(schedule.Rusty).concat(schedule.Linus)
-                )
+                ).filter(x => x[0] < maxTime)
             )
         ),
-        dateToTicks(maxTime)
+        maxTime
     );
 }
 
