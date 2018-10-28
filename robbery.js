@@ -129,6 +129,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
+            if (schedulesIntersection === null) {
+                return false;
+            }
             for (let i = momentIndex; i < schedulesIntersection.length; i++) {
                 if (momentIndex === i) {
                     schedulesIntersection[i].from.addMinutes(30);
