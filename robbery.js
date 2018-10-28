@@ -9,7 +9,7 @@ const days = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
 const gangMembers = ['Danny', 'Rusty', 'Linus'];
 const dayDurationInMinutes = 24 * 60;
 let startOfWeek;
-const endOfWeek = dayDurationInMinutes * 7 - 1;
+let endOfWeek;
 let robbingSchedule;
 
 function getRobbingSchedule(bankTimeZone) {
@@ -114,7 +114,7 @@ function findIntersections(scheduleOne, scheduleTwo, duration) {
 }
 
 function getMomentsIntersection(dateOne, dateTwo, duration) {
-    if (dateOne.to < dateTwo.from || dateOne.from > dateTwo.to) {
+    if (dateOne.to <= dateTwo.from || dateOne.from >= dateTwo.to) {
         return null;
     }
 
@@ -171,6 +171,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     console.info(schedule, duration, workingHours);
     const bankTimezone = parseInt(workingHours.from.slice(6));
     startOfWeek = -bankTimezone * 60;
+    endOfWeek = dayDurationInMinutes * 7 - bankTimezone * 60;
     robbingSchedule = getRobbingSchedule(bankTimezone);
 
     const gangSchedule = getGangFreeTimeIntervals(schedule);
