@@ -26,14 +26,27 @@ function getMinutesFromStr(str) {
     return parseInt(minute.substr(1));
 }
 
-function caseMinusDeltaTime(time, day, delta) {
+function casePlusDeltaTime(time, day, delta) {
     if (time + delta >= 24) {
         time = time + delta - 24;
         let temp = DAYS_KEYS[day];
-        temp++;
+        temp = (temp == 6) ? 0 : temp++;
         day = NUMBER_KEYS[temp];
     } else {
         time = time + delta;
+    }
+    return day + " " + time;
+}
+
+function caseMinusDeltaTime(time, day, delta) {
+    if (time - delta < 0) {
+        let kek = delta - time;
+        time = 24 - kek;
+        let temp = DAYS_KEYS[day];
+        temp = (temp == 0) ? 6 : temp--;
+        day = NUMBER_KEYS[temp];
+    } else {
+        time = time - delta;
     }
     return day + " " + time;
 }
@@ -45,6 +58,22 @@ function convertTimeZone(manSchedule, bankTimeDelta) {
     }
     if (deltaMan < bankTimeDelta) {
         let delta = bankTimeDelta - deltaMan;
+        for (let i = 0; i < manSchedule.length; i++) {
+            let fromStr = manSchedule[i].from;
+            let toStr = manSchedule[i].to;
+            let fromTime = getHoursFromStr(fromStr);
+            let toTime = getHoursFromStr(toStr);
+            let fromDay = getDayFromStr(fromStr);
+            let toDay = getDayFromStr(toStr);
+            let fromMinutes = getMinutesFromStr(fromStr);
+            let toMinutes = getMinutesFromStr(toStr);
+            manSchedule[i].from = casePlusDeltaTime(fromTime, fromDay, delta) + ':' + fromMinutes + '+' + bankTimeDelta;
+            manSchedule[i].to = casePlusDeltaTime(toTime, toDay, delta) + ':' + toMinutes + '+' + bankTimeDelta;
+        }
+        return manSchedule;
+    }
+    if (deltaMan > bankTimeDelta) {
+        let delta = deltaMan - bankTimeDelta;
         for (let i = 0; i < manSchedule.length; i++) {
             let fromStr = manSchedule[i].from;
             let toStr = manSchedule[i].to;
