@@ -19,7 +19,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
     const MINUTES_IN_DAY = 60 * 24;
 
-    const TARGET_TIME_ZONE = parseInt(workingHours.from.split('+')[1]) || 0;
+    const TARGET_TIME_ZONE = parseInt(workingHours.from.split('+')[1]);
 
     const weekEnum = Object.freeze({
         'ПН': 0, 'ВТ': 1, 'СР': 2,
@@ -92,7 +92,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     function intersectIntervals(fullSchedule) {
 
         /**
-         * Производит вычитание интервалов (a - b)
+         * Возвращает множество интервалов, содержащихся в A, но не содержащихся в B
          * @param {Object} intervalA
          * @param {Object} intervalB
          * @returns {Object[]}
@@ -120,26 +120,26 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 return a1 <= b && a2 >= b;
             }
 
-            if (contains(intervalB, intervalA)) { // или равны
+            if (contains(intervalA, intervalB)) { // или равны
+                return [];
+            }
+            if (contains(intervalB, intervalA)) {
                 return [{
                     from: intervalA.from,
                     to: intervalB.from }, {
                     from: intervalB.to,
                     to: intervalA.to }];
             }
-            if (contains(intervalA, intervalB)) {
-                return [];
-            }
             if (liesInBetween(intervalA.from, intervalB.to, intervalA.to)) {
                 return [{
-                    from: Math.min(intervalA.to, intervalB.to),
-                    to: Math.max(intervalA.to, intervalB.to)
+                    from: intervalB.to,
+                    to: intervalA.to
                 }];
             }
             if (liesInBetween(intervalA.from, intervalB.from, intervalA.to)) {
                 return [{
-                    from: Math.min(intervalA.from, intervalB.from),
-                    to: Math.max(intervalA.from, intervalB.from)
+                    from: intervalA.from,
+                    to: intervalB.from
                 }];
             }
 
