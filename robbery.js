@@ -104,7 +104,7 @@ function initializeBankTime(workingHours) {
 
 function takeAppropriateMoment(allReadyMoment, duration) {
     let begin = allReadyMoment.begin;
-    if (getDay(begin) > 3) {
+    if (getDay(begin) >= 3) {
         return;
     }
     let end = allReadyMoment.end;
