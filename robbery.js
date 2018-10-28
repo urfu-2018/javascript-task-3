@@ -75,7 +75,11 @@ function getGangFreeTimeIntervals(schedule) {
 
 function fixTimeTable(timePoints) {
     if (timePoints[1] <= startOfWeek) {
-        return timePoints.slice(2);
+        timePoints = timePoints.slice(2);
+    }
+
+    if (timePoints[timePoints.length - 2] >= endOfWeek) {
+        timePoints = timePoints.slice(0, timePoints.length - 2);
     }
 
     return timePoints;
