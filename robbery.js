@@ -108,7 +108,9 @@ function takeAppropriateMoment(allReadyMoment, duration) {
         return;
     }
     let end = allReadyMoment.end;
-    if (inBankTime(begin) || inBankTime(end)) {
+    let afterBankOpen = (begin % minuteInDay > bankClose && end % minuteInDay > bankClose);
+    let beforeBankOpen = (begin % minuteInDay < bankOpen && end % minuteInDay < bankOpen);
+    if (!afterBankOpen && !beforeBankOpen) {
         return takeBankCorrectMoment(begin, end, duration);
     }
 }
@@ -126,10 +128,6 @@ function findAppropriateMoments(schedule, duration, workingHours) {
     }
 
     return result;
-}
-
-function inBankTime(time) {
-    return (time % minuteInDay >= bankOpen && time % minuteInDay <= bankClose);
 }
 
 function createTimeSpansForGangster(gangsterSchedule, gangster) {
@@ -198,16 +196,16 @@ function findAllReadyMoments(gangstersTimeSpans) {
     let result = [];
     gangstersTimeSpans.forEach(t => {
         let key = t.do;
-        if (key[0] === '-') {
-            set.add(key.substring(1));
-            if (set.size === 3) {
-                beginMoment = t.minute;
-            }
-        } else {
-            if (set.size === 3) {
+        if (key[0] === '+') {
+            if (set.size === 0) {
                 result = result.concat(addPossibleAppropriateMoment(beginMoment, t.minute));
             }
+            set.add(key.substring(1));
+        } else {
             set.delete(key.substring(1));
+            if (set.size === 0) {
+                beginMoment = t.minute;
+            }
         }
     });
 
