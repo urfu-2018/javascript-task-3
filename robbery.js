@@ -132,17 +132,22 @@ function getUTCTimeInMinutesForBank(timeString) {
 
 function invertIntervals(intervals, domain) {
     intervals = intervals.sort((interval1, interval2) => interval1[0] > interval2[0]);
+    if (intervals.length === 0) {
+        return [domain];
+    }
+
     const inverted = [];
 
     const isFirst = i => i === 0 && intervals[i][0] > domain[0];
     const isLast = i => i === intervals.length && intervals[i - 1][1] < domain[1];
+    const isMiddle = i => i > 0 && i < intervals.length;
 
     for (let i = 0; i <= intervals.length; i++) {
         if (isLast(i)) {
             inverted.push([intervals[i - 1][1], domain[1]]);
         } else if (isFirst(i)) {
             inverted.push([domain[0], intervals[i][0]]);
-        } else if (i > 0 && i < intervals.length) {
+        } else if (isMiddle(i)) {
             inverted.push([intervals[i - 1][1], intervals[i][0]]);
         }
     }
@@ -151,6 +156,10 @@ function invertIntervals(intervals, domain) {
 }
 
 function mergeIntersectedIntervals(intervals) {
+    if (intervals.length === 0) {
+        return [];
+    }
+
     const unique = [intervals[0]];
     for (let i = 1; i < intervals.length; i++) {
         const previous = unique[unique.length - 1];
