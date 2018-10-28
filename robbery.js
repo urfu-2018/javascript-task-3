@@ -45,9 +45,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 return '';
             }
             const segment = robberySegments[curSegment];
-            template = template.replace('%DD', getDay(segment.from));
-            template = template.replace('%HH', getHour(segment.from));
-            template = template.replace('%MM', getMinutes(segment.from));
+            template = template.replace(/%DD/, getDay(segment.from));
+            template = template.replace(/%HH/, getHour(segment.from));
+            template = template.replace(/%MM/, getMinutes(segment.from));
 
             return template;
         },
@@ -114,7 +114,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
     function getScheduleSegments() {
         let result = [];
-        const bankTimeZone = parseInt(workingHours.from.substr(6, 1));
+        const bankTimeZone = parseInt(workingHours.from.match(/\+\d{1,2}/)[0].substring(1));
         const daysNumbers = { 'ПН': 0, 'ВТ': 1, 'СР': 2 };
         for (let friend in schedule) {
             if (schedule.hasOwnProperty(friend)) {
@@ -129,7 +129,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
         function getTimeInMinutes(time) {
             const dayNumber = daysNumbers[time.substr(0, 2)];
-            const timeZone = bankTimeZone - parseInt(time.substr(9, 1));
+            const timeZone = bankTimeZone - parseInt(time.match(/\+\d{1,2}/)[0].substring(1));
             const hours = parseInt(time.substr(3, 2));
             const minutes = parseInt(time.substr(6, 2));
 
