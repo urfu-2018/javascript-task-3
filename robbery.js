@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = true;
+const isStar = false;
 
 /**
  * @param {Object} schedule – Расписание Банды
@@ -15,7 +15,8 @@ const isStar = true;
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    console.info(schedule, duration, workingHours);
+    const bankTimeZone = parseInt(workingHours.from.split('+')[1]);
+    const result = findRoberyTime(schedule, duration, workingHours);
 
     return {
 
@@ -24,7 +25,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            return false;
+            return Boolean(result);
         },
 
         /**
@@ -34,7 +35,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            return template;
+            return ticksToDate(result, template, bankTimeZone);
         },
 
         /**
@@ -48,8 +49,128 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     };
 }
 
+const weekToNum = { ПН: 1, ВТ: 2, СР: 3, ЧТ: 4, ПТ: 5, СБ: 6, ВС: 7 };
+
+/**
+ * @param {String} date – Дата, например, "ПН 12:00+5"
+ * @returns {Date}
+ */
+function dateToTicks(date) {
+    const [week, time] = date.split(' ');
+
+    return Date.parse(`2018 10 ${weekToNum[week]} ${time}`);
+}
+
+/**
+ * @param {[]} intervals
+ * @returns {[]}
+ */
+function unionOfIntervals(intervals) {
+    intervals = intervals.sort((x, y) => x[0] > y[0]);
+    const result = [intervals[0]];
+    for (let interval of intervals.slice(1)) {
+        if (result[result.length - 1][1] < interval[0]) {
+            result.push(interval);
+        } else if (result[result.length - 1][1] < interval[1]) {
+            result[result.length - 1][1] = interval[1];
+        }
+    }
+
+    return result;
+}
+
+/**
+ * @param {int} start
+ * @param {[]} intervals
+ * @param {int} end
+ * @returns {[]}
+ */
+function invertIntervals(start, intervals, end) {
+    intervals = intervals.sort((x, y) => x[0] > y[0]).reduce((a, b) => a.concat(b), []);
+    if (intervals[0] === start) {
+        intervals.shift();
+    } else {
+        intervals.unshift(start);
+    }
+    if (intervals.slice(-1) === end) {
+        intervals.pop();
+    } else {
+        intervals.push(end);
+    }
+
+    return intervals.reduce((a, c, i) => a.concat(i % 2 ? [[intervals[i - 1], c]] : []), []);
+}
+
+function scheduleToTimeIntervals(schedule) {
+    const result = [];
+    for (let interval of schedule) {
+        result.push([dateToTicks(interval.from), dateToTicks(interval.to)]);
+    }
+
+    return result;
+}
+
+const numToWeek = { 1: 'ПН', 2: 'ВТ', 3: 'СР', 4: 'ЧТ', 5: 'ПТ', 6: 'СБ', 7: 'ВС' };
+
+function ticksToDate(ticks, format, timeZone) {
+    if (!ticks) {
+        return '';
+    }
+    const date = new Date(ticks + timeZone * 3600 * 1000);
+    let hours = date.getUTCHours();
+    let minutes = date.getUTCMinutes();
+    if (hours < 10) {
+        hours = '0' + hours;
+    }
+    if (minutes < 10) {
+        minutes = '0' + minutes;
+    }
+    const week = numToWeek[date.getUTCDay()];
+
+    return format
+        .replace('%DD', week)
+        .replace('%HH', hours)
+        .replace('%MM', minutes);
+}
+
+function findGoodIntervals(schedule, workingHours) {
+    const bankSchedule = [
+        { from: 'ПН ' + workingHours.from, to: 'ПН ' + workingHours.to },
+        { from: 'ВТ ' + workingHours.from, to: 'ВТ ' + workingHours.to },
+        { from: 'СР ' + workingHours.from, to: 'СР ' + workingHours.to }
+    ];
+    const minTime = 'ПН ' + workingHours.from;
+    const maxTime = 'СР ' + workingHours.to;
+
+    return invertIntervals(
+        dateToTicks(minTime),
+        unionOfIntervals(
+            invertIntervals(
+                dateToTicks(minTime),
+                scheduleToTimeIntervals(bankSchedule),
+                dateToTicks(maxTime)
+            ).concat(
+                scheduleToTimeIntervals(
+                    schedule.Danny.concat(schedule.Rusty).concat(schedule.Linus)
+                )
+            )
+        ),
+        dateToTicks(maxTime)
+    );
+}
+
+function findRoberyTime(schedule, duration, workingHours) {
+    const durationTicks = new Date(new Date(0).setMinutes(duration));
+    for (let interval of findGoodIntervals(schedule, workingHours)) {
+        if (interval[1] - interval[0] >= durationTicks) {
+            return interval[0];
+        }
+    }
+
+    return null;
+}
+
 module.exports = {
     getAppropriateMoment,
-
     isStar
 };
