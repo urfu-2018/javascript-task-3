@@ -11,7 +11,6 @@ const WORKING_DAYS = ['ПН', 'ВТ', 'СР'];
 const MINUTES_IN_HOUR = 60;
 const MINUTES_IN_DAY = 24 * MINUTES_IN_HOUR;
 const [CLOSED, OPENED] = [0, 1];
-const [FIRST_MOMENT, LAST_MOMENT] = [0, 7 * MINUTES_IN_DAY];
 const EXTRA_TIME = 30;
 
 function parseTime(timeString) {
@@ -43,13 +42,13 @@ function extractTimezone(fullTime) {
     return parseInt(fullTime.split('+')[1]);
 }
 
-function getRobbersEvents(schedule) {
+function getRobbersEvents(schedule, firstMoment, lastMoment) {
     let result = [];
     for (const robberSchedule of Object.values(schedule)) {
         result = result.concat(getEvents(robberSchedule, true));
         result = result.concat([
-            [FIRST_MOMENT, OPENED],
-            [LAST_MOMENT, CLOSED]
+            [firstMoment, OPENED],
+            [lastMoment, CLOSED]
         ]);
     }
 
@@ -85,10 +84,15 @@ function getRobberyIntervals(events, duration, requiredCnt) {
     return result;
 }
 
-function prepareEvents(schedule, workingHours) {
-    let events = getRobbersEvents(schedule).concat(getBankEvents(workingHours));
+function prepareEvents(schedule, workingHours, firstMoment, lastMoment) {
+    let events = getRobbersEvents(schedule, firstMoment, lastMoment)
+        .concat(getBankEvents(workingHours));
     events.sort((a, b) => {
-        return a[0] - b[0];
+        if (a[0] - b[0] !== 0) {
+            return a[0] - b[0];
+        }
+
+        return b[1] - a[1];
     });
 
     return events;
@@ -110,8 +114,10 @@ function pad(x, length) {
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
     console.info(schedule, duration, workingHours);
-    const events = prepareEvents(schedule, workingHours);
     const timezone = extractTimezone(workingHours.to);
+    const startTime = parseTime('ПН 00:00+' + timezone);
+    const endTime = parseTime('ВС 23:59+' + timezone);
+    const events = prepareEvents(schedule, workingHours, startTime, endTime);
     let intervals = getRobberyIntervals(events, duration, 4);
 
     return {
@@ -152,20 +158,17 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            if (intervals.length === 0) {
-                return false;
-            }
-            if (intervals[0][1] - intervals[0][0] >= EXTRA_TIME + duration) {
-                intervals[0][0] += EXTRA_TIME;
+            const newStart = intervals[0][0] + EXTRA_TIME;
+            for (let i = 0; i < intervals.length; i++) {
+                if (intervals[i][1] - Math.max(newStart, intervals[i][0]) >= duration) {
+                    intervals = intervals.slice(i);
+                    intervals[0][0] = Math.max(newStart, intervals[0][0]);
 
-                return true;
+                    return true;
+                }
             }
-            if (intervals.length === 1) {
-                return false;
-            }
-            intervals = intervals.slice(1);
 
-            return true;
+            return false;
         }
     };
 }
