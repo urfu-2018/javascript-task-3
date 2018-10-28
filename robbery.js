@@ -43,7 +43,7 @@ function formatSchedule(timeTable, bankTimeZone, robberTimeZone, day) {
     const difference = robberTimeZone - bankTimeZone;
     if (!day) {
         day = timeTable.substr(0, 2);
-        day = swapNumberAndStringDays[day] || 4; // дальше среды не имеет смысла по условию, флаг
+        day = swapNumberAndStringDays[day];
     }
 
     return createDate(day, hours - difference, minutes);
@@ -86,13 +86,15 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     }
 
     function tryToCoverRobTime(robber) {
-        const robberZone = getTimeZone(schedule[robber][0].from);
-        const robberBusyness = schedule[robber];
-        robberBusyness.forEach(gap => {
-            const busyFrom = formatSchedule(gap.from, bankZone, robberZone);
-            const busyTo = formatSchedule(gap.to, bankZone, robberZone);
-            updateRobTime(busyFrom, busyTo);
-        });
+        if (schedule[robber].length > 0) {
+            const robberZone = getTimeZone(schedule[robber][0].from);
+            const robberBusyness = schedule[robber];
+            robberBusyness.forEach(gap => {
+                const busyFrom = formatSchedule(gap.from, bankZone, robberZone);
+                const busyTo = formatSchedule(gap.to, bankZone, robberZone);
+                updateRobTime(busyFrom, busyTo);
+            });
+        }
     }
 
     function updateRobTime(from, to) {
@@ -105,9 +107,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             noRobTime[dayFrom].push({ fromInMinutes: pushFrom, toInMinutes: pushTo });
         } else {
             noRobTime[dayFrom].push({ fromInMinutes: pushFrom, toInMinutes: dayEndInMinutes });
-            if (dayTo !== 4) {
-                noRobTime[dayTo].push({ fromInMinutes: 0, toInMinutes: pushTo });
-            }
+            noRobTime[dayTo].push({ fromInMinutes: 0, toInMinutes: pushTo });
         }
         if (differenceInDays > 1) {
             for (let i = dayFrom + 1; i < dayTo; i++) {
