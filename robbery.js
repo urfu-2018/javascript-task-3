@@ -177,12 +177,12 @@ function getFreeTime(robberSchedule) {
     let start = 0;
     robberSchedule.forEach(range => {
         if (start < range.from) {
-            freeTimeSchedule.push({from: start, to: range.from});
+            freeTimeSchedule.push({ from: start, to: range.from });
         }
         start = range.to;
     });
     if (start < MAX_MINUTE) {
-        freeTimeSchedule.push({from: start, to: MAX_MINUTE});
+        freeTimeSchedule.push({ from: start, to: MAX_MINUTE });
     }
 
     return freeTimeSchedule;
