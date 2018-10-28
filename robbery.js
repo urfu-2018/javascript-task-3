@@ -41,6 +41,22 @@ function getWeekNumber(day) {
  * @param {String} workingHours.to – Время закрытия, например, "18:00+5"
  * @returns {Object}
  */
+function parseToUtc(inputStr) {
+    let day = getWeekNumber(inputStr.slice(0, 2));
+
+    const localHour = parseInt(inputStr.slice(3, 5));
+    const minutes = parseInt(inputStr.slice(6, 8));
+    const shift = parseInt(inputStr.slice(9, 11));
+    let fromUtcHour = localHour - shift;
+
+    if (fromUtcHour < 0) {
+        fromUtcHour = (24 + fromUtcHour) % 24;
+        day = (7 + day) % day;
+    }
+
+    return { day: day, hour: fromUtcHour, minutes: minutes };
+}
+
 function getAppropriateMoment(schedule, duration, workingHours) {
     console.info(schedule, duration, workingHours);
     workingHours = {
@@ -54,28 +70,47 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             minutes: parseInt(workingHours.to.slice(3, 5))
         }
     };
-    schedule = Object.keys(schedule)
-        .map(
-            x => schedule[x].map(y => {
-                const hour = parseInt(y.from.slice(3, 5));
-                const shift = parseInt(y.from.slice(9, 11));
+    let newSchedule = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] };
 
-                return {
-                    name: x,
-                    from: {
-                        day: getWeekNumber(y.from.slice(0, 2)),
-                        hour: (24 + hour - shift) % 24 + workingHours.shift,
-                        minutes: y.from.slice(6, 8)
-                    },
-                    to: {
-                        day: getWeekNumber(y.to.slice(0, 2)),
-                        hour: y.to.slice(3, 5),
-                        minutes: y.to.slice(6, 8)
-                    }
-                };
-            }))
-        .reduce((x, y)=>x.concat(y))
-        .sort((x, y)=> x.from.day - y.from.day || x.from.hour - y.from.hour);
+    function fillSchedule(robberSchedule, robberName) {
+        const fromInUtc = parseToUtc(robberSchedule.from);
+        const toInUtc = parseToUtc(robberSchedule.to);
+        if (fromInUtc.day === toInUtc.day) {
+            newSchedule[fromInUtc.day].push(
+                { name: robberName, fromInUtc: fromInUtc, toInYtc: toInUtc });
+
+            return;
+        }
+        newSchedule[fromInUtc.day].push(
+            {
+                name: robberName,
+                fromInUtc: fromInUtc,
+                toInYtc: { day: fromInUtc.day, hour: 23, minutes: 59 }
+            });
+        newSchedule[toInUtc.day].push({
+            name: robberName,
+            fromInUtc: { day: toInUtc.day, hour: 0, minutes: 0 },
+            toInYtc: toInUtc
+        });
+    }
+
+    for (let propName in schedule) {
+        if (!Array.isArray(schedule[propName])) {
+            continue;
+        }
+        const robberSchedule = schedule[propName];
+        for (let i = 0; i < robberSchedule.length; i++) {
+            fillSchedule(robberSchedule[i], propName);
+        }
+    }
+    const anies = Object.keys(newSchedule).filter(x=>newSchedule[x].length > 0)
+        .map(x=>newSchedule[x]
+            .sort((y, z) =>
+                y.fromInUtc.day - z.fromInUtc.day ||
+            y.fromInUtc.hour - z.fromInUtc.hour || y.fromInUtc.minutes - z.fromInUtc.minutes)
+            .reduce((y, z)=> {
+                return { fromInUtc: z.fromInUtc, toInYtc: y.toInYtc };
+            }));
 
     // const groupBy1 = groupBy(schedule, 'day');
     // const filter = schedule
