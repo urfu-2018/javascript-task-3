@@ -141,7 +141,7 @@ function getAppMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            let newAppMoment = scanLine(duration, appeMoment);
+            let newAppMoment = scanLine(duration, appMoment);
             if (newAppMoment !== -1) {
                 appMoment = newAppMoment;
 
