@@ -91,7 +91,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 }
 
 function getUTCTimeInMinutes(timeString) {
-    const parts = /([а-яА-ЯёЁ]{2}) (\d{1,2}):(\d\d)\+(\d+)/.exec(timeString);
+    const parts = /([а-яА-ЯёЁ]{2}) (\d{1,2}):(\d+)\+(\d+)/.exec(timeString);
     const days = {
         ПН: 0,
         ВТ: 24 * 60,
@@ -109,7 +109,7 @@ function getUTCTimeInMinutes(timeString) {
 }
 
 function getUTCTimeInMinutesForBank(timeString) {
-    const parts = /(\d{1,2}):(\d\d)\+(\d+)/.exec(timeString);
+    const parts = /(\d{1,2}):(\d+)\+(\d+)/.exec(timeString);
 
     return Number(parts[1]) * 60 + Number(parts[2]) - Number(parts[3]) * 60;
 }
