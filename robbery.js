@@ -64,7 +64,8 @@ function getGangFreeTimeIntervals(schedule) {
     };
 
     gangMembers.forEach(gangMember => {
-        freeIntervals[gangMember].push(...parseTimePoints(schedule[gangMember]));
+        freeIntervals[gangMember].push(...parseTimePoints(schedule[gangMember])
+            .sort((a, b) => a > b));
         freeIntervals[gangMember].push(endOfWeek);
         freeIntervals[gangMember] =
             combineTimePoints(fixTimeTable(freeIntervals[gangMember]));
@@ -88,17 +89,12 @@ function fixTimeTable(timePoints) {
 function findAllIntersections(schedules, robbingDeadlines, workingHours, duration) {
     let intersection = findIntersections(robbingDeadlines, workingHours, duration);
 
-    for (const gangMember in schedules) {
-        if (!schedules.hasOwnProperty(gangMember)) {
-            continue;
-        }
-
+    gangMembers.forEach(gangMember => {
         intersection = findIntersections(schedules[gangMember], intersection, duration);
         if (!intersection) {
             return null;
         }
-
-    }
+    });
 
     return intersection;
 }
