@@ -100,78 +100,50 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         function subtractIntervals(intervalA, intervalB) {
 
             /**
-             * Определяет тип пересечения интервалов.
-             * 0 - не пересекаются,
-             * 1 - пересекаются и a начинаентся раньше b
-             * 2 - пересекаются и b начинается раньше а
-             * 3 - пересекаются и a вложен в b
-             * 4 - пересекаются и b вложен в a (или они равны)
+             * Проверяет, содержится ли интервал a в b.
              * @param {Object} a
              * @param {Object} b
-             * @returns {Number}
+             * @returns {boolean}
              */
-            function getIntersectionType(a, b) {
-
-                /**
-                 * Проверяет, содержится ли интервал a в b.
-                 * @param {Object} c
-                 * @param {Object} d
-                 * @returns {boolean}
-                 */
-                function contains(c, d) {
-                    return c.from >= d.from && c.to <= d.to;
-                }
-
-                /**
-                 * Эта функция проверяет, лежит ли число d между c1 и c2
-                 * Она здесь написана только потому, что я не знаю, как еще сократить complexity.
-                 * @param {Number} c1
-                 * @param {Number} d
-                 * @param {Number} c2
-                 * @returns {Boolean}
-                 */
-                function liesInBetween(c1, d, c2) {
-                    return c1 <= d && c2 >= d;
-                }
-
-                if (contains(b, a)) { // или равны
-                    return 4;
-                }
-                if (contains(a, b)) {
-                    return 3;
-                }
-                if (liesInBetween(a.from, b.to, a.to)) {
-                    return 2;
-                }
-                if (liesInBetween(a.from, b.from, a.to)) {
-                    return 1;
-                }
-
-                return 0;
+            function contains(a, b) {
+                return a.from >= b.from && a.to <= b.to;
             }
 
-            switch (getIntersectionType(intervalA, intervalB)) {
-                default:
-                    return [intervalA];
-                case 1:
-                    return [{
-                        from: Math.min(intervalA.from, intervalB.from),
-                        to: Math.max(intervalA.from, intervalB.from)
-                    }];
-                case 2:
-                    return [{
-                        from: Math.min(intervalA.to, intervalB.to),
-                        to: Math.max(intervalA.to, intervalB.to)
-                    }];
-                case 3:
-                    return [];
-                case 4:
-                    return [{
-                        from: intervalA.from,
-                        to: intervalB.from }, {
-                        from: intervalB.to,
-                        to: intervalA.to }];
+            /**
+             * Эта функция проверяет, лежит ли число b между a1 и a2
+             * @param {Number} a1
+             * @param {Number} b
+             * @param {Number} a2
+             * @returns {Boolean}
+             */
+            function liesInBetween(a1, b, a2) {
+                return a1 <= b && a2 >= b;
             }
+
+            if (contains(intervalB, intervalA)) { // или равны
+                return [{
+                    from: intervalA.from,
+                    to: intervalB.from }, {
+                    from: intervalB.to,
+                    to: intervalA.to }];
+            }
+            if (contains(intervalA, intervalB)) {
+                return [];
+            }
+            if (liesInBetween(intervalA.from, intervalB.to, intervalA.to)) {
+                return [{
+                    from: Math.min(intervalA.to, intervalB.to),
+                    to: Math.max(intervalA.to, intervalB.to)
+                }];
+            }
+            if (liesInBetween(intervalA.from, intervalB.from, intervalA.to)) {
+                return [{
+                    from: Math.min(intervalA.from, intervalB.from),
+                    to: Math.max(intervalA.from, intervalB.from)
+                }];
+            }
+
+            return [intervalA];
         }
 
         for (let interval of fullSchedule.people) {
