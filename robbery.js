@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = true;
+const isStar = false;
 
 const MINUTES_IN_HOUR = 60;
 const HOURS_IN_DAY = 24;
@@ -133,7 +133,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            if (validInterval === undefined) {
+            if (!this.exists()) {
                 return '';
             }
 
@@ -141,8 +141,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             const { hours, minutes } = validDate.time;
 
             return template
-                .replace('%HH', hours < 10 ? '0' + hours : hours)
-                .replace('%MM', minutes < 10 ? '0' + minutes : minutes)
+                .replace('%HH', hours.toString().padStart(2, '0'))
+                .replace('%MM', minutes.toString().padStart(2, '0'))
                 .replace('%DD', validDate.day);
         },
 
