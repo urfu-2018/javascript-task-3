@@ -6,6 +6,23 @@
  */
 const isStar = true;
 
+const minInDay = 60 * 24;
+
+const timeRegex = new RegExp('([А-Я]{2}) (\\d{2}):(\\d{2})\\+(\\d+)');
+const bankTimeRegex = new RegExp('(\\d{2}):(\\d{2})\\+(\\d+)');
+const dayToMinutesShith = { 'ПН': 0, 'ВТ': 1, 'СР': 2, 'ЧТ': 3 };
+class Interval {
+    constructor(leftPoint, rightPoint) {
+        this.leftPoint = leftPoint;
+        this.rightPoint = rightPoint;
+    }
+}
+Interval.prototype.toString = function intervalToString() {
+    var ret = this.leftPoint + ' ' + this.rightPoint;
+
+    return ret;
+};
+
 /**
  * @param {Object} schedule – Расписание Банды
  * @param {Number} duration - Время на ограбление в минутах
@@ -14,8 +31,177 @@ const isStar = true;
  * @param {String} workingHours.to – Время закрытия, например, "18:00+5"
  * @returns {Object}
  */
+
+function parseTimeIntevalToMinRelativeMonday(interval, bankShift) {
+    const match = timeRegex.exec(interval);
+    const day = match[1];
+    const shift = parseInt(match[4]);
+    const deltaShift = bankShift - shift;
+    const result = minInDay * dayToMinutesShith[day] +
+        parseInt(match[2]) * 60 + parseInt(match[3]) + deltaShift * 60;
+
+    return result;
+}
+
+function parseBankTime(time) {
+    const matchFrom = bankTimeRegex.exec(time.from);
+    const matchTo = bankTimeRegex.exec(time.to);
+    const fromMin = parseInt(matchFrom[1]) * 60 + parseInt(matchFrom[2]);
+    const toMin = parseInt(matchTo[1]) * 60 + parseInt(matchTo[2]);
+
+    return { from: fromMin, to: toMin, shift: parseInt(matchFrom[3]) };
+}
+
+function getIntervalsForPerson(intervalsArray, bankShift) {
+    const result = [];
+    for (var interval of intervalsArray) {
+        const leftPoint = parseTimeIntevalToMinRelativeMonday(interval.from, bankShift);
+        const rightPoint = parseTimeIntevalToMinRelativeMonday(interval.to, bankShift);
+        result.push(new Interval(leftPoint, rightPoint));
+    }
+
+    return result;
+}
+
+function reverseIntervals(intervals) {
+    const result = [];
+    let prevRightPoint = 0;
+    for (let interval of intervals) {
+        result.push(new Interval(prevRightPoint, interval.leftPoint));
+        prevRightPoint = interval.rightPoint;
+    }
+    result.push(new Interval(prevRightPoint, 4320));
+
+    return result;
+}
+
+function getBankOpenIntervals(bankInterval) {
+    const result = [];
+    for (var i = 0; i < 3; i++) {
+        result.push(new Interval(bankInterval.from + i * minInDay,
+            bankInterval.to + i * minInDay
+        ));
+    }
+
+    return result;
+}
+function findIntersectionOfAllGroups(intervals, duration) {
+    var a = findIntersectionsTwoGroupsOfIntervals(intervals[0], intervals[1], duration);
+    var b = findIntersectionsTwoGroupsOfIntervals(a, intervals[2], duration);
+    var c = findIntersectionsTwoGroupsOfIntervals(b, intervals[3], duration);
+
+    return c;
+}
+
+function findIntersectionsTwoGroupsOfIntervals(firstIntervals, secondIntervals, duration) {
+    let result = [];
+    for (let firstInterval of firstIntervals) {
+        for (let secondIntrval of secondIntervals) {
+            checkIntervalsPartialIntersection(firstInterval, secondIntrval, duration, result);
+            checkIntervalsFullIntersection(firstInterval, secondIntrval, duration, result);
+            checkIntervalsPartialIntersection(secondIntrval, firstInterval, duration, result);
+            checkIntervalsFullIntersection(secondIntrval, firstInterval, duration, result);
+        }
+    }
+
+    return result;
+}
+
+function checkIntervalsPartialIntersection(first, second, duration, result) {
+    if (first.leftPoint <= second.leftPoint && first.rightPoint <= second.rightPoint) {
+        const letfIntersectionPoint = second.leftPoint;
+        const rightIntersectionPoint = first.rightPoint;
+        if (rightIntersectionPoint - letfIntersectionPoint >= duration) {
+            result.push(new Interval(letfIntersectionPoint,
+                rightIntersectionPoint)
+            );
+        }
+    }
+}
+
+function checkIntervalsFullIntersection(first, second, duration, result) {
+    if (first.leftPoint >= second.leftPoint && first.rightPoint <= second.rightPoint) {
+        const letfIntersectionPoint = first.leftPoint;
+        const rightIntersectionPoint = first.rightPoint;
+        if (rightIntersectionPoint - letfIntersectionPoint >= duration) {
+            result.push(new Interval(letfIntersectionPoint,
+                rightIntersectionPoint));
+        }
+    }
+}
+
+function div(val, by) {
+    return (val - val % by) / by;
+}
+
+function getDateTimeFromMinutes(minutes) {
+    if (minutes >= 2 * minInDay) {
+        const hours = div((minutes - 2 * minInDay), 60);
+        const min = (minutes - 2 * minInDay) % 60;
+
+        return { 'day': 'СР', hours: toTwoDigit(hours), minutes: toTwoDigit(min) };
+    }
+
+    if (minutes >= minInDay) {
+        const hours = div((minutes - minInDay), 60);
+        const min = (minutes - minInDay) % 60;
+
+        return { 'day': 'ВТ', hours: toTwoDigit(hours), minutes: toTwoDigit(min) };
+
+    }
+
+    if (minutes >= 0) {
+        const hours = div(minutes, 60);
+        const min = minutes % 60;
+
+        return { 'day': 'ПН', hours: toTwoDigit(hours), minutes: toTwoDigit(min) };
+    }
+}
+function toTwoDigit(digit) {
+    if (digit < 10) {
+        return '0' + digit.toString();
+    }
+
+    return digit;
+}
+
+function toSet(arr) {
+    const names = new Set();
+
+    const a = arr.filter(item => !names.has(item.toString())
+        ? names.add(item.toString()) : false);
+
+    return a;
+
+}
+
+function getAdditionTimes(intervals, duration) {
+    const result = [];
+    for (const interval of intervals) {
+        let currLeftPart = interval.leftPoint;
+        while (currLeftPart <= interval.rightPoint &&
+            interval.rightPoint - currLeftPart >= duration) {
+            result.push(new Interval(currLeftPart, interval.rightPoint));
+            currLeftPart += 30;
+        }
+    }
+
+    return result;
+}
 function getAppropriateMoment(schedule, duration, workingHours) {
-    console.info(schedule, duration, workingHours);
+    const bankInterval = parseBankTime(workingHours);
+    const dannyIntervals = reverseIntervals(getIntervalsForPerson(schedule.Danny,
+        bankInterval.shift));
+    const rustyIntervals = reverseIntervals(getIntervalsForPerson(schedule.Rusty,
+        bankInterval.shift));
+    const linusIntervals = reverseIntervals(getIntervalsForPerson(schedule.Linus,
+        bankInterval.shift));
+    const bankIntervals = getBankOpenIntervals(bankInterval);
+    const arr = [dannyIntervals, rustyIntervals, linusIntervals, bankIntervals];
+    let res = findIntersectionOfAllGroups(arr, duration);
+    res = toSet(res);
+    res = getAdditionTimes(res, duration);
+    let pointer = 0;
 
     return {
 
@@ -24,7 +210,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            return false;
+            return pointer < res.length;
         },
 
         /**
@@ -34,7 +220,15 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            return template;
+            if (res.length === 0) {
+                return '';
+            }
+            const date = getDateTimeFromMinutes(res[pointer].leftPoint);
+            let result = template.replace('%DD', date.day);
+            result = result.replace('%HH', date.hours);
+            result = result.replace('%MM', date.minutes);
+
+            return result;
         },
 
         /**
@@ -43,6 +237,12 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
+            if (pointer < res.length - 1) {
+                pointer++;
+
+                return true;
+            }
+
             return false;
         }
     };
