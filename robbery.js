@@ -168,12 +168,18 @@ function removePreviouslyDates(busyDates, startBankTime) {
 }
 
 function getGoodTiming(busyDates, duration, workingTime) {
+    if (workingTime[1] - workingTime[0] < duration) {
+        return;
+    }
     let from = workingTime[0];
     while (from <= workingTime[1]) {
+        if (busyDates.length === 0) {
+            return workingTime[0];
+        }
         let sector = [from, from + duration];
         let result = mergeIntersections(busyDates, sector, workingTime, duration);
         busyDates = hasNewDates(result.busyDates, busyDates);
-        if (result.sector[1] + duration > workingTime[1] && !result.hasGoodTiming) {
+        if (!existGoodTime(result.sector[1] + duration, workingTime[1], result.hasGoodTiming)) {
             break;
         }
         if (result.hasGoodTiming) {
@@ -183,6 +189,14 @@ function getGoodTiming(busyDates, duration, workingTime) {
         }
         from = result.sector[1];
     }
+}
+
+function existGoodTime(lastPlusDur, endBankTime, flag) {
+    if (lastPlusDur > endBankTime && !flag) {
+        return false;
+    }
+
+    return true;
 }
 
 function hasNewDates(newDates, busyDates) {
