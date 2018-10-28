@@ -64,7 +64,8 @@ function getGangFreeTimeIntervals(schedule) {
     };
 
     gangMembers.forEach(gangMember => {
-        freeIntervals[gangMember].push(...parseTimePoints(schedule[gangMember]));
+        freeIntervals[gangMember].push(...(parseTimePoints(schedule[gangMember])
+            .sort((a, b) => a > b)));
         freeIntervals[gangMember].push(endOfWeek);
         freeIntervals[gangMember] =
             combineTimePoints(fixTimeTable(freeIntervals[gangMember]));
@@ -169,8 +170,8 @@ function fillBankSchedule(bankWorkingHours) {
 function getAppropriateMoment(schedule, duration, workingHours) {
     console.info(schedule, duration, workingHours);
     const bankTimezone = parseInt(workingHours.from.slice(6));
-    startOfWeek = -bankTimezone * 60;
-    endOfWeek = dayDurationInMinutes * 7 - bankTimezone * 60 - 1;
+    startOfWeek = convertToMinutes(`ПН 00:00+${bankTimezone}`);
+    endOfWeek = convertToMinutes(`ВС 23:59+${bankTimezone}`);
     robbingSchedule = getRobbingSchedule(bankTimezone);
 
     const gangSchedule = getGangFreeTimeIntervals(schedule);
