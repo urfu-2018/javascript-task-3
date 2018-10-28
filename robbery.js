@@ -25,7 +25,7 @@ function convertDayToMinuts(day) {
 
 function сonvertminutsToFormat(minuts, bankTimeZone) {
     minuts += bankTimeZone * 60;
-    let day = Math.trunc(minuts / 24 * 60);
+    let day = Math.trunc(minuts / (24 * 60));
     minuts -= day * 24 * 60;
     let hours = Math.trunc(minuts / 60);
     minuts -= hours * 60;
@@ -71,7 +71,7 @@ function scanLine(duration, lastAppropriateMoment) {
     for (let i = 0; i < timeLine.length - 1; i++) {
         notBusy += timeLine[i].second;
         if (notBusy === 4 &&
-            timeLine[i + 1].first - timeLine[i].first >= duration &&
+            timeLine[i + 1].first - timeLine[i].first > duration &&
             timeLine[i].first > lastAppropriateMoment) {
 
             return timeLine[i].first;
@@ -92,12 +92,12 @@ function scanLine(duration, lastAppropriateMoment) {
  */
 
 function getAppropriateMoment(schedule, duration, workingHours) {
-    console.info(schedule, duration, workingHours);
+    //console.info(schedule, duration, workingHours);
     let bankTimeZone = parseInt(workingHours.from.match('\\+(\\d)')[1]);
     let keys = Object.keys(schedule);
     for (let i = 0; i < keys.length; i++) {
         let roberSchedule = schedule[keys[i]];
-        for (let j = 0; j < roberSchedule; j++) {
+        for (let j = 0; j < roberSchedule.length; j++) {
             timeLine.push({ first: convertToMinuts(roberSchedule[j].from), second: 1 });
             timeLine.push({ first: convertToMinuts(roberSchedule[j].to), second: -1 });
         }
@@ -125,11 +125,11 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         format: function (template) {
             if (approproateMoment !== -1) {
                 let time = сonvertminutsToFormat(approproateMoment, bankTimeZone);
-                template.replace('%HH', time.hours.toString());
-                template.replace('%MM', time.minuts.toString());
-                template.replace('%DD', time.day);
+                let answer = template.replace(/%HH/, time.hours.toString())
+                .replace(/%MM/gi, time.minuts.toString())
+                .replace(/%DD/gi, time.day);
 
-                return template;
+                return answer;
             }
 
             return '';
