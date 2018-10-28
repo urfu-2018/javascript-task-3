@@ -146,10 +146,10 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             return [intervalA];
         }
 
-        for (let interval of fullSchedule.people) {
+        for (let busyTime of fullSchedule.people) {
             let leftovers = [];
-            for (let day of fullSchedule.bank) {
-                leftovers = leftovers.concat(subtractIntervals(day, interval));
+            for (let workTime of fullSchedule.bank) {
+                leftovers = leftovers.concat(subtractIntervals(workTime, busyTime));
             }
             fullSchedule.bank = leftovers;
         }
@@ -158,8 +158,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     }
 
     const candidates = intersectIntervals(congregateIntervals())
-        .filter(interval => (interval.to - interval.from) >= duration)
-        .sort((a, b) => (a.from - b.from));
+        .filter(interval => interval.to - interval.from >= duration)
+        .sort((a, b) => a.from - b.from);
     let firstCandidate = candidates[0];
 
     return {
@@ -185,11 +185,11 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
             const time = firstCandidate.from;
             const day = weekEnum[Math.floor(time / MINUTES_IN_DAY)];
-            let hour = Math.floor((time % MINUTES_IN_DAY) / 60);
+            let hour = Math.floor(time % MINUTES_IN_DAY / 60);
             if (hour < 10) {
                 hour = '0' + hour;
             }
-            let minute = (time % MINUTES_IN_DAY) % 60;
+            let minute = time % MINUTES_IN_DAY % 60;
             if (minute < 10) {
                 minute = '0' + minute;
             }
@@ -206,7 +206,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          */
         tryLater: function () {
             const backup = firstCandidate;
-            if (firstCandidate.to - firstCandidate.from >= (30 + duration)) {
+            if (firstCandidate.to - firstCandidate.from >= 30 + duration) {
                 firstCandidate.from += 30;
             } else {
                 firstCandidate = candidates.filter(interval =>
