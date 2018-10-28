@@ -27,47 +27,38 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     });
 
     /**
-     * Собирает все входные данные в один массив (с преобразованиями)
+     * Собирает все входные данные в один массив, приводя к минутам с ПН 00:00+зона_банка
      * @returns {Object}
      */
     function congregateIntervals() {
 
         /**
-         * По интервалу в форме from: ПН: 09:35+5, to: 'ВТ: 14:59+5'
-         * возвращает интервал в минутах и приписывает имя
-         * @param {Object} interval
+         * По времени в форме from: ПН: 09:35+5 возвращает кол-во минут с ПН 00:00
+         * @param {Object} time
          * @returns {Object}
          */
-        function transformInterval(interval) {
+        function transformInterval(time) {
             // 'ПН 09:35+5' => [ПН, 09, 35, 5]
             const regex = /^(.{2}) (\d{2}):(\d{2})+.(\d)+$/g;
 
-            /**
-             * Выполняет эту операцию для одной из двух частей.
-              * @param {String} time
-             * @returns {number}
-             */
-            function parseInterval(time) {
-
-                // Для интервалов без дня, полагаем что с нуля (нужно для банка).
-                if (!time.includes(' ')) {
-                    time = 'ПН ' + time;
-                }
-                const intervalParts = time.split(regex).filter(part => part.length > 0);
-                const dayFrom = weekEnum[time.split(' ')[0]] * MINUTES_IN_DAY;
-                const timeFrom = parseInt(intervalParts[1]) * 60 + parseInt(intervalParts[2]);
-                const timezoneShift = (TARGET_TIME_ZONE - parseInt(intervalParts[3])) * 60;
-
-                return dayFrom + timeFrom + timezoneShift;
+            // Для интервалов без дня, полагаем что с нуля (нужно для банка).
+            if (!time.includes(' ')) {
+                time = 'ПН ' + time;
             }
+            const intervalParts = time.split(regex).filter(part => part.length > 0);
+            const day = weekEnum[time.split(' ')[0]] * MINUTES_IN_DAY;
+            const timeOfDay = parseInt(intervalParts[1]) * 60 + parseInt(intervalParts[2]);
+            const timezoneShift = (TARGET_TIME_ZONE - parseInt(intervalParts[3])) * 60;
 
-            return { from: parseInterval(interval.from), to: parseInterval(interval.to) };
+            return day + timeOfDay + timezoneShift;
         }
 
-        let bankTimes = [];
-        const transformed = transformInterval(workingHours);
+        let workTimes = [];
+        const transformed = {
+            from: transformInterval(workingHours.from),
+            to: transformInterval(workingHours.to) };
         for (let i = 0; i < 3; i ++) { // формируем расписание банка (3: до среды)
-            bankTimes.push({
+            workTimes.push({
                 from: transformed.from + MINUTES_IN_DAY * i,
                 to: transformed.to + MINUTES_IN_DAY * i
             });
@@ -76,11 +67,13 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         let busyTimes = [];
         for (let person of Object.values(schedule)) { // читаем расписание грабителей
             for (let interval of person) {
-                busyTimes.push(transformInterval(interval));
+                busyTimes.push({
+                    from: transformInterval(interval.from),
+                    to: transformInterval(interval.to) });
             }
         }
 
-        return { bank: bankTimes, people: busyTimes };
+        return { bank: workTimes, people: busyTimes };
     }
 
     /**
@@ -151,7 +144,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             for (let workTime of fullSchedule.bank) {
                 leftovers = leftovers.concat(subtractIntervals(workTime, busyTime));
             }
-            fullSchedule.bank = leftovers;
+            fullSchedule.bank = leftovers; // так остаются только новые интервалы
         }
 
         return fullSchedule.bank;
@@ -195,8 +188,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             }
 
             return template.replace('%DD', day)
-                .replace('%HH', hour)
-                .replace('%MM', minute);
+                .replace('%HH', hour.toString())
+                .replace('%MM', minute.toString());
         },
 
         /**
@@ -210,7 +203,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 firstCandidate.from += 30;
             } else {
                 firstCandidate = candidates.filter(interval =>
-                    (interval.from >= firstCandidate.from + 30))[0];
+                    interval.from >= firstCandidate.from + 30)[0];
             }
             if (firstCandidate === undefined) {
                 firstCandidate = backup;
