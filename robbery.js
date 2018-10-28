@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = false;
+const isStar = true;
 
 /**
  * @param {Object} schedule – Расписание Банды
@@ -18,11 +18,17 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
     const bankTimes = getBankWorkingIntervals(workingHours);
     const bankTimeZone = Number(workingHours.to.split('+')[1]);
+    const bankTimeShift = -bankTimeZone * 60;
     const gangTimes = Object.values(schedule)
         .map(friend =>
-            getFriendFreeIntervals(friend, [-bankTimeZone * 60, 72 * 60 - bankTimeZone * 60]));
+            getFriendFreeIntervals(friend, [bankTimeShift, 72 * 60 + bankTimeShift]));
 
-    let timeFound = findNextTime([0, 72 * 60], duration, bankTimes, gangTimes);
+    let timeFound = findNextTime(
+        [bankTimeShift, 72 * 60 + bankTimeShift],
+        duration,
+        bankTimes,
+        gangTimes
+    );
 
     return {
 
@@ -46,7 +52,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 return '';
             }
 
-            return formatDate(timeFound + bankTimeZone * 60, template);
+            return formatDate(timeFound - bankTimeShift, template);
         },
 
         /**
@@ -56,7 +62,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          */
         tryLater: function () {
             const nextTime = findNextTime(
-                [timeFound + 30, 72 * 60],
+                [timeFound + 30, 72 * 60 + bankTimeShift],
                 duration,
                 bankTimes,
                 gangTimes
