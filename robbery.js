@@ -28,7 +28,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     const bankSchedule = getBankSchedule(getBankScheduleInDatestamp(workingHours));
     const robberSchedule = getRobberSchedule(schedule, bankTimeZone);
     let timeRangesToRobbery = getTimeToRobbery (robberSchedule, bankSchedule, duration);
-    timeRangesToRobbery.sort((a, b) => a.from - b.from);
+    timeRangesToRobbery = timeRangesToRobbery.sort((a, b) => a.from - b.from);
 
     return {
 
@@ -186,7 +186,7 @@ function getFreeTime(robberSchedule) {
         start = middle;
     });
 
-    if (start < finish) {
+    if (start <= finish) {
         robberSchedule.push({ 'from': start, 'to': finish });
     }
 
@@ -218,7 +218,8 @@ function getTimeToRobbery(robberSchedule, bankSchedule, duration) {
     const threeRobbers = getIntersection(twoRobbers, robberSchedule.Rusty);
     const timeRangeToRobber = getIntersection(threeRobbers, bankSchedule);
 
-    return timeRangeToRobber.filter(interval => interval.to - interval.from >= duration);
+    return timeRangeToRobber.filter(interval => (interval.to - interval.from >= duration) &&
+     (interval.from < interval.to));
 }
 
 module.exports = {
