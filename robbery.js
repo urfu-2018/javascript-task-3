@@ -234,16 +234,15 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         .throwOutBusyTime(rustyTime)
         .throwOutBusyTime(linusTime);
 
+    const bankWorkingStartTime = createTime(
+        'ПН',
+        bankWorkingTimeFrom.hours,
+        bankWorkingTimeFrom.minutes,
+        bankWorkingTimeFrom.timezone
+    );
+
     const firstRobberyInterval = robberySchedule
-        .getCorrectIntervalAfterMoment(
-            createTime(
-                'ПН',
-                bankWorkingTimeFrom.hours,
-                bankWorkingTimeFrom.minutes,
-                bankWorkingTimeFrom.timezone
-            ),
-            duration
-        );
+        .getCorrectIntervalAfterMoment(bankWorkingStartTime, duration);
 
     return {
 
@@ -282,6 +281,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
+            if (!this.exists()) {
+                return false;
+            }
             const laterTime = this.robberyTime.getTimeAfter(30);
             const robberyInterval = robberySchedule
                 .getCorrectIntervalAfterMoment(laterTime, duration);
