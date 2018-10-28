@@ -10,13 +10,13 @@ const gangMembers = ['Danny', 'Rusty', 'Linus'];
 const dayDurationInMinutes = 24 * 60;
 let startOfWeek;
 const endOfWeek = dayDurationInMinutes * 7 - 1;
-const robbingSchedule = getRobbingSchedule();
+let robbingSchedule;
 
-function getRobbingSchedule() {
+function getRobbingSchedule(bankTimeZone) {
     return days.slice(0, 3).map(day => {
         return {
-            from: convertToMinutes(`${day} 00:00+0`),
-            to: convertToMinutes(`${day} 23:59+0`)
+            from: convertToMinutes(`${day} 00:00+${bankTimeZone}`),
+            to: convertToMinutes(`${day} 23:59+${bankTimeZone}`)
         };
     });
 }
@@ -171,6 +171,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     console.info(schedule, duration, workingHours);
     const bankTimezone = parseInt(workingHours.from.slice(6));
     startOfWeek = -bankTimezone * 60;
+    robbingSchedule = getRobbingSchedule(bankTimezone);
 
     const gangSchedule = getGangFreeTimeIntervals(schedule);
     const bankSchedule = fillBankSchedule(workingHours);
