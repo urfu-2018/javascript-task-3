@@ -71,7 +71,7 @@ class RobberyDate {
 
     toString(template) {
         return template.replace(/%DD/, this.weekday)
-            .replace(/%HH/, this.time.slice(0,2))
+            .replace(/%HH/, this.time.slice(0, 2))
             .replace(/%MM/, this.time.slice(3));
     }
 }
@@ -157,6 +157,7 @@ function getFreeSchedule(schedule, bankTimeZone) {
         }
         robsSchedule[name] = getFreeTimes(fullSchedule[name], bankTimeZone);
     }
+
     return robsSchedule;
 }
 
