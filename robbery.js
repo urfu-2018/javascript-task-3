@@ -111,12 +111,14 @@ function minutesToDatestamp(time) {
     const minutes = time % 60;
     const h = (time - minutes) / 60;
     const hours = h % 24;
+    const hoursStr = (hours < 10)
+        ? '0' + hours.toString() : hours;
     const days = h - hours;
     const day = getKeyByValue(DAYS, days);
     const minutesStr = (minutes < 10)
         ? '0' + minutes.toString() : minutes;
 
-    return [day, hours, minutesStr];
+    return [day, hoursStr, minutesStr];
 }
 
 function getKeyByValue(object, value) {
