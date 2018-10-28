@@ -59,44 +59,6 @@ function removeTimeZone(timeZone, workingHours) {
     return bankTimeZone - timeZone;
 }
 
-/* function mergeIntersections(element, busyDates) {
-    let preResult = [1, 0];// 1просто так, 0 ложное значение для проверок
-    for (let index = busyDates.indexOf(element); index < busyDates.length; index++) {
-        if (preResult[1]) { // если мы дошли до отрезка который не входит в текущий,
-            // то значит и все остальные тоже лишние (sort)
-            break;
-        }
-        if (element === busyDates[index] || busyDates[index].length !== 2) {
-            continue;
-        }
-        preResult = toCombine(element, busyDates[index], preResult[1]);
-        element = preResult[0];
-        if (!preResult[1]) {
-            delete busyDates[index];
-        }
-    }
-
-    return element;
-}
-
-function toCombine(element, element2, flag) {
-    if (element[0] <= element2[0] && element2[0] <= element[1]) {
-        if (element2[1] > element[1]) {
-            element[1] = element2[1];
-        }
-
-        return [element, flag];
-    }
-    if (element[0] <= element2[1] && element2[1] <= element[1]) {
-        element[0] = element2[0];
-
-        return [element, flag];
-    }
-    flag = true;
-
-    return [element, flag];
-}*/
-
 /**
  * @param {Object} schedule – Расписание Банды
  * @param {Number} duration - Время на ограбление в минутах
@@ -119,22 +81,11 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         return a[0] - b[0];
     });
 
-    /* busyDates.forEach(element => {
+    busyDates.forEach(element => {
         console.info(element);
-    });*/
-
-    /* busyDates.forEach(element => {
-        element = mergeIntersections(element, busyDates);
-        if (element.length !== 0) {
-            combinedDates.push(element);
-        }
-    });*/
+    });
     // тут тупа вывод для меня
-    // console.info(workingHoursInMinute + '       ETO VREMYA BANKA');
-
-    /* combinedDates.forEach(element => {
-        console.info(element);
-    });*/
+    console.info(workingHoursInMinute + '       ETO VREMYA BANKA');
 
     return {
 
@@ -161,7 +112,6 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (typeof appropriateMoment === 'undefined') {
                 return '';
             }
-            appropriateMoment -= getTimeZone(workingHours.from) * minutesInHour;
             let day = getAnswer(appropriateMoment, minutesInDay);
             let timeWithoutDays = appropriateMoment - day * minutesInDay;
             let hour = getAnswer(timeWithoutDays, minutesInHour);
@@ -199,13 +149,24 @@ function getAnswer(time, divider) {
 }
 
 function getMoment(busyDates, duration, workingHoursInMinute) {
-    let result = [];
+    let resultTo = [];
     for (let index = 0; index < 3; index++) {
         let workingTime = [workingHoursInMinute[0] + index * minutesInDay,
             workingHoursInMinute[1] + index * minutesInDay];
-        result = getGoodTiming(busyDates, duration, workingTime);
-        if (typeof result !== 'undefined') {
-            break;
+        busyDates = removePreviouslyDates(busyDates, workingTime[0]);
+        console.info(workingTime + 'Текущее время работы банка');
+        resultTo = getGoodTiming(busyDates, duration, workingTime);// 2130
+        if (typeof resultTo !== 'undefined') {
+            return resultTo;
+        }
+    }
+}
+
+function removePreviouslyDates(busyDates, startBankTime) {
+    let result = [];
+    for (let element of busyDates) {
+        if (element[1] >= startBankTime) {
+            result.push(element);
         }
     }
 
@@ -213,22 +174,34 @@ function getMoment(busyDates, duration, workingHoursInMinute) {
 }
 
 function getGoodTiming(busyDates, duration, workingTime) {
-    for (let from = workingTime[0]; from <= workingTime[1] - duration; from += duration) {
+    if (workingTime[1] - workingTime[0] < duration) {
+        return;
+    }
+    let from = workingTime[0];
+    while (from <= workingTime[1]) {
         let sector = [from, from + duration];
-        let result = getIntersections(busyDates, sector);
+        console.info(busyDates);
+        let result = getIntersections(busyDates, sector, workingTime[1], duration);
+        if (result[0][1] + duration > workingTime[1] && !result[1]) {
+            break;
+        }
         if (result[1]) {
             return result[0][1] - duration;
         }
-        from = result[0][1] - duration;
+        from = result[0][1];
     }
 }
 
-function getIntersections(busyDates, sector) {
+function getIntersections(busyDates, sector, endBankWorkTime, duration) {
     let hasGoodTiming = true;
     let countShift = 0;
-    busyDates.forEach(element => {
+    for (let element of busyDates) {
+        console.info(sector + '     gfgd    ' + element + 'до');
         let result = hasIntersections(sector, element);
         sector = result[0];
+        if (endBankWorkTime - duration < sector[1] && !hasGoodTiming) {
+            return [sector, false];
+        }
         if (!result[1]) {
             busyDates = shiftElements(busyDates, countShift);
 
@@ -236,7 +209,7 @@ function getIntersections(busyDates, sector) {
         }
         hasGoodTiming = false;
         countShift++;
-    });
+    }
 
     return [sector, hasGoodTiming];
 }
@@ -251,20 +224,35 @@ function shiftElements(busyDates, countShift) {
 }
 
 function hasIntersections(element, element2) {
-    if (element[0] <= element2[0] && element2[0] <= element[1]) {
-        if (element2[1] > element[1]) {
-            element[1] = element2[1];
+    for (let index = 0; index < 2; index++) {
+        let usuallIntersection = checkIntersections(element, element2, index, 0);
+        if (usuallIntersection[1]) {
+            return usuallIntersection;
         }
-
-        return [element, true];
+        let reverseIntesection = checkIntersections(element2, element, index, 1);
+        if (reverseIntesection[1]) {
+            return reverseIntesection;
+        }
     }
-    if (element[0] <= element2[1] && element2[1] <= element[1]) {
-        element[1] = element2[1];
-
-        return [element, true];
-    }
+    console.info('Сюда вообще доходит');
 
     return [element, false];
+}
+
+function checkIntersections(element, element2, index, flag) {
+    console.info('start check');
+    if (element[0] < element2[index] && element2[index] < element[1]) {
+        if (!flag) {
+            element[1] = element2[1];
+
+            return [element, true];
+        }
+        element2[1] = element[1];
+
+        return [element2, true];
+    }
+
+    return [arguments[flag], false];
 }
 
 module.exports = {
