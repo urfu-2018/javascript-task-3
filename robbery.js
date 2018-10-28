@@ -10,10 +10,16 @@ const gangMembers = ['Danny', 'Rusty', 'Linus'];
 const dayDurationInMinutes = 24 * 60;
 const startOfWeek = 0;
 const endOfWeek = dayDurationInMinutes * 7 - 1;
-const robbingSchedule = [{
-    from: convertToMinutes('ПН 00:00+0'),
-    to: convertToMinutes('СР 23:59+0')
-}];
+const robbingSchedule = getRobbingSchedule();
+
+function getRobbingSchedule() {
+    return days.slice(0, 3).map(day => {
+        return {
+            from: convertToMinutes(`${day} 00:00+0`),
+            to: convertToMinutes(`${day} 23:59+0`)
+        };
+    });
+}
 
 function getMinutesFromWeekStart(day) {
     return days.indexOf(day) * dayDurationInMinutes;
