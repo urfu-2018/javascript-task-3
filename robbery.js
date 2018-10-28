@@ -67,6 +67,9 @@ weekDay.ПН = 0;
 weekDay.ВТ = 1;
 weekDay.СР = 2;
 weekDay.ЧТ = 3;
+weekDay.ПТ = 4;
+weekDay.СБ = 5;
+weekDay.ВС = 6;
 
 var millisecondsInMinute = 60000;
 var bankTime;
@@ -101,6 +104,9 @@ function initializeBankTime(workingHours) {
 
 function takeAppropriateMoment(allReadyMoment, duration) {
     let begin = allReadyMoment.begin;
+    if (getDay(begin) > 3) {
+        return;
+    }
     let end = allReadyMoment.end;
     if (inBankTime(begin) || inBankTime(end)) {
         return takeBankCorrectMoment(begin, end, duration);
