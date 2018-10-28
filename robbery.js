@@ -138,10 +138,10 @@ function invertIntervals(intervals, domain) {
     const isLast = i => i === intervals.length && intervals[i - 1][1] < domain[1];
 
     for (let i = 0; i <= intervals.length; i++) {
-        if (isFirst(i)) {
-            inverted.push([domain[0], intervals[i][0]]);
-        } else if (isLast(i)) {
+        if (isLast(i)) {
             inverted.push([intervals[i - 1][1], domain[1]]);
+        } else if (isFirst(i)) {
+            inverted.push([domain[0], intervals[i][0]]);
         } else if (i > 0 && i < intervals.length) {
             inverted.push([intervals[i - 1][1], intervals[i][0]]);
         }
