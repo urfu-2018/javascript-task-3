@@ -8,7 +8,7 @@ const isStar = true;
 const days = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
 const gangMembers = ['Danny', 'Rusty', 'Linus'];
 const dayDurationInMinutes = 24 * 60;
-const startOfWeek = 0;
+let startOfWeek;
 const endOfWeek = dayDurationInMinutes * 7 - 1;
 const robbingSchedule = getRobbingSchedule();
 
@@ -31,12 +31,7 @@ function convertToMinutes(str) {
     const hours = parseInt(hh) - parseInt(timezone);
     const minutes = parseInt(mm);
 
-    let result = minutesFromWeekStart + hours * 60 + minutes;
-    if (result < 0) {
-        return 0;
-    }
-
-    return result;
+    return minutesFromWeekStart + hours * 60 + minutes;
 }
 
 function parseTimePoints(schedule) {
@@ -79,8 +74,8 @@ function getGangFreeTimeIntervals(schedule) {
 }
 
 function fixTimeTable(timePoints) {
-    if (timePoints[0] === 0 && timePoints[1] === 0) {
-        return timePoints.slice(1);
+    if (timePoints[1] <= startOfWeek) {
+        return timePoints.slice(2);
     }
 
     return timePoints;
@@ -175,6 +170,7 @@ function fillBankSchedule(bankWorkingHours) {
 function getAppropriateMoment(schedule, duration, workingHours) {
     console.info(schedule, duration, workingHours);
     const bankTimezone = parseInt(workingHours.from.slice(6));
+    startOfWeek -= bankTimezone * 60;
 
     const gangSchedule = getGangFreeTimeIntervals(schedule);
     const bankSchedule = fillBankSchedule(workingHours);
