@@ -38,7 +38,7 @@
      return result;
 }
  function parseTimePoints(schedule) {
-@@ -67,12 +72,20 @@ function getGangFreeTimeIntervals(schedule) {
+{
         freeIntervals[gangMember].push(...parseTimePoints(schedule[gangMember]));
         freeIntervals[gangMember].push(endOfWeek);
         freeIntervals[gangMember] =
