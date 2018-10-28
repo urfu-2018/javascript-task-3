@@ -104,7 +104,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
              * 0 - не пересекаются,
              * 1 - пересекаются и a начинаентся раньше b
              * 2 - пересекаются и b начинается раньше а
-             * 3 - пересекаются и a вложен в b
+             * 3 - пересекаются и a вложен в b (или они равны)
              * 4 - пересекаются и b вложен в a
              * @param {Object} a
              * @param {Object} b
@@ -215,18 +215,17 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             const time = firstCandidate.from;
             const day = weekEnum[Math.floor(time / MINUTES_IN_DAY)];
             let hour = Math.floor((time % MINUTES_IN_DAY) / 60);
-            if (hour === 0) {
-                hour = '00';
+            if (hour < 10) {
+                hour = '0' + hour;
             }
             let minute = (time % MINUTES_IN_DAY) % 60;
-            if (minute === 0) {
-                minute = '00';
+            if (minute < 10) {
+                minute = '0' + minute;
             }
-            template = template.replace('%DD', day);
-            template = template.replace('%HH', hour);
-            template = template.replace('%MM', minute);
 
-            return template;
+            return template.replace('%DD', day)
+                .replace('%HH', hour)
+                .replace('%MM', minute);
         },
 
         /**
