@@ -8,30 +8,30 @@ const isStar = true;
 
 let timeLine = [];
 
-function ConvertDayToMinuts(day) {
-    if (day === "") {
+function convertDayToMinuts(day) {
+    if (day === 'ПН') {
 
         return 24 * 60;
     }
-    if (day === "") {
+    if (day === 'ВТ') {
 
         return 48 * 60;
     }
-    if (day === "") {
+    if (day === 'СР') {
 
         return 72 * 60;
     }
 }
 
-function ConvertminutsToFormat(minuts, bankTimeZone) {
+function сonvertminutsToFormat(minuts, bankTimeZone) {
     minuts += bankTimeZone * 60;
     let day = Math.trunc(minuts / 24 * 60);
     minuts -= day * 24 * 60;
     let hours = Math.trunc(minuts / 60);
     minuts -= hours * 60;
     let time = {
-        hours : hours,
-        minuts : minuts,
+        hours: hours,
+        minuts: minuts
     };
     if (day === 1) {
         time.day = 'ПН';
@@ -46,24 +46,24 @@ function ConvertminutsToFormat(minuts, bankTimeZone) {
     return time;
 }
 
-function ConvertToMinuts(timeString) {
+function convertToMinuts(timeString) {
     let minuts = 0;
-    minuts += ConvertDayToMinuts(timeString.slice(0, 2)); 
-    let hours = parseInt(timeString.match("(\\d\\d):(\\d\\d)")[1]);
-    minuts += parseInt(timeString.match("(\\d\\d):(\\d\\d)")[2]);
-    let timeZone = parseInt(timeString.match("\+(\\d)")[1]);
+    minuts += convertDayToMinuts(timeString.slice(0, 2));
+    let hours = parseInt(timeString.match('(\\d\\d):(\\d\\d)')[1]);
+    minuts += parseInt(timeString.match('(\\d\\d):(\\d\\d)')[2]);
+    let timeZone = parseInt(timeString.match('\\+(\\d)')[1]);
     minuts += (hours - timeZone) * 60;
 
     return minuts;
 }
 
-function AddWorkingHoursToTimeLine(workingHours) {
-    timeLine.push({ first : ConvertToMinuts("ПН " + workingHours.from), second : 1 });
-    timeLine.push({ first : ConvertToMinuts("ПН " + workingHours.to), second : -1 });
-    timeLine.push({ first : ConvertToMinuts("ВТ " + workingHours.from), second : 1 });
-    timeLine.push({ first : ConvertToMinuts("ВТ " + workingHours.to), second : -1 });
-    timeLine.push({ first : ConvertToMinuts("СР " + workingHours.from), second : 1 });
-    timeLine.push({ first : ConvertToMinuts("СР " + workingHours.to), second : -1 });
+function addWorkingHoursToTimeLine(workingHours) {
+    timeLine.push({ first: convertToMinuts('ПН ' + workingHours.from), second: 1 });
+    timeLine.push({ first: convertToMinuts('ПН ' + workingHours.to), second: -1 });
+    timeLine.push({ first: convertToMinuts('ВТ ' + workingHours.from), second: 1 });
+    timeLine.push({ first: convertToMinuts('ВТ ' + workingHours.to), second: -1 });
+    timeLine.push({ first: convertToMinuts('СР ' + workingHours.from), second: 1 });
+    timeLine.push({ first: convertToMinuts('СР ' + workingHours.to), second: -1 });
 }
 
 function scanLine(duration, lastAppropriateMoment) {
@@ -78,6 +78,7 @@ function scanLine(duration, lastAppropriateMoment) {
         }
 
     }
+
     return -1;
 }
 
@@ -92,16 +93,16 @@ function scanLine(duration, lastAppropriateMoment) {
 
 function getAppropriateMoment(schedule, duration, workingHours) {
     console.info(schedule, duration, workingHours);
-    let bankTimeZone = parseInt(workingHours.from.match('\+(\\d)')[1]);
+    let bankTimeZone = parseInt(workingHours.from.match('\\+(\\d)')[1]);
     let keys = Object.keys(schedule);
     for (let i = 0; i < keys.length; i++) {
         let roberSchedule = schedule[keys[i]];
         for (let j = 0; j < roberSchedule; j++) {
-            timeLine.push({ first : ConvertToMinuts(roberSchedule[j].from), second : 1 });
-            timeLine.push({ first : ConvertToMinuts(roberSchedule[j].to), second : -1 })
+            timeLine.push({ first: convertToMinuts(roberSchedule[j].from), second: 1 });
+            timeLine.push({ first: convertToMinuts(roberSchedule[j].to), second: -1 });
         }
     }
-    AddWorkingHoursToTimeLine(workingHours);
+    addWorkingHoursToTimeLine(workingHours);
     timeLine.sort((a, b) => a.first - b.first);
     let approproateMoment = scanLine(duration, -1);
 
@@ -123,15 +124,14 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          */
         format: function (template) {
             if (approproateMoment !== -1) {
-                let time = ConvertminutsToFormat(approproateMoment, bankTimeZone);
+                let time = сonvertminutsToFormat(approproateMoment, bankTimeZone);
                 template.replace('%HH', time.hours.toString());
                 template.replace('%MM', time.minuts.toString());
                 template.replace('%DD', time.day);
-
                 return template;
-            } else {
-                return '';
             }
+
+            return '';
         },
 
         /**
@@ -143,11 +143,10 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             let newApproproateMoment = scanLine(duration, approproateMoment);
             if (newApproproateMoment !== -1) {
                 approproateMoment = newApproproateMoment;
-
                 return true;
-            } else {
-                return false;
             }
+
+            return false;
         }
     };
 }
