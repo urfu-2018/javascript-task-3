@@ -1,160 +1,217 @@
-'use strict';
-
-/**
- * Сделано задание на звездочку
- * Реализовано оба метода и tryLater
- */
-const isStar = true;
-
-let timeLine = [];
-
-function convDayToMin(day) {
-    if (day === 'ПН') {
-
-        return 24 * 60;
+ 'use strict';
+ 
+ /**
+  * Сделано задание на звездочку
+  * Реализовано оба метода и tryLater
+  */
+ const isStar = true;
+ const days = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
+ const gangMembers = ['Danny', 'Rusty', 'Linus'];
+ const dayValueInMin = 24 * 60;
+ const startOfWeek = 0;
+ const endOfWeek = dayValueInMin * 7 - 1;
+ const robbingGraf = getrobbingGraf();
+ 
+ function getrobbingGraf() {
+     return days.slice(0, 3).map(day => {
+         return {
+             from: convToMin(`${day} 00:00+0`),
+             to: convToMin(`${day} 23:59+0`)
+         };
+     });
+ }
+ 
+ function getMinFromWeekFirst(day) {
+     return days.indexOf(day) * dayValueInMin;
+ }
+ 
+ function convToMin(str) {
+     const [dayOfWeek, hh, mm, timezone] = /([А-Я]{2}) (\d\d):(\d\d)\+(\d)/.exec(str).slice(1);
+     const minFromWeekStart = getMinFromWeekFirst(dayOfWeek);
+    const hours = parseInt(hh) - parseInt(timezone);
+    const min = parseInt(mm);
+     return minFromWeekStart + hours * 60 + min;
+    let result = minFromWeekStart + hours * 60 + min;
+    if (result < 0) {
+        return 0;
     }
-    if (day === 'ВТ') {
-
-        return 48 * 60;
-    }
-    if (day === 'СР') {
-
-        return 72 * 60;
-    }
+     return result;
 }
-
-function convMinFormat(minuts, bankTimeZone) {
-    minuts += bankTimeZone * 60;
-    let day = Math.trunc(minuts / (24 * 60));
-    minuts -= day * 24 * 60;
-    let hours = Math.trunc(minuts / 60);
-    minuts -= hours * 60;
-    let time = {
-        hours: hours,
-        minuts: minuts
-    };
-    if (day === 1) {
-        time.day = 'ПН';
-    }
-    if (day === 2) {
-        time.day = 'ВТ';
-    }
-    if (day === 3) {
-        time.day = 'СР';
-    }
-
-    return time;
+ function parseTimePoints(schedule) {
+@@ -67,12 +72,20 @@ function getGangFreeTimeIntervals(schedule) {
+        freeIntervals[gangMember].push(...parseTimePoints(schedule[gangMember]));
+        freeIntervals[gangMember].push(endOfWeek);
+        freeIntervals[gangMember] =
+            combineTimePoints(freeIntervals[gangMember].sort((a, b) => a > b));
+            combineTimePoints(fixTimeTable(freeIntervals[gangMember]));
+    });
+     return freeIntervals;
 }
-
-function convToMin(timeString) {
-    let minuts = 0;
-    minuts += convDayToMin(timeString.slice(0, 2));
-    let hours = parseInt(timeString.match('(\\d\\d):(\\d\\d)')[1]);
-    minuts += parseInt(timeString.match('(\\d\\d):(\\d\\d)')[2]);
-    let timeZone = parseInt(timeString.match('\\+(\\d)')[1]);
-    minuts += (hours - timeZone) * 60;
-
-    return minuts;
-}
-
-function addWorkingHoursToTimeLine(workingHours) {
-    timeLine.push({ first: convToMin('ПН ' + workingHours.from), second: 1 });
-    timeLine.push({ first: convToMin('ПН ' + workingHours.to), second: -1 });
-    timeLine.push({ first: convToMin('ВТ ' + workingHours.from), second: 1 });
-    timeLine.push({ first: convToMin('ВТ ' + workingHours.to), second: -1 });
-    timeLine.push({ first: convToMin('СР ' + workingHours.from), second: 1 });
-    timeLine.push({ first: convToMin('СР ' + workingHours.to), second: -1 });
-}
-
-function scanLine(duration, lastAppropriateMoment) {
-    let notBusy = 0;
-    for (let i = 0; i < timeLine.length - 1; i++) {
-        notBusy += timeLine[i].second;
-        if (notBusy === 4 &&
-            timeLine[i + 1].first - timeLine[i].first > duration &&
-            timeLine[i].first > lastAppropriateMoment) {
-
-            return timeLine[i].first;
-        }
-
+ function fixTimeTable(timePoints) {
+    if (timePoints[0] === 0 && timePoints[1] === 0) {
+        return timePoints.slice(1);
     }
-
-    return -1;
+     return timePoints;
 }
-
-/**
- * @param {Object} schedule – Расписание Банды
- * @param {Number} duration - Время на ограбление в минутах
- * @param {Object} workingHours – Время работы банка
- * @param {String} workingHours.from – Время открытия, например, "10:00+5"
- * @param {String} workingHours.to – Время закрытия, например, "18:00+5"
- * @returns {Object}
- */
-
-function getAppMoment(schedule, duration, workingHours) {
-    console.info(schedule, duration, workingHours);
-    let bankTimeZone = parseInt(workingHours.from.match('\\+(\\d)')[1]);
-    let keys = Object.keys(schedule);
-    for (let i = 0; i < keys.length; i++) {
-        let roberSchedule = schedule[keys[i]];
-        for (let j = 0; j < roberSchedule.length; j++) {
-            timeLine.push({ first: convToMin(roberSchedule[j].from), second: 1 });
-            timeLine.push({ first: convToMin(roberSchedule[j].to), second: -1 });
-        }
-    }
-    addWorkingHoursToTimeLine(workingHours);
-    timeLine.sort((a, b) => a.first - b.first);
-    let appMoment = scanLine(duration, -1);
-
-    return {
-
-        /**
-         * Найдено ли время
-         * @returns {Boolean}
-         */
-        exists: function () {
-            return appMoment !== -1;
-        },
-
-        /**
-         * Возвращает отформатированную строку с часами для ограбления
-         * Например, "Начинаем в %HH:%MM (%DD)" -> "Начинаем в 14:59 (СР)"
-         * @param {String} template
-         * @returns {String}
-         */
-        format: function (template) {
-            if (appMoment !== -1) {
-                let time = convMinFormat(appMoment, bankTimeZone);
-                let answer = template.replace(/%HH/, time.hours.toString())
-                    .replace(/%MM/gi, time.minuts.toString())
-                    .replace(/%DD/gi, time.day);
-
-                return answer;
-            }
-
-            return '';
-        },
-
-        /**
-         * Попробовать найти часы для ограбления позже [*]
-         * @star
-         * @returns {Boolean}
-         */
-        tryLater: function () {
-            let newAppMoment = scanLine(duration, appMoment);
-            if (newAppMoment !== -1) {
-                appMoment = newAppMoment;
-
-                return true;
-            }
-
-            return false;
-        }
-    };
-}
-
-module.exports = {
-    getAppMoment,
-
-    isStar
-};
+ function findAllIntersections(schedules, robbingDeadlines, workingHours, duration) {
+    let intersection = findIntersections(robbingDeadlines, workingHours, duration);
+      for (const gangMember in schedules) {
+         if (!schedules.hasOwnProperty(gangMember)) {
+             continue;
+         }
+ 
+         intersection = findIntersections(schedules[gangMember], intersection, duration);
+         if (!intersection) {
+             return null;
+         }
+ 
+     }
+ 
+     return intersection;
+ }
+ 
+ function findIntersections(scheduleOne, scheduleTwo, duration) {
+     let result = [];
+     scheduleOne.forEach(dateOne =>
+         scheduleTwo.forEach(dateTwo => {
+             const intersection = getMomentsCusp(dateOne, dateTwo, duration);
+             if (intersection) {
+                 result.push(intersection);
+             }
+         })
+     );
+ 
+     return result.length === 0 ? null : result;
+ }
+ 
+ function getMomentsCusp(dateOne, dateTwo, duration) {
+     if (dateOne.to < dateTwo.from || dateOne.from > dateTwo.to) {
+         return null;
+     }
+ 
+     const left = Math.max(dateOne.from, dateTwo.from);
+     const right = Math.min(dateOne.to, dateTwo.to);
+ 
+     if (Math.abs(right - left) < duration) {
+         return null;
+     }
+ 
+     return {
+         from: left,
+         to: right
+     };
+ }
+ 
+ function extractDayHoursMin(timeInMin) {
+     const dayIndex = Math.floor(timeInMin / dayValueInMin);
+     const day = days[dayIndex];
+     const dayMin = timeInMin % dayValueInMin;
+     const hours = Math.floor(dayMin / 60);
+     const min = dayMin - hours * 60;
+ 
+     return [day, hours.toString(), min.toString()];
+ }
+ 
+ function formatTemplate(template, day, hours, min) {
+     return template.replace('%DD', day)
+         .replace('%HH', hours.padStart(2, '0'))
+         .replace('%MM', min.padStart(2, '0'));
+ }
+ 
+ function fillBankSchedule(bankWorkingHours) {
+     let bankSchedule = [];
+     days.forEach(day => {
+         bankSchedule.push({
+             from: convToMin(`${day} ${bankWorkingHours.from}`),
+             to: convToMin(`${day} ${bankWorkingHours.to}`)
+         });
+     });
+ 
+     return bankSchedule;
+ }
+ 
+ /**
+  * @param {Object} schedule – Расписание Банды
+  * @param {Number} duration - Время на ограбление в минутах
+  * @param {Object} workingHours – Время работы банка
+  * @param {String} workingHours.from – Время открытия, например, "10:00+5"
+  * @param {String} workingHours.to – Время закрытия, например, "18:00+5"
+  * @returns {Object}
+  */
+ function getAppropriateMoment(schedule, duration, workingHours) {
+     console.info(schedule, duration, workingHours);
+     const bankTimezone = parseInt(workingHours.from.slice(6));
+ 
+     const gangSchedule = getGangFreeTimeIntervals(schedule);
+     const bankSchedule = fillBankSchedule(workingHours);
+ 
+     const intersections =
+         findAllIntersections(gangSchedule, robbingGraf, bankSchedule, duration);
+ 
+     let pointer = 0;
+ 
+     return {
+ 
+         /**
+          * Найдено ли время
+          * @returns {Boolean}
+          */
+         exists: function () {
+             return intersections && intersections.length > 0;
+         },
+ 
+         /**
+          * Возвращает отформатированную строку с часами для ограбления
+          * Например, "Начинаем в %HH:%MM (%DD)" -> "Начинаем в 14:59 (СР)"
+          * @param {String} template
+          * @returns {String}
+          */
+         format: function (template) {
+             if (!this.exists()) {
+                 return '';
+             }
+             const currentRobberyInterval = intersections[pointer];
+             const startTime = currentRobberyInterval.from + bankTimezone * 60;
+ 
+             return formatTemplate(template, ...extractDayHoursMin(startTime));
+         },
+ 
+         /**
+          * Попробовать найти часы для ограбления позже [*]
+          * @star
+          * @returns {Boolean}
+          */
+         tryLater: function () {
+             if (!this.exists() || pointer === intersections.length) {
+                 return false;
+             }
+ 
+             const halfOfAnHour = 30;
+             let currentDate = intersections[pointer];
+ 
+             if (currentDate.from + halfOfAnHour + duration <= currentDate.to) {
+                 currentDate.from += halfOfAnHour;
+ 
+                 return true;
+             }
+ 
+             const nextIndex = intersections
+                 .slice(pointer + 1)
+                 .findIndex(date => date.from - currentDate.to > halfOfAnHour);
+ 
+             if (nextIndex === -1) {
+                 return false;
+             }
+             pointer += nextIndex + 1;
+ 
+             return true;
+         }
+     };
+ }
+ 
+ module.exports = {
+     getAppropriateMoment,
+ 
+     isStar
+ };
+ 
