@@ -87,7 +87,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 }
 
 function getTimezone(datestamp) {
-    return parseInt(datestamp[datestamp.length - 1]);
+    return parseInt(datestamp.match(/\+\d{1,2}/)[0].substring(1));
 }
 
 function getDays(datestamp) {
