@@ -92,7 +92,7 @@ function scanLine(duration, lastAppropriateMoment) {
  */
 
 function getAppropriateMoment(schedule, duration, workingHours) {
-    //console.info(schedule, duration, workingHours);
+    console.info(schedule, duration, workingHours);
     let bankTimeZone = parseInt(workingHours.from.match('\\+(\\d)')[1]);
     let keys = Object.keys(schedule);
     for (let i = 0; i < keys.length; i++) {
@@ -126,8 +126,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (approproateMoment !== -1) {
                 let time = сonvertminutsToFormat(approproateMoment, bankTimeZone);
                 let answer = template.replace(/%HH/, time.hours.toString())
-                .replace(/%MM/gi, time.minuts.toString())
-                .replace(/%DD/gi, time.day);
+                    .replace(/%MM/gi, time.minuts.toString())
+                    .replace(/%DD/gi, time.day);
 
                 return answer;
             }
