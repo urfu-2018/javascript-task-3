@@ -44,7 +44,7 @@
         freeIntervals[gangMember] =
             combineTimePoints(freeIntervals[gangMember].sort((a, b) => a > b));
             combineTimePoints(fixTimeTable(freeIntervals[gangMember]));
-    });
+    };
      return freeIntervals;
 }
  function fixTimeTable(timePoints) {
