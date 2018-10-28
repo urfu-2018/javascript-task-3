@@ -148,7 +148,7 @@ function getMoment(busyDates, duration, workingHoursInMinute) {
         busyDates = removePreviouslyDates(busyDates, workingTime[0]);
         console.info('следующий день        ' + workingTime);
         resultTo = getGoodTiming(busyDates, duration, workingTime);
-        if (typeof resultTo !== 'undefined') {
+        if (typeof resultTo !== 'undefined' && (resultTo + duration) % 1440 !== 0) {
             return {
                 goodMoment: resultTo.sector
             };
@@ -168,9 +168,6 @@ function removePreviouslyDates(busyDates, startBankTime) {
 }
 
 function getGoodTiming(busyDates, duration, workingTime) {
-    if (workingTime[1] - workingTime[0] < duration) {
-        return;
-    }
     let from = workingTime[0];
     while (from <= workingTime[1]) {
         let sector = [from, from + duration];
