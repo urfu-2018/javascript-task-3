@@ -116,7 +116,10 @@ function getRobberyIntervals(intervals, bankSchedule, duration) {
 
         if (shiftedInterval.from < shiftedInterval.to) {
             robberyIntervals.push(shiftedInterval);
+            addShifted(shiftedInterval);
         }
+
+        return;
     };
 
     bankSchedule.forEach(workingHours => intervals.forEach(interval => {
