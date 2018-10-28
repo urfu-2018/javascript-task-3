@@ -94,8 +94,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     let bankTimeZone = parseInt(workingHours.from.slice(-1));
     let bankWorkingHours = getBankWorkingHours(workingHours, bankTimeZone);
     let robsSchedule = getFreeSchedule(schedule, bankTimeZone);
-    let workingTime = [new DateRange(new RobberyDate('ПН 00:00+5', bankTimeZone),
-        new RobberyDate('СР 23:59+5', bankTimeZone))];
+    let workingTime = [new DateRange(new RobberyDate(`ПН 00:00+${bankTimeZone}`, bankTimeZone),
+        new RobberyDate(`СР 23:59+${bankTimeZone}`, bankTimeZone))];
+    console.info(workingTime);
     let robTime = getSchedulesIntersection(workingTime, bankWorkingHours, duration);
     let schedulesIntersection = getAllSchedulesIntersection(robTime, robsSchedule, duration);
 
