@@ -108,19 +108,30 @@ function invertIntervals(intervals) {
 
 function getRobberyIntervals(intervals, bankSchedule, duration) {
     const robberyIntervals = [];
+    const addShifted = interval => {
+        const shiftedInterval = {
+            from: interval.from + ROBBERY_SHIFT,
+            to: interval.to
+        };
 
-    for (const workingHours of bankSchedule) {
-        for (const interval of intervals) {
-            if (isIntersected(workingHours, interval)) {
-                robberyIntervals.push({
-                    from: Math.max(workingHours.from, interval.from),
-                    to: Math.min(workingHours.to, interval.to)
-                });
-            }
+        if (shiftedInterval.from < shiftedInterval.to) {
+            robberyIntervals.push(shiftedInterval);
         }
-    }
+    };
 
-    return robberyIntervals.filter(interval => interval.to - interval.from >= duration);
+    bankSchedule.forEach(workingHours => intervals.forEach(interval => {
+        if (isIntersected(workingHours, interval)) {
+            robberyIntervals.push({
+                from: Math.max(workingHours.from, interval.from),
+                to: Math.min(workingHours.to, interval.to)
+            });
+        }
+    }));
+    robberyIntervals.forEach(addShifted);
+
+    return robberyIntervals
+        .filter(interval => interval.to - interval.from >= duration)
+        .sort((a, b) => a.from - b.from);
 }
 
 /**
@@ -172,7 +183,12 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            return false;
+            if (!this.exists() || robberyIntervals.length === 1) {
+                return false;
+            }
+            robberyIntervals.shift();
+
+            return true;
         }
     };
 }
