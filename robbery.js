@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = false;
+const isStar = true;
 
 const MINUTES_IN_HOUR = 60;
 const HOURS_IN_DAY = 24;
@@ -152,6 +152,13 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
+            if (!this.exists()) {
+                return false;
+            }
+            if (intervalToMinutes(intervalFactory(validInterval.from, END_OF_WEEK)) < 30) {
+                return false;
+            }
+
             const newBusyInterval = intervalFactory(
                 validInterval.from,
                 addMinutes(validInterval.from, 30)
