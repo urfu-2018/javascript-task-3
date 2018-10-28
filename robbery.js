@@ -1,16 +1,13 @@
 'use strict';
+const days = ['ПН', 'ВТ', 'СР'];
+const MINUTES_IN_HOUR = 60;
+const HOURS_IN_DAY = 24;
 
 /**
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = false;
-const days = ['ПН', 'ВТ', 'СР', 'ЧТ'];
-
-function dataSort(date1, date2) {
-    return date1.from.day * 1440 + date1.from.hours * 60 + date1.from.minutes >=
-        date2.from.day * 1440 + date2.from.hours * 60 + date2.from.minutes;
-}
+exports.isStar = true;
 
 /**
  * @param {Object} schedule – Расписание Банды
@@ -20,14 +17,10 @@ function dataSort(date1, date2) {
  * @param {String} workingHours.to – Время закрытия, например, "18:00+5"
  * @returns {Object}
  */
-function getAppropriateMoment(schedule, duration, workingHours) {
-    var availableTimes = getMoments(schedule, duration, workingHours);
-    // console.info(availableTimes);
-    var laterVariants = (availableTimes.length > 0) ? getLater(availableTimes, duration) : [];
-    const resultArray = availableTimes.concat(laterVariants).sort(dataSort);
-    var currentResult = (availableTimes.length > 0) ? resultArray[0].from : {};
-    var laterMomentsCounter = 0;
-    // console.info(resultArray);
+exports.getAppropriateMoment = function (schedule, duration, workingHours) {
+    var intervalsForRobbery = getRobberyIntervals(schedule, workingHours, duration);
+    var timeForRobbery = intervalsForRobbery.length
+        ? intervalsForRobbery[0].periodStart : undefined;
 
     return {
 
@@ -36,27 +29,25 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            return availableTimes.length > 0;
+            return timeForRobbery !== undefined;
         },
 
         /**
          * Возвращает отформатированную строку с часами для ограбления
-         * Например, "Начинаем в %HH:%MM (%DD)" -> "Начинаем в 14:59 (СР)"
+         * Например,
+         *   "Начинаем в %HH:%MM (%DD)" -> "Начинаем в 14:59 (СР)"
          * @param {String} template
          * @returns {String}
          */
         format: function (template) {
-            if (availableTimes.length > 0) {
-                var result = '';
-                result = template.replace('%HH', currentResult.hours);
-                const minutes = currentResult.minutes.toString();
-                result = result.replace('%MM', (minutes.length !== 2) ? '0' + minutes : minutes);
-                result = result.replace('%DD', days[currentResult.day]);
-
-                return result;
+            if (!this.exists()) {
+                return '';
             }
+            const date = minutesToDate(timeForRobbery);
 
-            return '';
+            return template.replace('%HH', addLeadingZero(date.hours))
+                .replace('%MM', addLeadingZero(date.remainingMinutes))
+                .replace('%DD', date.day);
         },
 
         /**
@@ -65,367 +56,120 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            laterMomentsCounter++;
-            if (resultArray[laterMomentsCounter] !== undefined) {
-                currentResult = resultArray[laterMomentsCounter].from;
-
-                return true;
-            }
-
-            return false;
-        }
-    };
-}
-
-function getLater(variants, duration) {
-    const newVariants = [];
-    const day = variants[0].from.day;
-    // var currentTime = variants[0].from;
-    variants.forEach(function (i) {
-        var currentTime = i.from;
-        while (timeBigger(i.to, currentTime)) {
-            const isHourNotChanging = currentTime.minutes + 30 === 30;
-            currentTime = {
-                minutes: (isHourNotChanging) ? currentTime.minutes + 30 : 0,
-                hours: (isHourNotChanging) ? currentTime.hours : currentTime.hours + 1
-            };
-            const probablePeriod = {
-                from: {
-                    day: day,
-                    hours: currentTime.hours,
-                    minutes: currentTime.minutes
-                },
-                to: {
-                    day: day,
-                    hours: i.to.hours,
-                    minutes: i.to.minutes
-                }
-            };
-            if (checkProbablePeriod(probablePeriod, duration)) {
-                newVariants.push(probablePeriod);
-            } else {
-                break;
-            }
-        }
-    });
-
-    return newVariants;
-}
-
-function getMoments(schedule, duration, workingHours) {
-    const formattedSchedule = transformSchedule(schedule, workingHours);
-    const [monSchedule, tueSchedule, wenSchedule] = separateSchedule(formattedSchedule);
-    const monAvailableTime = findAvailableTime(workingHours, monSchedule, duration);
-    const tueAvailableTime = findAvailableTime(workingHours, tueSchedule, duration);
-    const wenAvailableTime = findAvailableTime(workingHours, wenSchedule, duration);
-
-    return monAvailableTime.concat(tueAvailableTime, wenAvailableTime);
-}
-
-function assignInitialValue(bankSchedule, schedule) {
-    const firstRecord = schedule[0];
-    const isbankOpenTimeBigger = timeBigger(bankSchedule.from, firstRecord.from); // b  >= a
-    const isBankCloseTimeBigger = timeBigger(bankSchedule.to, firstRecord.to); // c <= d
-
-    return {
-        from: resolveFromTime(firstRecord, isbankOpenTimeBigger, bankSchedule),
-        to: resolveToTime(firstRecord, isBankCloseTimeBigger, bankSchedule)
-    };
-}
-
-function resolveFromTime(record, isBankOpenTimeBigger, bankSchedule) { // b >= a
-    const isBankTimeBigger = timeBigger(bankSchedule.from, record.to); // b >= c
-
-    return {
-        day: record.from.day,
-        hours: (isBankTimeBigger || isBankOpenTimeBigger)
-            ? bankSchedule.from.hours : record.from.hours,
-        minutes: (isBankTimeBigger || isBankOpenTimeBigger)
-            ? bankSchedule.from.minutes : record.from.minutes
-    };
-}
-
-function resolveToTime(record, isBankCloseTimeBigger, bankSchedule) { // c<=d
-    const isBankTimeBigger = timeBigger(bankSchedule.from, record.to); // b >= c
-
-    var newRecord = {};
-    newRecord.day = record.from.day;
-    if (!isBankCloseTimeBigger) {
-        newRecord.hours = bankSchedule.to.hours;
-        newRecord.minutes = bankSchedule.to.minutes;
-    } else if (isBankTimeBigger) {
-        newRecord.hours = bankSchedule.from.hours;
-        newRecord.minutes = bankSchedule.from.minutes;
-    } else {
-        newRecord.hours = record.to.hours;
-        newRecord.minutes = record.to.minutes;
-    }
-
-    return newRecord;
-}
-
-function findAvailableTime(workingHours, schedule, duration) {
-    const bankSchedule = formatWorkingTimeRecord(workingHours);
-    const day = schedule[0].from.day;
-    var periods = [];
-    var currentPeriod = assignInitialValue(bankSchedule, schedule);
-    schedule.forEach(function (i) {
-        const isBankTimeToBigger = timeBigger(bankSchedule.to, i.to);
-        if (timeBigger(i.from, currentPeriod.to) && isBankTimeToBigger) { // если есть точка разрыва
-            const probablePeriod = {
-                from: {
-                    day: day,
-                    hours: currentPeriod.to.hours,
-                    minutes: currentPeriod.to.minutes
-                },
-                to: {
-                    day: day,
-                    hours: i.from.hours,
-                    minutes: i.from.minutes
-                }
-            };
-            periods.push(probablePeriod);
-            currentPeriod.from = (timeBigger(i.from, bankSchedule.to)) ? i.from : bankSchedule.to;
-            currentPeriod.to = (timeBigger(i.to, bankSchedule.to)) ? bankSchedule.to : i.to;
-        } else {
-            currentPeriod.to = resolveEnd(isBankTimeToBigger, i, currentPeriod, bankSchedule);
-        }
-    });
-
-    if (timeBigger(currentPeriod.from, bankSchedule.from) && periods.length === 0) {
-        const probablePeriod = {
-            from: {
-                day: day,
-                hours: bankSchedule.from.hours,
-                minutes: bankSchedule.from.minutes
-            },
-            to: {
-                day: day,
-                hours: currentPeriod.from.hours,
-                minutes: currentPeriod.from.minutes
-            }
-        };
-        periods.push(probablePeriod);
-    }
-
-    if (timeBigger(bankSchedule.to, currentPeriod.to)) {
-        const probablePeriod = {
-            from: {
-                day: day,
-                hours: currentPeriod.to.hours,
-                minutes: currentPeriod.to.minutes
-            },
-            to: {
-                day: day,
-                hours: bankSchedule.to.hours,
-                minutes: bankSchedule.to.minutes
-            }
-        };
-        periods.push(probablePeriod);
-    }
-
-    const filteredPeriods = [];
-    periods.forEach(function (i) {
-        if (checkProbablePeriod(i, duration)) {
-            filteredPeriods.push(i);
-        }
-    });
-
-    return filteredPeriods;
-}
-
-// function formAndCheckPeriod(){
-//     const probablePeriod = {
-//         from: {
-//             day: currentPeriod.to.day,
-//             hours: currentPeriod.to.hours,
-//             minutes: currentPeriod.to.minutes
-//         },
-//         to: {
-//             day: currentPeriod.to.day,
-//             hours: bankSchedule.to.hours,
-//             minutes: bankSchedule.to.minutes
-//         }
-//     };
-//     if (checkProbablePeriod(probablePeriod, duration)) {
-//         periods.push(probablePeriod);
-//     }
-// }
-function resolveEnd(isBankTimeToBigger, i, currentPeriod, bankSchedule) {
-    if (isBankTimeToBigger) {
-        if (timeBigger(i.to, currentPeriod.to)) {
-            return i.to;
-        }
-
-        return currentPeriod.to;
-    }
-
-    return bankSchedule.to;
-}
-
-
-function checkProbablePeriod(probablePeriod, duration) {
-    return (probablePeriod.to.hours * 60 + probablePeriod.to.minutes -
-        (probablePeriod.from.hours * 60 + probablePeriod.from.minutes) - duration) >= 0;
-}
-
-function timeBigger(time1, time2) {
-    return time1.hours * 60 + time1.minutes >= time2.minutes + time2.hours * 60;
-}
-
-
-function separateSchedule(schedule) {
-    var monSchedule = [];
-    var tueSchedule = [];
-    var wenSchdule = [];
-
-    schedule.forEach(function (i) {
-        switch (i.from.day) {
-            case 0:
-                monSchedule.push(i);
-                break;
-            case 1:
-                tueSchedule.push(i);
-                break;
-            case 2:
-                wenSchdule.push(i);
-                break;
-            default:
-                break;
-        }
-    });
-
-    return [monSchedule.sort(timeSort), tueSchedule.sort(timeSort), wenSchdule.sort(timeSort)];
-}
-
-function timeSort(time1, time2) {
-    const time1minutes = time1.from.hours * 60 + time1.from.minutes;
-    const time2minutes = time2.from.hours * 60 + time2.from.minutes;
-
-    return time1minutes >= time2minutes;
-}
-
-function transformSchedule(schedule, workingHours) {
-    const formatedWorkingHours = formatWorkingTimeRecord(workingHours);
-    const allSchedules = schedule.Danny.concat(schedule.Rusty, schedule.Linus);
-    var cleanSchedules = [];
-    allSchedules.forEach(function (i) {
-        const newRecord = formatSchedule(formatedWorkingHours, i);
-        const spittedDays = splitDays(newRecord);
-        if (spittedDays.length > 0) {
-            spittedDays.forEach(function (t) {
-                cleanSchedules.push(t);
-            });
-        } else {
-            cleanSchedules.push(newRecord);
-        }
-    });
-
-    return cleanSchedules;
-}
-
-function splitDays(record) {
-    const daysDelta = record.to.day - record.from.day;
-    var newRecords = [];
-    var startDate = record.from;
-    if (daysDelta) {
-        for (var i = 0; i < daysDelta; i++) {
-            newRecords.push({
-                from: {
-                    day: startDate.day,
-                    hours: startDate.hours,
-                    minutes: startDate.minutes
-                },
-                to: {
-                    day: startDate.day,
-                    hours: 23,
-                    minutes: 59
-                }
+            intervalsForRobbery = intervalsForRobbery.filter(function (interval) {
+                return Math.max(timeForRobbery + 30, interval.periodStart) + duration <=
+                    interval.periodStart + interval.size;
             });
 
-            startDate = {
-                day: record.from.day + i + 1,
-                hours: 0,
-                minutes: 0
-            };
-        }
-        newRecords.push({
-            from: {
-                day: startDate.day,
-                hours: startDate.hours,
-                minutes: startDate.minutes
-            },
-            to: {
-                day: record.to.day,
-                hours: record.to.hours,
-                minutes: record.to.minutes
+            if (!intervalsForRobbery.length) {
+                return false;
             }
-        });
-    }
+            timeForRobbery = Math.max(intervalsForRobbery[0].periodStart, timeForRobbery + 30);
 
-    return newRecords;
-}
-
-function formatWorkingTimeRecord(workingHours) {
-    const fromTimeSplittedPlus = workingHours.from.split('+');
-    const fromTimeHoursSplitted = fromTimeSplittedPlus[0].split(':');
-    const toTimeSplittedPlus = workingHours.to.split('+');
-    const toTimeHoursSplitted = toTimeSplittedPlus[0].split(':');
-    const bankTimezone = parseInt(fromTimeSplittedPlus[1]);
-
-    return {
-        timezone: bankTimezone,
-        from: {
-            hours: parseInt(fromTimeHoursSplitted[0]),
-            minutes: parseInt(fromTimeHoursSplitted[1])
-        },
-        to: {
-            hours: parseInt(toTimeHoursSplitted[0]),
-            minutes: parseInt(toTimeHoursSplitted[1])
+            return true;
         }
     };
-}
-
-
-function formatSchedule(workingHours, record) {
-    const fromTimeSplittedPlus = record.from.split('+');
-    const recordTimezone = parseInt(fromTimeSplittedPlus[1]);
-    const timezonesDelta = workingHours.timezone - recordTimezone;
-    const fromTimeHoursSplitted = fromTimeSplittedPlus[0].split(':');
-    var fromTime = {
-        day: days.indexOf(fromTimeHoursSplitted[0].split(' ')[0]),
-        hours: parseInt(fromTimeHoursSplitted[0].split(' ')[1]),
-        minutes: parseInt(fromTimeHoursSplitted[1])
-    };
-    fromTime = correctTime(fromTime, workingHours, timezonesDelta);
-
-
-    const toTimeSplittedPlus = record.to.split('+');
-    const toTimeHoursSplitted = toTimeSplittedPlus[0].split(':');
-    var toTime = {
-        day: days.indexOf(toTimeHoursSplitted[0].split(' ')[0]),
-        hours: parseInt(toTimeHoursSplitted[0].split(' ')[1]),
-        minutes: parseInt(toTimeHoursSplitted[1])
-
-    };
-    toTime = correctTime(toTime, workingHours, timezonesDelta);
-
-
-    return { from: fromTime, to: toTime };
-}
-
-function correctTime(robberTime, bankTime, deltaTimezones) {
-    var correctedHours = robberTime.hours + deltaTimezones;
-    var correctedDay = (Math.floor(correctedHours / 24) > 0) ? robberTime.day + 1 : robberTime.day;
-
-    return {
-        day: correctedDay,
-        hours: correctedHours,
-        minutes: robberTime.minutes
-    };
-}
-
-module.exports = {
-    getAppropriateMoment,
-    isStar
 };
+
+function getRobberyIntervals(schedule, workingHours, duration) {
+    const bankTimezone = extractDateComponents(workingHours.from).timezone;
+    const notWorkingHoursOfBank = getNotWorkingHours(workingHours, bankTimezone);
+    const unitedSchedule = Object.assign({ bank: notWorkingHoursOfBank }, schedule);
+    const formattedSchedule = formatSchedule(unitedSchedule, bankTimezone);
+    const intervals = getIntervalsOfFreeTime(formattedSchedule);
+
+    return intervals.filter((interval) => interval.size >= duration);
+}
+
+function formatSchedule(schedule, bankTimezone) {
+    var parsedSchedule = [];
+    const allSchedules = schedule.Danny.concat(schedule.bank, schedule.Rusty, schedule.Linus);
+    allSchedules.forEach(function (record) {
+        const startDate = extractDateComponents(record.from);
+        const endDate = extractDateComponents(record.to);
+        const startDateInMinutes = dateToMinutes(startDate, bankTimezone);
+        const endDateInMinutes = dateToMinutes(endDate, bankTimezone);
+        parsedSchedule.push({ minutes: startDateInMinutes, mark: 'start' },
+            { minutes: endDateInMinutes, mark: 'finish' });
+    });
+
+    return parsedSchedule;
+}
+
+function addLeadingZero(number) {
+    return `0${number}`.slice(-2);
+}
+
+function minutesToDate(minutes) {
+    const hours = Math.floor(minutes / MINUTES_IN_HOUR) % HOURS_IN_DAY;
+    const day = days[Math.floor(Math.floor(minutes / MINUTES_IN_HOUR) / HOURS_IN_DAY)];
+    const remainingMinutes = minutes % MINUTES_IN_HOUR;
+    if (!day) {
+        return null;
+    }
+
+    return { day, hours, remainingMinutes };
+}
+
+function getNotWorkingHours(workingHours, bankTimezone) {
+    return days.reduce(function (accumulator, day) {
+        accumulator.push(
+            {
+                from: day + ' 00:00+' + bankTimezone,
+                to: day + ' ' + workingHours.from
+            },
+            {
+                from: day + ' ' + workingHours.to,
+                to: day + ' 23:59+' + bankTimezone
+            });
+
+        return accumulator;
+    }, []);
+}
+
+function extractDateComponents(date) {
+    const [time, day] = date.split(' ').reverse();
+    const [hoursAndMinutes, timezone] = time.split('+');
+    const [hours, minutes] = hoursAndMinutes.split(':');
+
+    return { day, hours, minutes, timezone };
+}
+
+function dateToMinutes(time, bankTimezone) {
+    const day = time.day;
+    const hours = Number(time.hours);
+    const minutes = Number(time.minutes);
+    const robberTimezone = Number(time.timezone);
+
+    return hours * MINUTES_IN_HOUR + minutes + days.indexOf(day) *
+        HOURS_IN_DAY * MINUTES_IN_HOUR + (bankTimezone - robberTimezone) * MINUTES_IN_HOUR;
+}
+
+function getIntervalsOfFreeTime(formattedSchedule) {
+    var intervalLength = 0;
+    const sortedSchedule = formattedSchedule.sort((a, b) => Number(a.minutes) - Number(b.minutes));
+    var startMarksCounter = 0;
+    var endMarkCounter = 0;
+    var currentStartMinutes;
+    var previousEndMinutes = 0;
+
+    return sortedSchedule.reduce(function (intervals, event) {
+        if (!startMarksCounter) {
+            currentStartMinutes = event.minutes;
+        }
+        if (event.mark === 'start') {
+            startMarksCounter += 1;
+        } else {
+            endMarkCounter += 1;
+        }
+        if (startMarksCounter === endMarkCounter) {
+            startMarksCounter = 0;
+            endMarkCounter = 0;
+            intervalLength = currentStartMinutes - previousEndMinutes;
+            intervals.push({ periodStart: previousEndMinutes, size: intervalLength });
+            previousEndMinutes = event.minutes;
+        }
+
+        return intervals;
+    }, []);
+}
