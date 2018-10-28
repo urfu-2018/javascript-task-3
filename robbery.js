@@ -208,6 +208,7 @@ function findAllReadyMoments(gangstersTimeSpans) {
             }
         }
     });
+    result = result.concat(addPossibleAppropriateMoment(beginMoment, minuteInDay * 3 - 1));
 
     return result;
 }
