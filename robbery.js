@@ -105,8 +105,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (typeof appropriateMoment === 'undefined') {
                 return '';
             }
-            let day = getAnswer(appropriateMoment, minutesInDay);
-            let timeWithoutDays = appropriateMoment - day * minutesInDay;
+            let day = getAnswer(appropriateMoment.goodMoment, minutesInDay);
+            let timeWithoutDays = appropriateMoment.goodMoment - day * minutesInDay;
             let hour = getAnswer(timeWithoutDays, minutesInHour);
             let timeWithoutHours = timeWithoutDays - hour * minutesInHour;
             let minute = timeWithoutHours;
@@ -148,7 +148,9 @@ function getMoment(busyDates, duration, workingHoursInMinute) {
         busyDates = removePreviouslyDates(busyDates, workingTime[0]);
         resultTo = getGoodTiming(busyDates, duration, workingTime);
         if (typeof resultTo !== 'undefined') {
-            return resultTo;
+            return {
+                goodMoment: resultTo.sector
+            };
         }
     }
 }
@@ -171,36 +173,47 @@ function getGoodTiming(busyDates, duration, workingTime) {
     let from = workingTime[0];
     while (from <= workingTime[1]) {
         let sector = [from, from + duration];
-        let result = getIntersections(busyDates, sector, workingTime[1], duration);
-        if (result[0][1] + duration > workingTime[1] && !result[1]) {
+        let result = mergeIntersections(busyDates, sector, workingTime[1], duration);
+        if (result.sector[1] + duration > workingTime[1] && !result.hasGoodTiming) {
             break;
         }
-        if (result[1]) {
-            return result[0][1] - duration;
+        if (result.hasGoodTiming) {
+            return {
+                sector: result.sector[0]
+            };
         }
-        from = result[0][1];
+        from = result.sector[1];
     }
 }
 
-function getIntersections(busyDates, sector, endBankWorkTime, duration) {
+function mergeIntersections(busyDates, sector, endBankWorkTime, duration) {
     let hasGoodTiming = true;
     let countShift = 0;
     for (let element of busyDates) {
         let result = hasIntersections(sector, element);
-        sector = result[0];
+        sector = result.sector;
         if (endBankWorkTime - duration < sector[1] && !hasGoodTiming) {
-            return [sector, false];
+            return {
+                sector: sector,
+                hasGoodTiming: false
+            };
         }
-        if (!result[1]) {
+        if (!result.hasIntersect) {
             busyDates = shiftElements(busyDates, countShift);
 
-            return [sector, hasGoodTiming];
+            return {
+                sector: sector,
+                hasGoodTiming: hasGoodTiming
+            };
         }
         hasGoodTiming = false;
         countShift++;
     }
 
-    return [sector, hasGoodTiming];
+    return {
+        sector: sector,
+        hasGoodTiming: hasGoodTiming
+    };
 }
 
 function shiftElements(busyDates, countShift) {
@@ -215,16 +228,19 @@ function shiftElements(busyDates, countShift) {
 function hasIntersections(element, element2) {
     for (let index = 0; index < 2; index++) {
         let usuallIntersection = checkIntersections(element, element2, index, 0);
-        if (usuallIntersection[1]) {
+        if (usuallIntersection.hasIntersect) {
             return usuallIntersection;
         }
         let reverseIntesection = checkIntersections(element2, element, index, 1);
-        if (reverseIntesection[1]) {
+        if (reverseIntesection.hasIntersect) {
             return reverseIntesection;
         }
     }
 
-    return [element, false];
+    return {
+        sector: element,
+        hasIntersect: false
+    };
 }
 
 function checkIntersections(element, element2, index, flag) {
@@ -232,14 +248,23 @@ function checkIntersections(element, element2, index, flag) {
         if (!flag) {
             element[1] = element2[1];
 
-            return [element, true];
+            return {
+                sector: element,
+                hasIntersect: true
+            };
         }
         element2[1] = element[1];
 
-        return [element2, true];
+        return {
+            sector: element2,
+            hasIntersect: true
+        };
     }
 
-    return [arguments[flag], false];
+    return {
+        sector: arguments[flag],
+        hasIntersect: false
+    };
 }
 
 module.exports = {
