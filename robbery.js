@@ -128,6 +128,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 template.replace('%HH', time.hours.toString());
                 template.replace('%MM', time.minuts.toString());
                 template.replace('%DD', time.day);
+
                 return template;
             }
 
@@ -143,6 +144,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             let newApproproateMoment = scanLine(duration, approproateMoment);
             if (newApproproateMoment !== -1) {
                 approproateMoment = newApproproateMoment;
+
                 return true;
             }
 
