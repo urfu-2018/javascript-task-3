@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = true;
+const isStar = false;
 
 const weekDays = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
 const minutesInHour = 60;
@@ -76,16 +76,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         });
     }
     let workingHoursInMinute = convertToMinute(workingHours, workingHours);
-    // let combinedDates = [];
     busyDates.sort((a, b) => {
         return a[0] - b[0];
     });
-
-    busyDates.forEach(element => {
-        console.info(element);
-    });
-    // тут тупа вывод для меня
-    console.info(workingHoursInMinute + '       ETO VREMYA BANKA');
 
     return {
 
@@ -117,7 +110,6 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             let hour = getAnswer(timeWithoutDays, minutesInHour);
             let timeWithoutHours = timeWithoutDays - hour * minutesInHour;
             let minute = timeWithoutHours;
-            console.info(minute);
 
             return template.replace('%DD', weekDays[day])
                 .replace('%HH', toTwoElement(hour))
@@ -154,8 +146,7 @@ function getMoment(busyDates, duration, workingHoursInMinute) {
         let workingTime = [workingHoursInMinute[0] + index * minutesInDay,
             workingHoursInMinute[1] + index * minutesInDay];
         busyDates = removePreviouslyDates(busyDates, workingTime[0]);
-        console.info(workingTime + 'Текущее время работы банка');
-        resultTo = getGoodTiming(busyDates, duration, workingTime);// 2130
+        resultTo = getGoodTiming(busyDates, duration, workingTime);
         if (typeof resultTo !== 'undefined') {
             return resultTo;
         }
@@ -180,7 +171,6 @@ function getGoodTiming(busyDates, duration, workingTime) {
     let from = workingTime[0];
     while (from <= workingTime[1]) {
         let sector = [from, from + duration];
-        console.info(busyDates);
         let result = getIntersections(busyDates, sector, workingTime[1], duration);
         if (result[0][1] + duration > workingTime[1] && !result[1]) {
             break;
@@ -196,7 +186,6 @@ function getIntersections(busyDates, sector, endBankWorkTime, duration) {
     let hasGoodTiming = true;
     let countShift = 0;
     for (let element of busyDates) {
-        console.info(sector + '     gfgd    ' + element + 'до');
         let result = hasIntersections(sector, element);
         sector = result[0];
         if (endBankWorkTime - duration < sector[1] && !hasGoodTiming) {
@@ -234,13 +223,11 @@ function hasIntersections(element, element2) {
             return reverseIntesection;
         }
     }
-    console.info('Сюда вообще доходит');
 
     return [element, false];
 }
 
 function checkIntersections(element, element2, index, flag) {
-    console.info('start check');
     if (element[0] < element2[index] && element2[index] < element[1]) {
         if (!flag) {
             element[1] = element2[1];
