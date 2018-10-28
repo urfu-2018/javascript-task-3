@@ -53,7 +53,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 if (!time.includes(' ')) {
                     time = 'ПН ' + time;
                 }
-                const intervalParts = time.split(regex).filter(e => e.length > 0);
+                const intervalParts = time.split(regex).filter(part => part.length > 0);
                 const dayFrom = weekEnum[time.split(' ')[0]] * MINUTES_IN_DAY;
                 const timeFrom = parseInt(intervalParts[1]) * 60 + parseInt(intervalParts[2]);
                 const timezoneShift = (TARGET_TIME_ZONE - parseInt(intervalParts[3])) * 60;
@@ -74,8 +74,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         }
 
         let busyTimes = [];
-        for (let data of Object.values(schedule)) { // читаем расписание грабителей
-            for (let interval of data) {
+        for (let person of Object.values(schedule)) { // читаем расписание грабителей
+            for (let interval of person) {
                 busyTimes.push(transformInterval(interval));
             }
         }
@@ -104,8 +104,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
              * 0 - не пересекаются,
              * 1 - пересекаются и a начинаентся раньше b
              * 2 - пересекаются и b начинается раньше а
-             * 3 - пересекаются и a вложен в b (или они равны)
-             * 4 - пересекаются и b вложен в a
+             * 3 - пересекаются и a вложен в b
+             * 4 - пересекаются и b вложен в a (или они равны)
              * @param {Object} a
              * @param {Object} b
              * @returns {Number}
@@ -134,21 +134,20 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                     return c1 <= d && c2 >= d;
                 }
 
-                let intersectionType = 0;
-                if (liesInBetween(a.from, b.from, a.to)) {
-                    intersectionType = 1;
-                }
-                if (liesInBetween(a.from, b.to, a.to)) {
-                    intersectionType = 2;
+                if (contains(b, a)) { // или равны
+                    return 4;
                 }
                 if (contains(a, b)) {
                     return 3;
                 }
-                if (contains(b, a)) {
-                    return 4;
+                if (liesInBetween(a.from, b.to, a.to)) {
+                    return 2;
+                }
+                if (liesInBetween(a.from, b.from, a.to)) {
+                    return 1;
                 }
 
-                return intersectionType;
+                return 0;
             }
 
             switch (getIntersectionType(intervalA, intervalB)) {
@@ -236,9 +235,10 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         tryLater: function () {
             const backup = firstCandidate;
             if (firstCandidate.to - firstCandidate.from >= (30 + duration)) {
-                firstCandidate.from = firstCandidate.from + 30;
+                firstCandidate.from += 30;
             } else {
-                firstCandidate = candidates.filter(e => (e.from >= firstCandidate.from + 30))[0];
+                firstCandidate = candidates.filter(interval =>
+                    (interval.from >= firstCandidate.from + 30))[0];
             }
             if (firstCandidate === undefined) {
                 firstCandidate = backup;
