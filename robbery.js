@@ -118,7 +118,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         const daysNumbers = { 'ПН': 0, 'ВТ': 1, 'СР': 2 };
         for (let friend in schedule) {
             if (schedule.hasOwnProperty(friend)) {
-                schedule[friend] = schedule[friend].forEach(element => {
+                schedule[friend].forEach(element => {
                     const from = getTimeInMinutes(element.from);
                     const to = getTimeInMinutes(element.to);
 
