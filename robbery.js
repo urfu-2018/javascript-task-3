@@ -60,7 +60,7 @@ function getBankEvents(duration) {
     return getEvents(WORKING_DAYS.map(day => {
         return {
             from: day + ' ' + duration.from,
-            to: day + ' ' + duration.to,
+            to: day + ' ' + duration.to
         };
     }));
 }
