@@ -233,7 +233,7 @@ describe('robbery.getAppropriateMoment()', () => {
                 ),
                 intervalFactory(
                     dateFactory('СБ', 8, 30),
-                    dateFactory('ВС', 23, 59),
+                    dateFactory('ВС', 24, 0),
                 )
             ]);
     });
