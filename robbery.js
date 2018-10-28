@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = false;
+const isStar = true;
 
 /**
  * @param {Object} schedule – Расписание Банды
@@ -15,54 +15,24 @@ const isStar = false;
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    console.info(schedule, duration, workingHours);
 
-    const bankTimes = [0, 24, 48].map(offset =>
-        [
-            getUTCTimeInMinutesForBank(workingHours.from) + offset * 60,
-            getUTCTimeInMinutesForBank(workingHours.to) + offset * 60
-        ]
-    );
-
+    const bankTimes = getBankWorkingIntervals(workingHours);
     const bankTimeZone = Number(workingHours.to.split('+')[1]);
-
     const gangTimes = Object.values(schedule)
-        .map(
-            friend =>
-                invertIntervals(
-                    mergeIntersectedIntervals(
-                        friend.map(timePeriodToInterval),
-                    ), [-bankTimeZone * 60, 72 * 60 - bankTimeZone * 60]
-                ));
+        .map(friend =>
+            getFriendFreeIntervals(friend, [-bankTimeZone * 60, 72 * 60 - bankTimeZone * 60]));
 
-    let count = 0;
-    let timeToStart = null;
-
-    for (let value = 0; value < (72 * 60); value++) {
-        if (count === duration) {
-            timeToStart = value - duration;
-            break;
-        }
-        if (
-            gangTimes.every(
-                friend => friend.find(interval => isValueInInterval(interval, value))
-            ) &&
-            bankTimes.find(interval => isValueInInterval(interval, value))
-        ) {
-            count++;
-        } else {
-            count = 0;
-        }
-    }
+    let timeFound = findNextTime([0, 72 * 60], duration, bankTimes, gangTimes);
 
     return {
+
 
         /**
          * Найдено ли время
          * @returns {Boolean}
          */
         exists: function () {
-            return timeToStart !== null;
+            return timeFound !== null;
         },
 
         /**
@@ -72,11 +42,11 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            if (timeToStart === null) {
+            if (timeFound === null) {
                 return '';
             }
 
-            return formatDate(timeToStart + bankTimeZone * 60, template, bankTimeZone);
+            return formatDate(timeFound + bankTimeZone * 60, template);
         },
 
         /**
@@ -85,9 +55,55 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
+            const nextTime = findNextTime(
+                [timeFound + 30, 72 * 60],
+                duration,
+                bankTimes,
+                gangTimes
+            );
+            if (nextTime) {
+                timeFound = nextTime;
+
+                return true;
+            }
+
             return false;
         }
     };
+}
+
+function findNextTime([start, end], duration, bankOpenedIntervals, friendsFreeIntervals) {
+    let streak = 0;
+
+    for (let i = start; i < end; i++) {
+        if (streak >= duration) {
+            return i - duration;
+        }
+        if (canGang(friendsFreeIntervals, bankOpenedIntervals, i)) {
+            streak++;
+        } else {
+            streak = 0;
+        }
+    }
+
+    return null;
+}
+
+function getFriendFreeIntervals(friendShedule, domain) {
+    const mergedIntervals = mergeIntersectedIntervals(
+        friendShedule.map(timePeriodToInterval)
+    );
+
+    return invertIntervals(mergedIntervals, domain);
+}
+
+function getBankWorkingIntervals(workingHours) {
+    return [0, 24, 48].map(offset =>
+        [
+            getUTCTimeInMinutesForBank(workingHours.from) + offset * 60,
+            getUTCTimeInMinutesForBank(workingHours.to) + offset * 60
+        ]
+    );
 }
 
 function getUTCTimeInMinutes(timeString) {
@@ -174,6 +190,15 @@ function formatDate(timeInMinutes, format) {
         .replace(/%DD/, days[day])
         .replace(/%HH/, hours.toString().padStart(2, '0'))
         .replace(/%MM/, minutes.toString().padStart(2, '0'));
+}
+
+function canGang(gangTimes, bankTimes, value) {
+    const areFriendsFree = gangTimes.every(
+        friend => friend.find(interval => isValueInInterval(interval, value))
+    );
+    const isBankOpened = bankTimes.find(interval => isValueInInterval(interval, value));
+
+    return areFriendsFree && isBankOpened;
 }
 
 module.exports = {
