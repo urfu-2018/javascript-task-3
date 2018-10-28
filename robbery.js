@@ -173,7 +173,7 @@ function getGoodTiming(busyDates, duration, workingTime) {
     let from = workingTime[0];
     while (from <= workingTime[1]) {
         let sector = [from, from + duration];
-        let result = mergeIntersections(busyDates, sector, workingTime[1], duration);
+        let result = mergeIntersections(busyDates, sector, workingTime, duration);
         if (result.sector[1] + duration > workingTime[1] && !result.hasGoodTiming) {
             break;
         }
@@ -186,13 +186,13 @@ function getGoodTiming(busyDates, duration, workingTime) {
     }
 }
 
-function mergeIntersections(busyDates, sector, endBankWorkTime, duration) {
+function mergeIntersections(busyDates, sector, workingTime, duration) {
     let hasGoodTiming = true;
     let countShift = 0;
     for (let element of busyDates) {
         let result = hasIntersections(sector, element);
         sector = result.sector;
-        if (endBankWorkTime - duration < sector[1] && !hasGoodTiming) {
+        if (workingTime[1] - duration < sector[1] && !hasGoodTiming) {
             return {
                 sector: sector,
                 hasGoodTiming: false
@@ -206,8 +206,10 @@ function mergeIntersections(busyDates, sector, endBankWorkTime, duration) {
                 hasGoodTiming: hasGoodTiming
             };
         }
-        hasGoodTiming = false;
-        countShift++;
+        if (sector[1] < workingTime[0] + minutesInDay) {
+            hasGoodTiming = false;
+            countShift++;
+        }
     }
 
     return {
