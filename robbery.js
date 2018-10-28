@@ -158,6 +158,10 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
+            if (intervals.length === 0) {
+                return false;
+            }
+
             const newStart = intervals[0][0] + EXTRA_TIME;
             for (let i = 0; i < intervals.length; i++) {
                 if (intervals[i][1] - Math.max(newStart, intervals[i][0]) >= duration) {
