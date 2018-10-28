@@ -123,21 +123,45 @@ function getMoments(schedule, duration, workingHours) {
 }
 
 function assignInitialValue(bankSchedule, schedule) {
-    var isbankTimeFromBigger = timeBigger(bankSchedule.from, schedule[0].from);
-    var isBankTimeToBigger = timeBigger(bankSchedule.to, schedule[0].to);
+    const firstRecord = schedule[0];
+    const isbankOpenTimeBigger = timeBigger(bankSchedule.from, firstRecord.from); // b  >= a
+    const isBankCloseTimeBigger = timeBigger(bankSchedule.to, firstRecord.to); // c <= d
 
     return {
-        from: {
-            day: schedule[0].from.day,
-            hours: (isbankTimeFromBigger) ? bankSchedule.from.hours : schedule[0].from.hours,
-            minutes: (isbankTimeFromBigger) ? bankSchedule.from.minutes : schedule[0].from.minutes
-        },
-        to: {
-            day: schedule[0].from.day,
-            hours: (isBankTimeToBigger) ? schedule[0].to.hours : bankSchedule.to.hours,
-            minutes: (isBankTimeToBigger) ? schedule[0].to.minutes : bankSchedule.to.minutes
-        }
+        from: resolveFromTime(firstRecord, isbankOpenTimeBigger, bankSchedule),
+        to: resolveToTime(firstRecord, isBankCloseTimeBigger, bankSchedule)
     };
+}
+
+function resolveFromTime(record, isBankOpenTimeBigger, bankSchedule) { // b >= a
+    const isBankTimeBigger = timeBigger(bankSchedule.from, record.to); // b >= c
+
+    return {
+        day: record.from.day,
+        hours: (isBankTimeBigger || isBankOpenTimeBigger)
+            ? bankSchedule.from.hours : record.from.hours,
+        minutes: (isBankTimeBigger || isBankOpenTimeBigger)
+            ? bankSchedule.from.minutes : record.from.minutes
+    };
+}
+
+function resolveToTime(record, isBankCloseTimeBigger, bankSchedule) { // c<=d
+    const isBankTimeBigger = timeBigger(bankSchedule.from, record.to); // b >= c
+
+    var newRecord = {};
+    newRecord.day = record.from.day;
+    if (!isBankCloseTimeBigger) {
+        newRecord.hours = bankSchedule.to.hours;
+        newRecord.minutes = bankSchedule.to.minutes;
+    } else if (isBankTimeBigger) {
+        newRecord.hours = bankSchedule.from.hours;
+        newRecord.minutes = bankSchedule.from.minutes;
+    } else {
+        newRecord.hours = record.to.hours;
+        newRecord.minutes = record.to.minutes;
+    }
+
+    return newRecord;
 }
 
 function findAvailableTime(workingHours, schedule, duration) {
@@ -161,11 +185,11 @@ function findAvailableTime(workingHours, schedule, duration) {
                 }
             };
             periods.push(probablePeriod);
-            currentPeriod.from = (timeBigger(i.from, bankSchedule.to)) ? bankSchedule.to : i.from;
+            currentPeriod.from = (timeBigger(i.from, bankSchedule.to)) ? i.from : bankSchedule.to;
             currentPeriod.to = (timeBigger(i.to, bankSchedule.to)) ? bankSchedule.to : i.to;
+        } else {
+            currentPeriod.to = resolveEnd(isBankTimeToBigger, i, currentPeriod, bankSchedule);
         }
-
-        currentPeriod.to = resolveEnd(isBankTimeToBigger, i, currentPeriod, bankSchedule);
     });
 
     if (timeBigger(currentPeriod.from, bankSchedule.from) && periods.length === 0) {
@@ -320,7 +344,7 @@ function splitDays(record) {
             });
 
             startDate = {
-                day: startDate.day + i + 1,
+                day: record.from.day + i + 1,
                 hours: 0,
                 minutes: 0
             };
