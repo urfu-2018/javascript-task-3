@@ -19,7 +19,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
     const MINUTES_IN_DAY = 60 * 24;
 
-    const TARGET_TIME_ZONE = parseInt(workingHours.from.split('+')[1]);
+    const TARGET_TIME_ZONE = parseInt(workingHours.from.split('+')[1]) || 0;
 
     const weekEnum = Object.freeze({
         'ПН': 0, 'ВТ': 1, 'СР': 2,
