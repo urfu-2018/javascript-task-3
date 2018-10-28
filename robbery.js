@@ -170,7 +170,7 @@ function fillBankSchedule(bankWorkingHours) {
 function getAppropriateMoment(schedule, duration, workingHours) {
     console.info(schedule, duration, workingHours);
     const bankTimezone = parseInt(workingHours.from.slice(6));
-    startOfWeek -= bankTimezone * 60;
+    startOfWeek = -bankTimezone * 60;
 
     const gangSchedule = getGangFreeTimeIntervals(schedule);
     const bankSchedule = fillBankSchedule(workingHours);
