@@ -179,7 +179,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             return postMoment.length !== 0;
         }
     };
-};
+}
 
 module.exports = {
     getAppropriateMoment,
