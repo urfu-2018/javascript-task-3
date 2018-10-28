@@ -16,6 +16,7 @@ const isStar = true;
  */
 
 const MINUTES_IN_HOURS = 60;
+const MAX_MINUTE = 4320;
 
 const DAYS = {
     'ПН': 0,
@@ -156,43 +157,41 @@ function getBankSchedule(schedule) {
 }
 
 function getRobberSchedule(schedule, bankTimeZone) {
-    const minutesSchedule = {
-        Danny: [],
-        Rusty: [],
-        Linus: []
-    };
-    Object.keys(schedule).forEach(robberSchedule => {
-        schedule[robberSchedule].forEach(timeRange => {
-
-            minutesSchedule[robberSchedule].push(
-                { from: robberDatestampToMinutes(bankTimeZone, timeRange.from),
-                    to: robberDatestampToMinutes(bankTimeZone, timeRange.to)
-                });
+    const minutesSchedule = {};
+    Object.keys(schedule).forEach(robberName => {
+        const robberSchedule = [];
+        schedule[robberName].forEach(timeRange => {
+            robberSchedule.push({
+                from: robberDatestampToMinutes(bankTimeZone, timeRange.from),
+                to: robberDatestampToMinutes(bankTimeZone, timeRange.to)
+            });
         });
-        getFreeTime(minutesSchedule[robberSchedule]);
+        minutesSchedule[robberName] = getFreeTime(robberSchedule);
     });
 
     return minutesSchedule;
 }
 
 function getFreeTime(robberSchedule) {
-    let start = 0;
-    let middle = 0;
-    let finish = 4320;
-    robberSchedule.forEach(timeRange => {
-        if (start < timeRange.from) {
-            middle = timeRange.to;
-            timeRange.to = timeRange.from;
-            timeRange.from = start;
+    const freeTime = [];
+    let previousFrom = 0;
+    robberSchedule.forEach(range => {
+        if (previousFrom < range.from) {
+            freeTime.push({
+                from: previousFrom,
+                to: range.from
+            });
         }
-        start = middle;
+        previousFrom = range.to;
     });
-
-    if (start <= finish) {
-        robberSchedule.push({ 'from': start, 'to': finish });
+    if (previousFrom < MAX_MINUTE) {
+        freeTime.push({
+            from: previousFrom,
+            to: MAX_MINUTE
+        });
     }
 
-    return robberSchedule;
+    return freeTime;
 }
 
 function isIntersected(left, right) {
