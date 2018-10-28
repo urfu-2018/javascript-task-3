@@ -173,25 +173,19 @@ function getRobberSchedule(schedule, bankTimeZone) {
 }
 
 function getFreeTime(robberSchedule) {
-    const freeTime = [];
-    let previousFrom = 0;
+    const freeTimeSchedule = [];
+    let start = 0;
     robberSchedule.forEach(range => {
-        if (previousFrom < range.from) {
-            freeTime.push({
-                from: previousFrom,
-                to: range.from
-            });
+        if (start < range.from) {
+            freeTimeSchedule.push({from: start, to: range.from});
         }
-        previousFrom = range.to;
+        start = range.to;
     });
-    if (previousFrom < MAX_MINUTE) {
-        freeTime.push({
-            from: previousFrom,
-            to: MAX_MINUTE
-        });
+    if (start < MAX_MINUTE) {
+        freeTimeSchedule.push({from: start, to: MAX_MINUTE});
     }
 
-    return freeTime;
+    return freeTimeSchedule;
 }
 
 function isIntersected(left, right) {
