@@ -9,7 +9,7 @@ const isStar = false;
 const weekDays = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
 const minutesInHour = 60;
 const minutesInDay = 1440;
-let appropriateMoment;
+let goodSectors;
 
 function convertToMinute(element, workingHours) {
     let from = convert(element.from, workingHours);
@@ -59,6 +59,152 @@ function removeTimeZone(timeZone, workingHours) {
     return bankTimeZone - timeZone;
 }
 
+function mergeIntersections(element, busyDates) {
+    let preResult = [1, 0];// 1просто так, 0 ложное значение для проверок
+    for (let index = busyDates.indexOf(element); index < busyDates.length; index++) {
+        if (preResult[1]) { // если мы дошли до отрезка который не входит в текущий,
+            // то значит и все остальные тоже лишние (sort)
+            break;
+        }
+        if (element === busyDates[index] || busyDates[index].length !== 2) {
+            continue;
+        }
+        preResult = toCombine(element, busyDates[index], preResult[1]);
+        element = preResult[0];
+        if (!preResult[1]) {
+            delete busyDates[index];
+        }
+    }
+
+    return element;
+}
+
+function toCombine(element, element2, flag) {
+    if (element[0] <= element2[0] && element2[0] <= element[1]) {
+        if (element2[1] > element[1]) {
+            element[1] = element2[1];
+        }
+
+        return [element, flag];
+    }
+    if (element[0] <= element2[1] && element2[1] <= element[1]) {
+        element[0] = element2[0];
+
+        return [element, flag];
+    }
+    flag = true;
+
+    return [element, flag];
+}
+
+function getFreeSectors(combinedDates, duration) {
+    let result = [];
+    let t = 0;
+    for (let element of combinedDates) {
+        let preRes = hasFreeSectors(element, t, duration);
+        console.info(preRes);
+        if (typeof preRes.freeSectors !== 'undefined') {
+            result.push(preRes.freeSectors);
+        }
+        t = preRes.t;
+        if (t > 1440 * 3) {
+            return result;
+        }
+    }
+    if (t < 1440 * 3) {
+        result.push([t, 1440 * 3]);
+    }
+
+    return result;
+}
+
+function hasFreeSectors(element, t, duration) {
+    console.info('hasFREESECTORS    ' + element + '     ' + t + '   ' + duration);
+    let result;
+    if (element[0] - t >= duration) {
+        result = [t, element[0]];
+    }
+    t = element[1];
+
+    return {
+        freeSectors: result,
+        t: t
+    };
+}
+
+function getGoodSectors(freeSectors, workingHoursInMinute, duration) {
+    // console.info('GetGOOD SECTORS' + freeSectors + '    ' + workingHoursInMinute +
+    // '    ' + duration);
+    let result = [];
+    for (let index = 0; index < 3; index++) {
+        let workingTime = [workingHoursInMinute[0] + index * minutesInDay,
+            workingHoursInMinute[1] + index * minutesInDay];
+        let preRes = getGoodSector(freeSectors, workingTime, duration);
+        if (typeof preRes !== 'undefined' && preRes.length !== 0) {
+            result.push(preRes);
+        }
+    }
+
+    return result;
+}
+
+function invalid(element, workingTime, sector) {
+    if (element[0] > workingTime[0] + 1440 || element[1] > workingTime[1] + 1440) {
+        return sector;
+    }
+
+    return 1;
+}
+
+function firstCheck(element, workingTime) {
+    // console.info('first' + element + '      ' + workingTime);
+    let sector;
+    let preRes = invalid(element, workingTime, sector);
+    if (typeof preRes === 'undefined') {
+        return sector;
+    }
+    if (workingTime[0] <= element[0] && element[1] <= workingTime[1]) {
+        sector = [element[0], element[1]];
+    }
+    if (workingTime[0] > element[0] && workingTime[1] < element[1]) {
+        sector = [workingTime[0], workingTime[1]];
+    }
+
+    return sector;
+}
+
+function secondCheck(element, workingTime) {
+    // console.info('second' + element + '      ' + workingTime);
+    let sector;
+    if (workingTime[0] < element[0] && workingTime[1] < element[1]) {
+        sector = [element[0], workingTime[1]];
+    }
+    if (workingTime[0] > element[0] && workingTime[1] > element[1]) {
+        sector = [workingTime[0], element[1]];
+    }
+
+    return sector;
+}
+
+function getGoodSector(freeSectors, workingTime, duration) {
+    // console.info('getgood SECTOR' + freeSectors + '     ' + workingTime + '     ' + duration);
+    let result = [];
+    let sector;
+    for (let element of freeSectors) {
+        sector = firstCheck(element, workingTime);
+        if (typeof sector === 'undefined') {
+            sector = secondCheck(element, workingTime);
+        }
+        if (typeof sector !== 'undefined' && sector.length !== 0 &&
+        sector[1] - sector[0] >= duration) {
+            // console.info(sector + 'sd');
+            result.push(sector);
+        }
+    }
+
+    return result;
+}
+
 /**
  * @param {Object} schedule – Расписание Банды
  * @param {Number} duration - Время на ограбление в минутах
@@ -68,7 +214,6 @@ function removeTimeZone(timeZone, workingHours) {
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    console.info(schedule, duration, workingHours);
     let busyDates = []; // Когда заняты
     for (let key of Object.keys(schedule)) {
         schedule[key].forEach(element => {
@@ -76,9 +221,22 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         });
     }
     let workingHoursInMinute = convertToMinute(workingHours, workingHours);
+    let combinedDates = [];
     busyDates.sort((a, b) => {
         return a[0] - b[0];
     });
+    busyDates.forEach(element => {
+        element = mergeIntersections(element, busyDates);
+        if (element.length !== 0) {
+            combinedDates.push(element);
+        }
+    });
+    // тут тупа вывод для меня
+    combinedDates.forEach(element => {
+        console.info(element);
+    });
+    let freeSectors = getFreeSectors(combinedDates, duration);
+    console.info(freeSectors);
 
     return {
 
@@ -87,8 +245,10 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            appropriateMoment = getMoment(busyDates, duration, workingHoursInMinute);
-            if (typeof appropriateMoment !== 'undefined') {
+            goodSectors = getGoodSectors(freeSectors, workingHoursInMinute, duration);
+            console.info('kek');
+            console.info(goodSectors);
+            if (goodSectors.length !== 0) {
                 return true;
             }
 
@@ -102,11 +262,11 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            if (typeof appropriateMoment === 'undefined') {
+            if (goodSectors.length === 0) {
                 return '';
             }
-            let day = getAnswer(appropriateMoment.goodMoment, minutesInDay);
-            let timeWithoutDays = appropriateMoment.goodMoment - day * minutesInDay;
+            let day = getAnswer(goodSectors[0][0][0], minutesInDay);
+            let timeWithoutDays = goodSectors[0][0][0] - day * minutesInDay;
             let hour = getAnswer(timeWithoutDays, minutesInHour);
             let timeWithoutHours = timeWithoutDays - hour * minutesInHour;
             let minute = timeWithoutHours;
@@ -127,6 +287,10 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     };
 }
 
+function getAnswer(time, divider) {
+    return Math.floor(time / divider);
+}
+
 function toTwoElement(element) {
     element = element.toString();
     if (element.length === 1) {
@@ -134,183 +298,6 @@ function toTwoElement(element) {
     }
 
     return element;
-}
-
-function getAnswer(time, divider) {
-    return Math.floor(time / divider);
-}
-
-function getMoment(busyDates, duration, workingHoursInMinute) {
-    let resultTo = [];
-    for (let index = 0; index < 3; index++) {
-        let workingTime = [workingHoursInMinute[0] + index * minutesInDay,
-            workingHoursInMinute[1] + index * minutesInDay];
-        busyDates = removePreviouslyDates(busyDates, workingTime[0]);
-        console.info('следующий день        ' + workingTime);
-        resultTo = getGoodTiming(busyDates, duration, workingTime);
-        if (typeof resultTo !== 'undefined' && (resultTo + duration) % 1440 !== 0) {
-            return {
-                goodMoment: resultTo.sector
-            };
-        }
-    }
-}
-
-function removePreviouslyDates(busyDates, startBankTime) {
-    let result = [];
-    for (let element of busyDates) {
-        if (element[1] >= startBankTime) {
-            result.push(element);
-        }
-    }
-
-    return result;
-}
-
-function getGoodTiming(busyDates, duration, workingTime) {
-    if (workingTime[1] - workingTime[0] < duration) {
-        return;
-    }
-    let from = workingTime[0];
-    while (from <= workingTime[1]) {
-        if (busyDates.length === 0) {
-            return workingTime[0];
-        }
-        let sector = [from, from + duration];
-        let result = mergeIntersections(busyDates, sector, workingTime, duration);
-        busyDates = hasNewDates(result.busyDates, busyDates);
-        if (!existGoodTime(result.sector[1] + duration, workingTime[1], result.hasGoodTiming)) {
-            break;
-        }
-        if (result.hasGoodTiming) {
-            return {
-                sector: result.sector[0]
-            };
-        }
-        from = result.sector[1];
-    }
-}
-
-function existGoodTime(lastPlusDur, endBankTime, flag) {
-    if (lastPlusDur > endBankTime && !flag) {
-        return false;
-    }
-
-    return true;
-}
-
-function hasNewDates(newDates, busyDates) {
-    if (typeof newDates !== 'undefined') {
-        return newDates;
-    }
-
-    return busyDates;
-}
-
-function canDelete(hasIntersect, dateTo, nextStart) {
-    if (hasIntersect && dateTo < nextStart) {
-        return true;
-    }
-
-    return false;
-}
-
-function mergeIntersections(busyDates, sector, workingTime, duration) {
-    let hasGoodTiming = true;
-    let intersectsIndex = new Map();
-    for (let element of busyDates) {
-        let result = hasIntersections(sector, element);
-        sector = result.sector;
-        if (workingTime[1] - duration < sector[1] && !hasGoodTiming) {
-            return {
-                sector: sector,
-                hasGoodTiming: false
-            };
-        }
-        if (canDelete(result.hasIntersect, sector[1], workingTime[0] + minutesInDay)) {
-            intersectsIndex.set(busyDates.indexOf(element), element);
-            hasGoodTiming = false;
-        }
-        if (!result.hasIntersect) {
-            busyDates = removeIntersects(intersectsIndex, busyDates);
-
-            return {
-                sector: sector,
-                hasGoodTiming: hasGoodTiming,
-                busyDates: busyDates
-            };
-        }
-    }
-
-    return {
-        sector: sector,
-        hasGoodTiming: hasGoodTiming
-    };
-}
-
-function removeIntersects(intersectsIndex, busyDates) {
-    let result = [];
-    console.info(intersectsIndex);
-    for (let element of busyDates) {
-        if (!isEqually(element, intersectsIndex)) {
-            result.push(element);
-        }
-    }
-    console.info(result);
-
-    return result;
-}
-
-function isEqually(element, intersectsIndex) {
-    for (let element2 of intersectsIndex) {
-        if (element[0] === element2[1][0] && element[1] === element2[1][1]) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-function hasIntersections(element, element2) {
-    for (let index = 0; index < 2; index++) {
-        let usuallIntersection = checkIntersections(element, element2, index, 0);
-        if (usuallIntersection.hasIntersect) {
-            return usuallIntersection;
-        }
-        let reverseIntesection = checkIntersections(element2, element, index, 1);
-        if (reverseIntesection.hasIntersect) {
-            return reverseIntesection;
-        }
-    }
-
-    return {
-        sector: element,
-        hasIntersect: false
-    };
-}
-
-function checkIntersections(element, element2, index, flag) {
-    if (element[0] < element2[index] && element2[index] < element[1]) {
-        if (!flag) {
-            element[1] = element2[1];
-
-            return {
-                sector: element,
-                hasIntersect: true
-            };
-        }
-        element2[1] = element[1];
-
-        return {
-            sector: element2,
-            hasIntersect: true
-        };
-    }
-
-    return {
-        sector: arguments[flag],
-        hasIntersect: false
-    };
 }
 
 module.exports = {
