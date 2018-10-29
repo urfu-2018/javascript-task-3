@@ -28,6 +28,17 @@ class TimeInterval {
 
         return { day: day, hours: hours, minutes: minutes };
     }
+
+    intersection(otherInterval) {
+        if (this.from > otherInterval.to || otherInterval.from > this.to) {
+            return new TimeInterval(0, 0);
+        }
+
+        let start = Math.max(this.from, otherInterval.from);
+        let end = Math.min(this.to, otherInterval.to);
+
+        return new TimeInterval(start, end);
+    }
 }
 
 /**
@@ -110,62 +121,45 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
 function getRobberyFreeIntervals(workingHours, schedule) {
     let bankTimeIntervals = [];
-    for (let i = 0; i < 3; i++) {
+    for (const day of daysOfTheWeek) {
         bankTimeIntervals.push(new TimeInterval(
-            parseTimeToMinutes(`${daysOfTheWeek[i]} ${workingHours.from}`),
-            parseTimeToMinutes(`${daysOfTheWeek[i]} ${workingHours.to}`)));
+            parseTimeToMinutes(`${day} ${workingHours.from}`),
+            parseTimeToMinutes(`${day} ${workingHours.to}`)));
     }
 
-    let freeIntervals = getFreeTime(bankTimeIntervals, schedule.Danny);
-    freeIntervals = getFreeTime(freeIntervals, schedule.Rusty);
-    freeIntervals = getFreeTime(freeIntervals, schedule.Linus);
+    let freeIntervals = getFreeIntervals(bankTimeIntervals, schedule.Danny);
+    freeIntervals = getFreeIntervals(freeIntervals, schedule.Rusty);
+    freeIntervals = getFreeIntervals(freeIntervals, schedule.Linus);
 
     return freeIntervals;
 }
 
-function getFreeTime(bankIntervals, schedule) {
-    let busyTimeIntervals = schedule.map(x => new TimeInterval(parseTimeToMinutes(x.from),
-        parseTimeToMinutes(x.to)));
+function getFreeIntervals(bankIntervals, robberySchedule) {
+    let robberyIntervals = invertIntervals(robberySchedule.map(
+        x => new TimeInterval(parseTimeToMinutes(x.from), parseTimeToMinutes(x.to))));
 
-    for (let i = 0; i < busyTimeIntervals.length; i++) {
-        let diff = [];
-        for (let j = 0; j < bankIntervals.length; j++) {
-            diff = diff.concat(getDifference(bankIntervals[j], busyTimeIntervals[i]));
+    let intervals = [];
+    for (const interval of bankIntervals) {
+        for (const otherInterval of robberyIntervals) {
+            intervals.push(interval.intersection(otherInterval));
         }
-        bankIntervals = diff;
     }
 
-    return bankIntervals;
+    return intervals;
 }
 
-function getDifference(freeBankInterval, otherInterval) {
-    if (freeBankInterval.to > otherInterval.to && otherInterval.from > freeBankInterval.from) {
-        return [new TimeInterval(freeBankInterval.from, otherInterval.from),
-            new TimeInterval(otherInterval.to, freeBankInterval.to)];
-    }
+function invertIntervals(intervals) {
+    let invertedIntervals = [];
+    let lastEndPoint = 0;
 
-    if (freeBankInterval.to < otherInterval.to && otherInterval.from < freeBankInterval.from) {
-        return [];
+    for (let i = 0; i < intervals.length; i++) {
+        invertedIntervals.push(new TimeInterval(lastEndPoint, intervals[i].from));
+        lastEndPoint = intervals[i].to;
     }
-    let interval = getIfNotIntersection(freeBankInterval, otherInterval);
+    invertedIntervals.push(
+        new TimeInterval(lastEndPoint, (daysOfTheWeek.length + 1) * minutesInDay));
 
-    return interval ? interval : getIfIntersection(freeBankInterval, otherInterval);
-}
-
-function getIfIntersection(freeBankInterval, otherInterval) {
-    if (freeBankInterval.from < otherInterval.from || freeBankInterval.to < otherInterval.to) {
-        return [new TimeInterval(freeBankInterval.from, otherInterval.from)];
-    }
-
-    if (freeBankInterval.from > otherInterval.from || freeBankInterval.to > otherInterval.to) {
-        return [new TimeInterval(otherInterval.to, freeBankInterval.to)];
-    }
-}
-
-function getIfNotIntersection(freeBankInterval, otherInterval) {
-    if (otherInterval.to < freeBankInterval.from || freeBankInterval.to < otherInterval.from) {
-        return [freeBankInterval];
-    }
+    return invertedIntervals;
 }
 
 function parseTimeToMinutes(time) {
