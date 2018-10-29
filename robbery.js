@@ -105,11 +105,13 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 }
 
 function formatBankWorkingHours(workingHours) {
-    const hoursFrom = Number(workingHours.from.slice(0, 2));
-    const minutesFrom = Number(workingHours.from.slice(3, 5));
+    const fromTmp = workingHours.from.replace(/[+:]/g, ' ').split(' ');
+    const hoursFrom = Number(fromTmp[0]);
+    const minutesFrom = Number(fromTmp[1]);
 
-    const hoursTo = Number(workingHours.to.slice(0, 2));
-    const minutesTo = Number(workingHours.to.slice(3, 5));
+    const toTmp = workingHours.to.replace(/[+:]/g, ' ').split(' ');
+    const hoursTo = Number(toTmp[0]);
+    const minutesTo = Number(toTmp[1]);
 
     return [
         { from: hoursFrom * 60 + minutesFrom, to: hoursTo * 60 + minutesTo },
