@@ -88,7 +88,7 @@ function unionOfIntervals(intervals) {
 function invertIntervals(start, intervals, end) {
     intervals = intervals
         .sort((x, y) => x[0] > y[0])
-        .filter(x => x[0] <= end && x[1] >= start)
+        .filter(x => x[0] < end && x[1] > start)
         .reduce((a, b) => a.concat(b), []);
     if (intervals[0] === start) {
         intervals.shift();
@@ -105,7 +105,7 @@ function invertIntervals(start, intervals, end) {
         .reduce((a, c, i) => a.concat(i % 2 ? [[intervals[i - 1], c]] : []), [])
         .filter(x => x[0] < x[1]);
 }
-
+invertIntervals(10, [[10, 20], [40, 110]], 100); // ?
 function scheduleToTimeIntervals(schedule) {
     const result = [];
     for (let interval of schedule) {
@@ -156,8 +156,9 @@ function findGoodIntervals(schedule, workingHours) {
                         .concat(schedule.Linus)
                         .filter(x => ['ПН', 'ВТ', 'СР'].includes(x.from.split(' ')[0]))
                 )
-                    .filter(x => x[0] < maxTime)
+                    .filter(x => x[0] < maxTime && x[1] > minTime)
                     .map(x => (x[1] > maxTime ? [x[0], maxTime] : x))
+                    .map(x => (x[0] > minTime ? [minTime, x[1]] : x))
             )
         ),
         maxTime
