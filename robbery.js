@@ -178,11 +178,15 @@ function getAdditionTimes(intervals, duration) {
 }
 function getAppropriateMoment(schedule, duration, workingHours) {
     const bankInterval = parseBankTime(workingHours);
-    const participantIntervals = Object.keys(schedule).map(part =>
-        reverseIntervals(getIntervalsForPerson(schedule[part], bankInterval.shift)));
+    const dannyIntervals = reverseIntervals(getIntervalsForPerson(schedule.Danny,
+        bankInterval.shift));
+    const rustyIntervals = reverseIntervals(getIntervalsForPerson(schedule.Rusty,
+        bankInterval.shift));
+    const linusIntervals = reverseIntervals(getIntervalsForPerson(schedule.Linus,
+        bankInterval.shift));
     const bankIntervals = getBankOpenIntervals(bankInterval);
-    participantIntervals.push(bankIntervals);
-    let res = findIntersectionOfAllGroups(participantIntervals, duration);
+    const arr = [dannyIntervals, rustyIntervals, linusIntervals, bankIntervals];
+    let res = findIntersectionOfAllGroups(arr, duration);
     res = toSet(res);
     res = getAdditionTimes(res, duration);
     let pointer = 0;
