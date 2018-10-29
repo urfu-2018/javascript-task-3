@@ -78,16 +78,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
  */
 function getSuitableTimeParts(schedule, duration) {
     const suitableTimes = [];
-    schedule.sort((a, b) => {
-        if (a.from < b.from) {
-            return -1;
-        }
-        if (a.from > b.from) {
-            return 1;
-        }
-
-        return 0;
-    })
+    schedule
+        .sort((a, b) => a.from - b.from)
         .forEach(part => {
             if ((part.to - part.from) >= duration) {
                 suitableTimes.push(part.from);
@@ -148,8 +140,8 @@ function convertTimeToMinutes(time, bankTimeZone) {
  * @returns {Array}
  */
 function convertTimeFromMinutes(timeInMinutes) {
-    let hours = Math.floor(timeInMinutes / 60);
-    const minutes = timeInMinutes - hours * 60;
+    let hours = String(Math.floor(timeInMinutes / 60));
+    const minutes = String(timeInMinutes - hours * 60);
     let day = 'ПН';
     if (hours >= 24 && hours < 48) {
         day = 'ВТ';
@@ -158,7 +150,9 @@ function convertTimeFromMinutes(timeInMinutes) {
     }
     hours = hours % 24;
 
-    return [day, hours, minutes];
+    return [day,
+        hours.length === 1 ? `0${hours}` : hours,
+        minutes.length === 1 ? `0${minutes}` : minutes];
 }
 
 /**
@@ -171,14 +165,14 @@ function getRobersFreeTime(schedule) {
     schedule.forEach(robber => {
         const personFreeTime = [];
         let minTime = 0;
-        robber.forEach(day => {
-            if (minTime < day.from) {
+        robber.forEach(part => {
+            if (minTime < part.from) {
                 personFreeTime.push({
                     from: minTime,
-                    to: day.from
+                    to: part.from
                 });
             }
-            minTime = day.to;
+            minTime = part.to;
         });
         if (minTime < maxMinute) {
             personFreeTime.push({
