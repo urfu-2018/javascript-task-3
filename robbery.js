@@ -180,7 +180,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         daysToRob.forEach(day => {
 
             noRobTime[day] = noRobTime[day].sort((gap1, gap2) =>
-                gap1.fromInMinutes > gap2.fromInMinutes);
+                gap1.fromInMinutes - gap2.fromInMinutes);
             // сортировка по началу, чтобы удобнее было смотреть свободные промежутки
             for (let i = 0; i < noRobTime[day].length - 1; i++) {
 
