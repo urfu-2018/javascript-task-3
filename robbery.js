@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = false;
+const isStar = true;
 let appropriateMoments;
 let bankWorkingHours;
 const days = ['ПН', 'ВТ', 'СР'];
