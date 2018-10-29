@@ -107,7 +107,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (templateMinute !== 0) {
                 const weekdayIndex = Math.floor(templateMinute / (24 * 60));
                 const weekday = weekdays[weekdayIndex];
-                const hour = (Math.floor((templateMinute - 24 * 60 * weekdayIndex) / 60)).toString();
+                const hour = (Math.floor((templateMinute - 24 * 60 * weekdayIndex) /
+                60)).toString();
                 let paddedHour = hour.length === 1 ? '0' + hour : hour;
                 const minute = (templateMinute % 60).toString();
                 let paddedMinute = minute.length === 1 ? '0' + minute : minute;
@@ -149,7 +150,25 @@ function findFreeSchedule(scheduleFull, duration, lastTime = 0) {
         else if (scheduleItem.status === 'to') {
             choiseTo(scheduleItem);
         }
-        handler(actualMinutes,scheduleItem,duration,scheduleFull,lastTime,startIndex, i);
+        if (checkBank && checkDanny && checkRusty && checkLinus) {
+            actualMinutes = scheduleItem.minutes + duration;
+            if (actualMinutes <= scheduleFull[i + 1].minutes) {
+                if (lastTime === 0) {
+                    startIndex = i;
+
+                    return actualMinutes - duration + bankTimeZone * 60;
+                }
+                else if ((lastTime + 30 + duration - bankTimeZone * 60) <= scheduleFull[i + 1].minutes &&
+                    (actualMinutes - duration + bankTimeZone * 60) >= lastTime) {
+                    startIndex = i;
+                    if ((actualMinutes - duration + bankTimeZone * 60) !== lastTime) {
+                        return actualMinutes - duration + bankTimeZone * 60;
+                    }
+
+                    return actualMinutes + 30 - duration + bankTimeZone * 60;
+                }
+            }
+        }
     }
 }
 
@@ -184,28 +203,6 @@ function choiseTo(scheduleItem) {
         case 'Linus':
             checkLinus = true;
             break;
-    }
-}
-
-function handler(actualMinutes, scheduleItem, duration, scheduleFull, lastTime, startIndex, i) {
-    if (checkBank && checkDanny && checkRusty && checkLinus) {
-        actualMinutes = scheduleItem.minutes + duration;
-        if (actualMinutes <= scheduleFull[i + 1].minutes) {
-            if (lastTime === 0) {
-                startIndex = i;
-
-                return actualMinutes - duration + bankTimeZone * 60;
-            }
-            else if ((lastTime + 30 + duration - bankTimeZone * 60) <= scheduleFull[i + 1].minutes &&
-                (actualMinutes - duration + bankTimeZone * 60) >= lastTime) {
-                startIndex = i;
-                if ((actualMinutes - duration + bankTimeZone * 60) !== lastTime) {
-                    return actualMinutes - duration + bankTimeZone * 60;
-                }
-
-                return actualMinutes + 30 - duration + bankTimeZone * 60;
-            }
-        }
     }
 }
 
