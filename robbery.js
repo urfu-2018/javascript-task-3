@@ -52,6 +52,7 @@ class TimeInterval {
 function getAppropriateMoment(schedule, duration, workingHours) {
     console.info(schedule, duration, workingHours);
 
+    const shift = 30;
     let lastIndex = 0;
     let lastCorrectInterval;
 
@@ -100,7 +101,11 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            lastCorrectInterval.from += 30;
+            if (!lastCorrectInterval) {
+                return false;
+            }
+
+            lastCorrectInterval.from += shift;
             for (let i = lastIndex; i < allIntervals.length; i++) {
                 if (!(allIntervals[i].length() >= duration)) {
                     continue;
@@ -111,7 +116,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 return true;
 
             }
-            lastCorrectInterval.from -= 30;
+            lastCorrectInterval.from -= shift;
 
             return false;
 
@@ -147,6 +152,7 @@ function getFreeIntervals(bankIntervals, robberySchedule) {
 
     return intervals;
 }
+
 
 function invertIntervals(intervals) {
     let invertedIntervals = [];
