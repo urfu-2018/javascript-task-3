@@ -5,8 +5,8 @@
  * Реализовано оба метода и tryLater
  */
 const isStar = true;
-
-const minInDay = 60 * 24;
+const minInHour = 60;
+const minInDay = minInHour * 24;
 
 const timeRegex = new RegExp('([А-Я]{2}) (\\d{2}):(\\d{2})\\+(\\d+)');
 const bankTimeRegex = new RegExp('(\\d{2}):(\\d{2})\\+(\\d+)');
@@ -15,6 +15,10 @@ class Interval {
     constructor(leftPoint, rightPoint) {
         this.leftPoint = leftPoint;
         this.rightPoint = rightPoint;
+    }
+
+    get length() {
+        return this.rightPoint - this.leftPoint;
     }
 }
 Interval.prototype.toString = function intervalToString() {
@@ -38,7 +42,7 @@ function parseTimeIntevalToMinRelativeMonday(interval, bankShift) {
     const shift = parseInt(match[4]);
     const deltaShift = bankShift - shift;
     const result = minInDay * dayToMinutesShith[day] +
-        parseInt(match[2]) * 60 + parseInt(match[3]) + deltaShift * 60;
+        parseInt(match[2]) * minInHour + parseInt(match[3]) + deltaShift * minInHour;
 
     return result;
 }
@@ -46,8 +50,8 @@ function parseTimeIntevalToMinRelativeMonday(interval, bankShift) {
 function parseBankTime(time) {
     const matchFrom = bankTimeRegex.exec(time.from);
     const matchTo = bankTimeRegex.exec(time.to);
-    const fromMin = parseInt(matchFrom[1]) * 60 + parseInt(matchFrom[2]);
-    const toMin = parseInt(matchTo[1]) * 60 + parseInt(matchTo[2]);
+    const fromMin = parseInt(matchFrom[1]) * minInHour + parseInt(matchFrom[2]);
+    const toMin = parseInt(matchTo[1]) * minInHour + parseInt(matchTo[2]);
 
     return { from: fromMin, to: toMin, shift: parseInt(matchFrom[3]) };
 }
@@ -109,23 +113,17 @@ function findIntersectionsTwoGroupsOfIntervals(firstIntervals, secondIntervals, 
 
 function checkIntervalsPartialIntersection(first, second, duration, result) {
     if (first.leftPoint <= second.leftPoint && first.rightPoint <= second.rightPoint) {
-        const letfIntersectionPoint = second.leftPoint;
-        const rightIntersectionPoint = first.rightPoint;
-        if (rightIntersectionPoint - letfIntersectionPoint >= duration) {
-            result.push(new Interval(letfIntersectionPoint,
-                rightIntersectionPoint)
-            );
+        const currInterval = new Interval(second.leftPoint, first.rightPoint);
+        if (currInterval.length >= duration) {
+            result.push(currInterval);
         }
     }
 }
 
 function checkIntervalsFullIntersection(first, second, duration, result) {
     if (first.leftPoint >= second.leftPoint && first.rightPoint <= second.rightPoint) {
-        const letfIntersectionPoint = first.leftPoint;
-        const rightIntersectionPoint = first.rightPoint;
-        if (rightIntersectionPoint - letfIntersectionPoint >= duration) {
-            result.push(new Interval(letfIntersectionPoint,
-                rightIntersectionPoint));
+        if (first.length >= duration) {
+            result.push(first);
         }
     }
 }
@@ -138,8 +136,8 @@ function getDateTimeFromMinutes(minutes) {
     for (const day of ['СР', 'ВТ', 'ПН']) {
         const minutesInCurrentDay = dayToMinutesShith[day] * minInDay;
         if (minutes >= minutesInCurrentDay) {
-            const hours = toTwoDigitNumber(div((minutes - minutesInCurrentDay), 60));
-            const min = toTwoDigitNumber((minutes - minutesInCurrentDay) % 60);
+            const hours = toTwoDigitNumber(div((minutes - minutesInCurrentDay), minInHour));
+            const min = toTwoDigitNumber((minutes - minutesInCurrentDay) % minInHour);
 
             return { day, hours: hours, minutes: min };
         }
@@ -153,13 +151,11 @@ function toTwoDigitNumber(digit) {
     return digit;
 }
 
-function toSet(arr) {
+function removeDuplicates(arr) {
     const names = new Set();
 
-    const a = arr.filter(item => !names.has(item.toString())
+    return arr.filter(item => !names.has(item.toString())
         ? names.add(item.toString()) : false);
-
-    return a;
 
 }
 
@@ -178,19 +174,16 @@ function getAdditionTimes(intervals, duration) {
 }
 function getAppropriateMoment(schedule, duration, workingHours) {
     const bankInterval = parseBankTime(workingHours);
-    const arr = Object.keys(schedule)
-        .map(x => reverseIntervals(getIntervalsForPerson(schedule[x], bankInterval.shift)));
-    // const dannyIntervals = reverseIntervals(getIntervalsForPerson(schedule.Danny,
-    //     bankInterval.shift));
-    // const rustyIntervals = reverseIntervals(getIntervalsForPerson(schedule.Rusty,
-    //     bankInterval.shift));
-    // const linusIntervals = reverseIntervals(getIntervalsForPerson(schedule.Linus,
-    //     bankInterval.shift));
+    const dannyIntervals = reverseIntervals(getIntervalsForPerson(schedule.Danny,
+        bankInterval.shift));
+    const rustyIntervals = reverseIntervals(getIntervalsForPerson(schedule.Rusty,
+        bankInterval.shift));
+    const linusIntervals = reverseIntervals(getIntervalsForPerson(schedule.Linus,
+        bankInterval.shift));
     const bankIntervals = getBankOpenIntervals(bankInterval);
-    arr.push(bankIntervals);
-    // const arr = [dannyIntervals, rustyIntervals, linusIntervals, bankIntervals];
+    const arr = [dannyIntervals, rustyIntervals, linusIntervals, bankIntervals];
     let res = findIntersectionOfAllGroups(arr, duration);
-    res = toSet(res);
+    res = removeDuplicates(res);
     res = getAdditionTimes(res, duration);
     let pointer = 0;
 
