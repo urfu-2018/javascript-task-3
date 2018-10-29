@@ -130,7 +130,13 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
+            let oldTemplate = templateMinute;
             templateMinute = findFreeSchedule(duration, templateMinute);
+            if (templateMinute === 0 && oldTemplate !== 0) {
+                templateMinute = oldTemplate;
+
+                return false;
+            }
             if (templateMinute !== 0) {
                 return true;
             }
