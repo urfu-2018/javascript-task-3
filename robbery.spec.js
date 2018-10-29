@@ -155,23 +155,3 @@ describe('Custom bank always open', () => {
         assert.strictEqual(moment.format('Метим на %DD, старт в %HH:%MM!'), '');
     });
 });
-
-// describe('Custom tz', () => {
-//     function getMomentFor(time) {
-//         return robbery.getAppropriateMoment(
-//             {
-//                 Danny: [{ from: 'ПН 00:00+5', to: 'ВТ 23:59+5' }],
-//                 Rusty: [{ from: 'ЧТ 00:00+5', to: 'ЧТ 23:59+5' }],
-//                 Linus: [{ from: 'ВТ 00:00+5', to: 'СР 23:59+5' }]
-//             },
-//             time,
-//             { from: '00:00+0', to: '23:59+0' }
-//         );
-//     }
-
-//     it('должен вернуть пустую строку при форматировании несуществующего момента', () => {
-//         const moment = getMomentFor(2);
-//         // assert.ok(!moment.exists());
-//         assert.strictEqual(moment.format('Метим на %DD, старт в %HH:%MM!'), '');
-//     });
-// });

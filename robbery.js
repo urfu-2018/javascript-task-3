@@ -69,9 +69,9 @@ function unionOfIntervals(intervals) {
     intervals = intervals.sort((x, y) => x[0] > y[0]);
     const result = [intervals[0]];
     for (let interval of intervals.slice(1)) {
-        if (result[result.length - 1][1] < interval[0]) {
+        if (result[result.length - 1][1] <= interval[0]) {
             result.push(interval);
-        } else if (result[result.length - 1][1] < interval[1]) {
+        } else if (result[result.length - 1][1] <= interval[1]) {
             result[result.length - 1][1] = interval[1];
         }
     }
