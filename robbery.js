@@ -19,7 +19,7 @@ function parseTime(time) {
 }
 
 /**
- * Перевести время в минуты
+ * Переведит время в минуты
  * @param {String} day - День недели
  * @param {Number} hours - Часы
  * @param {Number} minutes - Минуты
@@ -37,7 +37,7 @@ function getTimeInMinutes(day, hours, minutes, timeZone = 0) {
 }
 
 /**
- * Получить интервал работы банка в минутах
+ * Получает интервал работы банка в минутах
  * @param {Object} workingHours – Время работы банка
  * @param {String} workingHours.from – Время открытия, например, "10:00+5"
  * @param {String} workingHours.to – Время закрытия, например, "18:00+5"
@@ -176,20 +176,27 @@ function getTimeFromMinutes(minutes) {
     return [day, hours, minute];
 }
 
-function tryFindLeterRobbery(resultIntervals, duration) {
-    if (resultIntervals.length === 0) {
+
+/**
+ * Ищет время для ограбления через 30 минут от предыдущего
+ * @param {[Object]} robberyInterval - Интервалы для ограбления
+ * @param {Number} duration - Длительность ограбления
+ * @returns {Boolean} - Найдено ли время
+ */
+function tryFindLeterRobbery(robberyInterval, duration) {
+    if (robberyInterval.length === 0) {
         return false;
     }
 
-    let firstInterval = resultIntervals[0];
+    let firstInterval = robberyInterval[0];
     if (firstInterval.to - firstInterval.from - 30 >= duration) {
-        resultIntervals[0].from += 30;
+        robberyInterval[0].from += 30;
 
         return true;
     }
 
-    if (resultIntervals[1]) {
-        resultIntervals.shift();
+    if (robberyInterval[1]) {
+        robberyInterval.shift();
 
         return true;
     }
