@@ -117,7 +117,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         if (minTime > 0) {
             result.push([0, minTime]);
         }
-        result = getDiffTimePeriods(workingTimesInMinutes, minTime);
+        result = result.concat(getDiffTimePeriods(workingTimesInMinutes, minTime));
         if (maxTime < MAX_TIME_FOR_ROBBERY_IN_MINUTES) {
             result.push([maxTime, MAX_TIME_FOR_ROBBERY_IN_MINUTES]);
         }
