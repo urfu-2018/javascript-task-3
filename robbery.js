@@ -150,7 +150,7 @@ class Schedule {
         return new Schedule(bankWorkingTime);
     }
 
-    getCorrectIntervalAfterMoment(timeMoment, minIntervalDuration) {
+    getRobberyTimeAfterMoment(timeMoment, minIntervalDuration) {
         let intervalsAfterMoment = [];
         this.timeIntervals.forEach(interval => {
             if (interval.isTimeMomentAfterInterval(timeMoment)) {
@@ -169,7 +169,17 @@ class Schedule {
             return null;
         }
 
-        return intervalsAfterMoment[0];
+        return intervalsAfterMoment[0].start;
+    }
+
+    getFirstRobberyTime(minIntervalDuration) {
+        const correctIntervals = this.timeIntervals
+            .filter(interval => interval.getDuration() >= minIntervalDuration);
+        if (correctIntervals.length === 0) {
+            return null;
+        }
+
+        return correctIntervals[0].start;
     }
 }
 
@@ -234,19 +244,11 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         .throwOutBusyTime(rustyTime)
         .throwOutBusyTime(linusTime);
 
-    const bankWorkingStartTime = createTime(
-        'ПН',
-        bankWorkingTimeFrom.hours,
-        bankWorkingTimeFrom.minutes,
-        bankWorkingTimeFrom.timezone
-    );
-
-    const firstRobberyInterval = robberySchedule
-        .getCorrectIntervalAfterMoment(bankWorkingStartTime, duration);
+    const firstRobberyTime = robberySchedule.getFirstRobberyTime(duration);
 
     return {
 
-        robberyTime: firstRobberyInterval === null ? null : firstRobberyInterval.start,
+        robberyTime: firstRobberyTime,
 
         /**
          * Найдено ли время
@@ -285,13 +287,13 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 return false;
             }
             const laterTime = this.robberyTime.getTimeAfter(30);
-            const robberyInterval = robberySchedule
-                .getCorrectIntervalAfterMoment(laterTime, duration);
-            if (robberyInterval === null) {
+            const robberyTime = robberySchedule
+                .getRobberyTimeAfterMoment(laterTime, duration);
+            if (robberyTime === null) {
                 return false;
             }
 
-            this.robberyTime = robberyInterval.start;
+            this.robberyTime = robberyTime;
 
             return true;
         }
