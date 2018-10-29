@@ -35,12 +35,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * Найдено ли время
          * @returns {Boolean}
          */
-        exists: function (border) {
-            if (!border) {
-                border = minTime;
-            }
-
-            return freeTime.some((x) => x[1] - Math.max(x[0], border) >= duration);
+        exists: function () {
+            return Boolean(this.find(minTime));
         },
 
         find: function (border) {
