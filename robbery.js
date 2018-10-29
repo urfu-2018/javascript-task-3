@@ -132,7 +132,9 @@ function getPossibleIntervals(schedule, workingHours, bankTimezone) {
 function getIntervalsWithDuration(intervals, duration) {
     return intervals
         .filter(interval => interval.to - duration >= interval.from)
-        .sort((first, second) => first.from > second.from);
+        .sort(function (first, second) {
+            return first.from - second.from;
+        });
 }
 
 function getIntervalsWithShifts(intervals, duration) {
@@ -171,10 +173,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         to: getMinutesFromDayStart(dayRegex.exec(workingHours.to)) };
     const formatedWorkingHours = getIntervalObjectsForWeek(workingHoursInterval);
     const bankTimezone = dayRegex.exec(workingHours.from)[3];
-    const possibleIntervals = freeTimeIntervals.length > 0 ? getPossibleIntervals(
-        freeTimeIntervals, formatedWorkingHours, bankTimezone) : [];
-    const validIntervals =
-        possibleIntervals.length > 0 ? getIntervalsWithDuration(possibleIntervals, duration) : [];
+    const possibleIntervals = getPossibleIntervals(
+        freeTimeIntervals, formatedWorkingHours, bankTimezone);
+    const validIntervals = getIntervalsWithDuration(possibleIntervals, duration);
     const validIntervalsWithShifts =
         validIntervals.length > 0 ? getIntervalsWithShifts(validIntervals, duration) : [];
 
@@ -201,9 +202,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             const date = getDateFromMinutes(validIntervalsWithShifts[0].from,
                 bankTimezone);
 
-            template = template.replace('%DD', date.day);
-            template = template.replace('%HH', date.hours);
-            template = template.replace('%MM', date.minutes);
+            template = template.replace(/%DD/, date.day);
+            template = template.replace(/%HH/, date.hours);
+            template = template.replace(/%MM/, date.minutes);
 
             return template;
         },
