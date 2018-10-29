@@ -83,7 +83,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             .map(x => ({
                 from: parseToBankZone(x.from),
                 to: parseToBankZone(x.to)
-            })))
+            }))
+            .sort((x, y) => x.from - y.from))
         .map(x => getTimeRanges(x));
 
     appropriateMoments.push([0, 1, 2].map(x => {
@@ -104,7 +105,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            return appropriateMoments.length !== 0;
+            return appropriateMoments.length > 0;
         },
 
         /**
