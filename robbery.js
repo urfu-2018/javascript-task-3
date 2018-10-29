@@ -5,6 +5,7 @@
  * Реализовано оба метода и tryLater
  */
 const isStar = false;
+let bankTimeZone;
 
 /**
  * @param {Object} schedule – Расписание Банды
@@ -15,7 +16,7 @@ const isStar = false;
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    const bankTimeZone = parseInt(workingHours.from.split('+')[1]);
+    bankTimeZone = parseInt(workingHours.from.split('+')[1]);
     const result = findRoberyTime(schedule, duration, workingHours);
 
     return {
@@ -66,12 +67,14 @@ function dateToTicks(date) {
  * @returns {[]}
  */
 function unionOfIntervals(intervals) {
-    intervals = intervals.sort((x, y) => x[0] > y[0]);
+    intervals = intervals.sort((x, y) => x[0] - y[0]);
+    // const rint = numIntervalsToDateIntervals(intervals);
     const result = [intervals[0]];
+
     for (let interval of intervals.slice(1)) {
-        if (result[result.length - 1][1] <= interval[0]) {
+        if (result[result.length - 1][1] < interval[0]) {
             result.push(interval);
-        } else if (result[result.length - 1][1] <= interval[1]) {
+        } else if (result[result.length - 1][1] < interval[1]) {
             result[result.length - 1][1] = interval[1];
         }
     }
@@ -80,16 +83,14 @@ function unionOfIntervals(intervals) {
 }
 
 /**
- * @param {int} start
  * @param {[]} intervals
- * @param {int} end
  * @returns {[]}
  */
-function invertIntervals(start, intervals, end) {
-    intervals = intervals
-        .sort((x, y) => x[0] > y[0])
-        .filter(x => x[0] < end && x[1] > start)
-        .reduce((a, b) => a.concat(b), []);
+function invertIntervals(intervals) {
+    const start = dateToTicks('ПН 00:00+' + bankTimeZone);
+    const end = dateToTicks('СР 23:59+' + bankTimeZone);
+    intervals = intervals.sort((x, y) => x[0] > y[0]).reduce((a, b) => a.concat(b), []);
+
     if (intervals[0] === start) {
         intervals.shift();
     } else {
@@ -105,7 +106,7 @@ function invertIntervals(start, intervals, end) {
         .reduce((a, c, i) => a.concat(i % 2 ? [[intervals[i - 1], c]] : []), [])
         .filter(x => x[0] < x[1]);
 }
-invertIntervals(10, [[10, 20], [40, 110]], 100); // ?
+// invertIntervals(10, [[10, 20], [40, 110]], 100); // ?
 function scheduleToTimeIntervals(schedule) {
     const result = [];
     for (let interval of schedule) {
@@ -144,27 +145,19 @@ function findGoodIntervals(schedule, workingHours) {
         { from: 'ВТ ' + workingHours.from, to: 'ВТ ' + workingHours.to },
         { from: 'СР ' + workingHours.from, to: 'СР ' + workingHours.to }
     ];
-    const minTime = dateToTicks('ПН ' + workingHours.from);
-    const maxTime = dateToTicks('СР ' + workingHours.to);
 
     const busyRobbersIntervals = scheduleToTimeIntervals(
-        schedule.Danny.concat(schedule.Rusty)
-            .concat(schedule.Linus)
-            .filter(x => ['ПН', 'ВТ', 'СР'].includes(x.from.split(' ')[0]))
-    )
-        .filter(x => x[0] < maxTime && x[1] > minTime)
-        .map(x => (x[1] > maxTime ? [x[0], maxTime] : x))
-        .map(x => (x[0] < minTime ? [minTime, x[1]] : x));
-
-    // const brir = numIntervalsToDateIntervals(busyRobbersIntervals);
-
+        schedule.Danny.concat(schedule.Rusty).concat(schedule.Linus)
+    );
+    // const bri = numIntervalsToDateIntervals(busyRobbersIntervals);
+    // const bankNotWorking = numIntervalsToDateIntervals(
+    // invertIntervals(scheduleToTimeIntervals(bankSchedule))
+    // );
     const busyAll = unionOfIntervals(
-        invertIntervals(minTime, scheduleToTimeIntervals(bankSchedule), maxTime).concat(
-            busyRobbersIntervals
-        )
+        invertIntervals(scheduleToTimeIntervals(bankSchedule)).concat(busyRobbersIntervals)
     );
     // const ball = numIntervalsToDateIntervals(busyAll);
-    const freeAll = invertIntervals(minTime, busyAll, maxTime);
+    const freeAll = invertIntervals(busyAll);
     // const fall = numIntervalsToDateIntervals(freeAll);
 
     return freeAll;
@@ -190,7 +183,6 @@ function findRoberyTime(schedule, duration, workingHours) {
 //     return result;
 // }
 
-invertIntervals(0, [0, 10], 10); // ?
 module.exports = {
     getAppropriateMoment,
     findGoodIntervals,
