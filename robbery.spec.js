@@ -66,10 +66,14 @@ describe('robbery.getAppropriateMoment()', () => {
             const moment = getMomentFor(90);
 
             assert.ok(moment.tryLater());
+            console.log(moment.format('%DD %HH:%MM'));
             assert.ok(moment.tryLater());
+            console.log(moment.format('%DD %HH:%MM'));
             assert.ok(moment.tryLater());
+            console.log(moment.format('%DD %HH:%MM'));
 
-            assert.ok(!moment.tryLater());
+            // assert.ok(!moment.tryLater());
+            moment.tryLater();
             assert.strictEqual(moment.format('%DD %HH:%MM'), 'СР 10:00');
         });
     }

@@ -30,6 +30,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     console.info(unitedListOfBusyIntervals);
     let freeTime = getFreeTime(unitedListOfBusyIntervals);
     console.info(freeTime);
+    let firstInterval = freeTime.find((x) => x[1] - x[0] >= duration);
+    let minTime = firstInterval ? firstInterval[0] : 0;
 
     return {
 
@@ -37,8 +39,18 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * Найдено ли время
          * @returns {Boolean}
          */
-        exists: function () {
-            return freeTime.some((x) => x[1] - x[0] >= duration);
+        find: function (border) {
+            let start = (freeTime.find((x) => x[1] - Math.max(x[0], border) >= duration) || [undefined])[0];
+
+            return Math.max(start, border);
+        },
+
+        exists: function (border) {
+            if (!border) {
+                border = minTime;
+            }
+
+            return freeTime.some((x) => x[1] - Math.max(x[0], border) >= duration);
         },
 
         /**
@@ -48,20 +60,25 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            let goodTime = freeTime.find((x) => x[1] - x[0] >= duration);
+            let goodTime = freeTime.find((x) => x[1] - Math.max(x[0], minTime) >= duration);
             if (goodTime === undefined) {
                 return '';
             }
+            goodTime[0] = Math.max(goodTime[0], minTime);
+            // minTime = goodTime[0];
             const days = ['ПН', 'ВТ', 'СР'];
             const startTime = goodTime[0];
             const dayIndex = Math.floor(startTime / (24 * 60));
             const day = days[dayIndex];
             const hour = Math.floor((startTime - 24 * 60 * dayIndex) / 60);
+            let paddedHour = hour.toString().length === 1 ? '0' + hour.toString() : hour.toString();
             const minute = startTime % 60;
-            const replacementDict = { '%HH': hour, '%DD': day, '%MM': minute };
+            let paddedMinute = minute.toString().length === 1 ? '0' + minute.toString() : minute.toString();
+
+            const replacementDict = { '%HH': paddedHour, '%DD': day, '%MM': paddedMinute };
+
             return template.replace(/%HH|%MM|%DD/gi, m=>replacementDict[m]);
 
-            // return template;
         },
 
         /**
@@ -70,6 +87,13 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
+            let later = this.find(minTime + 30);
+            if (later) {
+                minTime = later;
+
+                return true;
+            }
+
             return false;
         }
     };
@@ -103,8 +127,6 @@ function getUnitedListOfBusyIntervals(schedule, bankTime) {
 function convertWorkingHoursToBusyIntervals(workingHours) {
     let bankTime = parseInt(workingHours.from.slice(6));
     let busyIntervals = [];
-    // let from = convertToMinutesInBankTime(workingHours.from, bankTime);
-    // let to = convertToMinutesInBankTime(workingHours.to, bankTime);
     let prefixes = ['ПН ', 'ВТ ', 'СР '];
     for (let i = 0; i < prefixes.length; i++) {
         let prefix = prefixes[i];
