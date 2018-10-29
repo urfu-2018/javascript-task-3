@@ -133,9 +133,9 @@ function ticksToDate(ticks, format = '%DD %HH:%MM', timeZone = 5) {
     const week = numToWeek[date.getUTCDay()];
 
     return format
-        .replace('%DD', week)
-        .replace('%HH', hours)
-        .replace('%MM', minutes);
+        .replace(/%DD/gi, week)
+        .replace(/%HH/gi, hours)
+        .replace(/%MM/gi, minutes);
 }
 
 function findGoodIntervals(schedule, workingHours) {
