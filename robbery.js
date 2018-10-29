@@ -174,6 +174,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 return false;
             }
 
+            return false;
         }
     };
 }
