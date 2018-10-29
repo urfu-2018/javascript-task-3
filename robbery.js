@@ -7,7 +7,8 @@
 const isStar = true;
 let appropriateMoments;
 let bankWorkingHours;
-const newSchedule = { 'ПН': [], 'ВТ': [], 'СР': [] };
+const newSchedule = { 'ПН': [], 'ВТ': [], 'СР': [], 'ЧТ': [], 'ПТ': [], 'СБ': [], 'ВС': [] };
+const days = ['ПН', 'ВТ', 'СР'];
 
 function parseToUtc(inputStr) {
     let day = inputStr.slice(0, 2);
@@ -19,7 +20,8 @@ function parseToUtc(inputStr) {
 
     if (fromUtcHour < 0) {
         fromUtcHour = (24 + fromUtcHour) % 24;
-        day = (7 + day) % day;
+        const dayIndex = (7 + days.indexOf(day)) % 7;
+        day = days[dayIndex];
     }
 
     return { day: day, minutes: fromUtcHour * 60 + minutes };
@@ -104,6 +106,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         }
     }
     appropriateMoments = Object.keys(newSchedule)
+        .filter(x => days.includes(x))
         .map(x => newSchedule[x]
             .sort((y, z) => y.fromInUtc.minutes - z.fromInUtc.minutes))
         .map(x => {
