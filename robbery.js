@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = false;
+const isStar = true;
 
 /**
  * Парсит время из строки
@@ -174,7 +174,27 @@ function getTimeFromMinutes(minutes) {
         .padStart(2, '0');
 
     return [day, hours, minute];
+}
 
+function tryFindLeterRobbery(resultIntervals, duration) {
+    if (resultIntervals.length === 0) {
+        return false;
+    }
+
+    let firstInterval = resultIntervals[0];
+    if (firstInterval.to - firstInterval.from - 30 >= duration) {
+        resultIntervals[0].from += 30;
+
+        return true;
+    }
+
+    if (resultIntervals[1]) {
+        resultIntervals.shift();
+
+        return true;
+    }
+
+    return false;
 }
 
 /**
@@ -231,7 +251,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            return false;
+            return tryFindLeterRobbery(resultIntervals, duration);
         }
     };
 }
