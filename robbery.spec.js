@@ -77,15 +77,15 @@ describe('Custom', () => {
         return robbery.getAppropriateMoment(
             {
                 Danny: [
-                    { from: 'ПН 10:00+5', to: 'ПН 18:00+5' },
-                    { from: 'ВТ 10:00+5', to: 'СР 18:00+5' },
+                    { from: 'ПН 00:00+5', to: 'ПН 20:00+5' },
+                    { from: 'ВТ 10:00+5', to: 'СР 20:00+5' },
                     { from: 'ЧТ 10:00+5', to: 'ЧТ 18:00+5' }
                 ],
                 Rusty: [],
                 Linus: []
             },
             time,
-            { from: '10:00+5', to: '18:00+5' }
+            { from: '10:00+3', to: '18:00+3' }
         );
     }
 
@@ -100,9 +100,9 @@ describe('Custom', () => {
     // });
 
     it('должен вернуть пустую строку при форматировании несуществующего момента', () => {
-        const moment = getMomentFor(121);
-
-        assert.ok(!moment.exists());
+        const moment = getMomentFor(90);
+        console.info(moment.format('Метим на %DD, старт в %HH:%MM!'));
+        // assert.ok(moment.exists());
         assert.strictEqual(moment.format('Метим на %DD, старт в %HH:%MM!'), '');
     });
 });

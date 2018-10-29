@@ -86,7 +86,8 @@ function unionOfIntervals(intervals) {
  * @returns {[]}
  */
 function invertIntervals(start, intervals, end) {
-    intervals = intervals.sort((x, y) => x[0] > y[0]).reduce((a, b) => a.concat(b), []);
+    intervals = intervals.sort((x, y) => x[0] > y[0]).filter(x => x[0] < end || x[1] > start)
+    .reduce((a, b) => a.concat(b), []);
     if (intervals[0] === start) {
         intervals.shift();
     } else {
@@ -102,6 +103,8 @@ function invertIntervals(start, intervals, end) {
         .reduce((a, c, i) => a.concat(i % 2 ? [[intervals[i - 1], c]] : []), [])
         .filter(x => x[0] !== x[1] && x[0] < x[1]);
 }
+
+invertIntervals(6, [[0,7],  [101, 110]], 100) //?
 
 function scheduleToTimeIntervals(schedule) {
     const result = [];
@@ -134,7 +137,7 @@ function ticksToDate(ticks, format = '%DD %HH:%MM', timeZone = 5) {
         .replace('%HH', hours)
         .replace('%MM', minutes);
 }
-
+ticksToDate(009) //?
 function findGoodIntervals(schedule, workingHours) {
     const bankSchedule = [
         { from: 'ПН ' + workingHours.from, to: 'ПН ' + workingHours.to },
