@@ -47,9 +47,10 @@ function toMinutesFromWeekStart(schedule) {
             .sort((first, second) => first.from > second.from));
 }
 
-function getFreeTimeIntervals(schedule) {
+function getFreeTimeIntervals(schedule, bankTimezone = 0) {
     let freeTimeIntervals = [];
     let times = [];
+    const bankTimezoneShift = bankTimezone * minutesInHour;
     schedule.forEach(robber => {
         robber.forEach(interval => {
             times.push({ from: true, value: interval.from });
@@ -72,7 +73,7 @@ function getFreeTimeIntervals(schedule) {
             busyNumber -= 1;
         }
     });
-    if (leftBorder <= lastAppropriateMoment) {
+    if (leftBorder <= lastAppropriateMoment - bankTimezoneShift) {
         freeTimeIntervals.push({ from: leftBorder, to: lastAppropriateMoment });
     }
 
@@ -108,7 +109,7 @@ function haveIntersection(firstInterval, secondInterval) {
     secondInterval.from <= firstInterval.to && secondInterval.to >= firstInterval.from;
 }
 
-function getPossibleIntervals(schedule, workingHours, bankTimezone) {
+function getPossibleIntervals(schedule, workingHours, bankTimezone = 0) {
     let possibleIntervals = [];
     const bankTimezoneShift = bankTimezone * minutesInHour;
     workingHours.forEach(bankInterval => {
@@ -147,7 +148,7 @@ function getIntervalsWithShifts(intervals, duration) {
             left + duration <= intervals[counter].to) {
             intervalsWithPossibleShifts.push({
                 from: left,
-                to: intervals[counter].to
+                to: left + duration
             });
         }
         left += delay;
@@ -166,13 +167,13 @@ function getIntervalsWithShifts(intervals, duration) {
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
+    const bankTimezone = dayRegex.exec(workingHours.from)[3];
     const formatedSchedule = toMinutesFromWeekStart(schedule);
-    const freeTimeIntervals = getFreeTimeIntervals(formatedSchedule);
+    const freeTimeIntervals = getFreeTimeIntervals(formatedSchedule, bankTimezone);
     const workingHoursInterval = {
         from: getMinutesFromDayStart(dayRegex.exec(workingHours.from)),
         to: getMinutesFromDayStart(dayRegex.exec(workingHours.to)) };
     const formatedWorkingHours = getIntervalObjectsForWeek(workingHoursInterval);
-    const bankTimezone = dayRegex.exec(workingHours.from)[3];
     const possibleIntervals = getPossibleIntervals(
         freeTimeIntervals, formatedWorkingHours, bankTimezone);
     const validIntervals = getIntervalsWithDuration(possibleIntervals, duration);
@@ -202,9 +203,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             const date = getDateFromMinutes(validIntervalsWithShifts[0].from,
                 bankTimezone);
 
-            template = template.replace(/%DD/, date.day);
-            template = template.replace(/%HH/, date.hours);
-            template = template.replace(/%MM/, date.minutes);
+            template = template.replace('%DD', date.day);
+            template = template.replace('%HH', date.hours);
+            template = template.replace('%MM', date.minutes);
 
             return template;
         },
