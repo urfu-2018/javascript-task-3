@@ -5,7 +5,7 @@
  * Реализовано оба метода и tryLater
  */
 const isStar = true;
-const daysOfTheWeek = ['ПН', 'ВТ', 'СР'];
+const daysOfTheWeek = ['ПН', 'ВТ', 'СР', 'ЧТ'];
 const minutesInHour = 60;
 const minutesInDay = 24 * minutesInHour;
 
@@ -44,7 +44,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     let lastIndex = 0;
     let lastCorrectInterval;
 
-    let allIntervals = getFreeIntervals(workingHours, schedule);
+    let allIntervals = getRobberyFreeIntervals(workingHours, schedule);
 
     for (let i = 0; i < allIntervals.length; i++) {
         if (allIntervals[i].length() >= duration) {
@@ -108,9 +108,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     };
 }
 
-function getFreeIntervals(workingHours, schedule) {
+function getRobberyFreeIntervals(workingHours, schedule) {
     let bankTimeIntervals = [];
-    for (let i = 0; i < daysOfTheWeek.length; i++) {
+    for (let i = 0; i < 3; i++) {
         bankTimeIntervals.push(new TimeInterval(
             parseTimeToMinutes(`${daysOfTheWeek[i]} ${workingHours.from}`),
             parseTimeToMinutes(`${daysOfTheWeek[i]} ${workingHours.to}`)));
