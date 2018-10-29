@@ -26,8 +26,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     schedule.bank = convertWorkingHoursToBusyIntervals(workingHours);
     let unitedListOfBusyIntervals = getUnitedListOfBusyIntervals(schedule, bankTime);
     let freeTime = getFreeTime(unitedListOfBusyIntervals);
-    let firstInterval = freeTime.find((x) => x[1] - x[0] >= duration);
-    let minTime = firstInterval ? firstInterval[0] : 0;
+    let goodTimes = freeTime.filter(x => x[1] - x[0] >= duration);
 
     return {
 
@@ -36,7 +35,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            return Boolean(this.find(minTime));
+            return goodTimes.length > 0;
         },
 
         find: function (border) {
@@ -53,10 +52,10 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            let startTime = this.find(minTime);
-            if (!startTime) {
+            if (goodTimes.length === 0) {
                 return '';
             }
+            let startTime = goodTimes[0][0];
             const days = ['ПН', 'ВТ', 'СР'];
             const dayIndex = Math.floor(startTime / (24 * 60));
             const day = days[dayIndex];
@@ -77,9 +76,13 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            let later = this.find(minTime + 30);
-            if (later) {
-                minTime = later;
+            if (goodTimes[0][1] - goodTimes[0][0] >= duration + 30) {
+                goodTimes[0][0] += 30;
+
+                return true;
+            }
+            if (goodTimes.length > 1) {
+                goodTimes.shift();
 
                 return true;
             }
