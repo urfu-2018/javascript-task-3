@@ -7,10 +7,10 @@
 const isStar = true;
 const minInHour = 60;
 const minInDay = minInHour * 24;
-
+const thirty = 30;
 const timeRegex = new RegExp('([А-Я]{2}) (\\d{2}):(\\d{2})\\+(\\d+)');
 const bankTimeRegex = new RegExp('(\\d{2}):(\\d{2})\\+(\\d+)');
-const dayToMinutesShith = { 'ПН': 0, 'ВТ': 1, 'СР': 2 };
+const dayToMinutesShith = { 'ПН': 0, 'ВТ': 1, 'СР': 2, 'ЧТ': 3 };
 class Interval {
     constructor(leftPoint, rightPoint) {
         this.leftPoint = leftPoint;
@@ -72,7 +72,7 @@ function reverseIntervals(intervals) {
         result.push(new Interval(prevRightPoint, interval.leftPoint));
         prevRightPoint = interval.rightPoint;
     }
-    result.push(new Interval(prevRightPoint, 4320));
+    result.push(new Interval(prevRightPoint, dayToMinutesShith['ЧТ'] * minInDay));
 
     return result;
 }
@@ -167,7 +167,7 @@ function addAdditionTimes(intervals, duration) {
         while (currLeftPart <= interval.rightPoint &&
             interval.rightPoint - currLeftPart >= duration) {
             result.push(new Interval(currLeftPart, interval.rightPoint));
-            currLeftPart += 30;
+            currLeftPart += thirty;
         }
     }
 
@@ -182,8 +182,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     const linusIntervals = reverseIntervals(getIntervalsForPerson(schedule.Linus,
         bankInterval.shift));
     const bankIntervals = getBankOpenIntervals(bankInterval);
-    const arr = [dannyIntervals, rustyIntervals, linusIntervals, bankIntervals];
-    let availableIntervals = removeDuplicates(findIntersectionOfAllGroups(arr, duration));
+    const participantIntrvals = [dannyIntervals, rustyIntervals, linusIntervals, bankIntervals];
+    let availableIntervals = removeDuplicates(findIntersectionOfAllGroups(participantIntrvals,
+        duration));
     availableIntervals = addAdditionTimes(availableIntervals, duration);
     let pointer = 0;
 
@@ -213,8 +214,6 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 .replace('%DD', date.day)
                 .replace('%HH', date.hours)
                 .replace('%MM', date.minutes);
-
-
         },
 
         /**
