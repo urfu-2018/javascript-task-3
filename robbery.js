@@ -202,7 +202,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            return intersections && intersections.length > 0;
+            return intersections !== null && intersections.length > 0;
         },
 
         /**
@@ -227,7 +227,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            if (!this.exists() || pointer === intersections.length) {
+            if (!this.exists() || pointer === intersections.length - 1) {
                 return false;
             }
 
