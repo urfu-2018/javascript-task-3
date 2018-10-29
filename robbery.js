@@ -6,6 +6,135 @@
  */
 const isStar = true;
 
+const hoursInDay = 24;
+const minutesInHour = 60;
+
+const dayMax = 23 * minutesInHour + 59;
+const wednesdayMax = 2 * hoursInDay * minutesInHour + dayMax;
+
+const numericalDayOfTheWeekEnum = {
+    'ПН': 0,
+    'ВТ': 1,
+    'СР': 2
+};
+
+function convertTimeToMinutes(time, timeShift) {
+    time = time.split(' ');
+    const dayOfWeek = numericalDayOfTheWeekEnum[time[0]];
+    const timeParts = time[1].match(/(\d{2}):(\d{2})\+(\d+)/);
+    if (typeof timeShift === 'undefined') {
+        timeShift = Number(timeParts[3]);
+    }
+
+    return dayOfWeek * hoursInDay * minutesInHour +
+        Number(timeParts[1]) * minutesInHour + Number(timeParts[2]) +
+        (timeShift - Number(timeParts[3])) * minutesInHour;
+}
+
+function getTimeShift(time) {
+    return time.match(/\d{2}:\d{2}\+(\d+)/)[1];
+}
+
+function parseBankTimetable(workingHours) {
+    const timetable = [];
+    const timeShift = getTimeShift(workingHours.from);
+    Object.keys(numericalDayOfTheWeekEnum).forEach(day => {
+        timetable.push({
+            from: convertTimeToMinutes(day + ' ' + workingHours.from),
+            to: convertTimeToMinutes(day + ' ' + workingHours.to)
+        });
+    });
+
+    return [timetable, timeShift];
+}
+
+function parseRobbersTimetable(schedule, bankTimeShift) {
+    const parsedTimetable = [];
+    Object.values(schedule).forEach(timetable => {
+        const temp = [];
+        Object.values(timetable).forEach(time => {
+            temp.push({
+                from: convertTimeToMinutes(time.from, bankTimeShift),
+                to: convertTimeToMinutes(time.to, bankTimeShift)
+            });
+        });
+        parsedTimetable.push(temp);
+    });
+
+
+    return parsedTimetable;
+}
+
+function getRobbersFreeTimetable(robbersTimetable) {
+    const robbersFreeTimetable = [];
+    robbersTimetable.forEach(robber => {
+        const robberFreeTime = [];
+        let infinum = 0;
+        robber.forEach(day => {
+            if (infinum < day.from) {
+                robberFreeTime.push({
+                    from: infinum,
+                    to: day.from
+                });
+            }
+            infinum = day.to;
+        });
+        if (infinum < wednesdayMax) {
+            robberFreeTime.push({
+                from: infinum,
+                to: wednesdayMax
+            });
+        }
+        robbersFreeTimetable.push(robberFreeTime);
+    });
+
+    return robbersFreeTimetable;
+}
+
+function parseTimeToDateString(time) {
+    const day = Math.trunc(Number(time) / (hoursInDay * minutesInHour));
+    const hours = Math.trunc((time - day * hoursInDay * minutesInHour) / 60);
+    let minutes = (time - day * hoursInDay * minutesInHour - hours * minutesInHour).toString();
+    if (minutes.length === 1) {
+        minutes = '0' + minutes;
+    }
+
+    return [['ПН', 'ВТ', 'СР'][day], hours, minutes];
+}
+
+function intersectTwoTimetables(oneRobber, anotherRobber) {
+    const result = [];
+    oneRobber.forEach(one => {
+        anotherRobber.forEach(another => {
+            if (one.to > another.from && one.from < another.to) {
+                result.push({
+                    from: Math.max(one.from, another.from),
+                    to: Math.min(one.to, another.to)
+                });
+            }
+        });
+    });
+
+    return result;
+}
+
+function intersectTimetables(robbersFreeTimetable, bankTimetable) {
+    const firstRobber = robbersFreeTimetable[0];
+    const secondRobber = robbersFreeTimetable[1];
+    const thirdRobber = robbersFreeTimetable[2];
+    let intersection = intersectTwoTimetables(firstRobber, secondRobber);
+    intersection = intersectTwoTimetables(intersection, thirdRobber);
+    intersection = intersectTwoTimetables(intersection, bankTimetable);
+
+    return intersection;
+}
+
+function getAppropriateRobberyMoments(intersectedTimetables, duration) {
+    return intersectedTimetables
+        .filter(time => !(time.from > time.to || (time.to - time.from) < duration))
+        .sort((l, r) => l.form < r.from);
+}
+
 /**
  * @param {Object} schedule – Расписание Банды
  * @param {Number} duration - Время на ограбление в минутах
@@ -15,7 +144,11 @@ const isStar = true;
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    console.info(schedule, duration, workingHours);
+    const [bankTimetable, bankTimeShift] = parseBankTimetable(workingHours);
+    const robbersTimetables = parseRobbersTimetable(schedule, bankTimeShift);
+    const robbersFreeTimetable = getRobbersFreeTimetable(robbersTimetables);
+    const intersectedTimetables = intersectTimetables(robbersFreeTimetable, bankTimetable);
+    const result = getAppropriateRobberyMoments(intersectedTimetables, duration);
 
     return {
 
@@ -24,7 +157,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            return false;
+            return result.length !== 0;
         },
 
         /**
@@ -34,7 +167,15 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            return template;
+            if (result.length === 0) {
+                return '';
+            }
+            const res = parseTimeToDateString(result[0].from);
+
+            return template
+                .replace('%DD', res[0])
+                .replace('%HH', res[1])
+                .replace('%MM', res[2]);
         },
 
         /**
@@ -43,6 +184,18 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
+            if (result.length === 0) {
+                return false;
+            } else if (result[0].to - result[0].from >= duration + 30) {
+                result[0].from += 30;
+
+                return true;
+            } else if (result.length > 1) {
+                result.shift();
+
+                return true;
+            }
+
             return false;
         }
     };
@@ -50,6 +203,5 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
 module.exports = {
     getAppropriateMoment,
-
     isStar
 };
