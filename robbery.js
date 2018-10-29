@@ -24,12 +24,12 @@ const dayOfWeek = {
 };
 
 function parseDate(str) {
-    var splitTime = str.split(' ');
-    var weekday = splitTime.length > 1 ? splitTime[0] : 'ПН';
-    var time = splitTime.length > 1 ? splitTime[1] : splitTime[0];
-    var h = Number(time.substring(0, 2));
-    var m = Number(time.substring(3, 5));
-    var gmt = Number(time.substring(6));
+    var splitFullTime = str.split(' ');
+    var weekday = splitFullTime.length > 1 ? splitFullTime[0] : 'ПН';
+    var time = (splitFullTime.length > 1 ? splitFullTime[1] : splitFullTime[0]).split(':');
+    var h = Number(time[0]);
+    var m = Number(time[1].substring(0, 2));
+    var gmt = Number(time[1].substring(3));
 
     return new Date(2018, 9, dayOfWeek[weekday], h - gmt, m);
 }
