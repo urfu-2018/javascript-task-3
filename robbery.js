@@ -23,13 +23,9 @@ const dayToHours = new Map(
 function getAppropriateMoment(schedule, duration, workingHours) {
     console.info(schedule, duration, workingHours);
     let bankTime = parseInt(workingHours.from.slice(6));
-    console.info(bankTime);
     schedule.bank = convertWorkingHoursToBusyIntervals(workingHours);
-    console.info(schedule.bank);
     let unitedListOfBusyIntervals = getUnitedListOfBusyIntervals(schedule, bankTime);
-    console.info(unitedListOfBusyIntervals);
     let freeTime = getFreeTime(unitedListOfBusyIntervals);
-    console.info(freeTime);
     let firstInterval = freeTime.find((x) => x[1] - x[0] >= duration);
     let minTime = firstInterval ? firstInterval[0] : 0;
 
@@ -39,18 +35,19 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * Найдено ли время
          * @returns {Boolean}
          */
-        find: function (border) {
-            let start = (freeTime.find((x) => x[1] - Math.max(x[0], border) >= duration) || [undefined])[0];
-
-            return Math.max(start, border);
-        },
-
         exists: function (border) {
             if (!border) {
                 border = minTime;
             }
 
             return freeTime.some((x) => x[1] - Math.max(x[0], border) >= duration);
+        },
+
+        find: function (border) {
+            let start =
+                (freeTime.find((x) => x[1] - Math.max(x[0], border) >= duration) || [undefined])[0];
+
+            return Math.max(start, border);
         },
 
         /**
@@ -60,20 +57,17 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            let goodTime = freeTime.find((x) => x[1] - Math.max(x[0], minTime) >= duration);
-            if (goodTime === undefined) {
+            let startTime = this.find(minTime);
+            if (!startTime) {
                 return '';
             }
-            goodTime[0] = Math.max(goodTime[0], minTime);
-            // minTime = goodTime[0];
             const days = ['ПН', 'ВТ', 'СР'];
-            const startTime = goodTime[0];
             const dayIndex = Math.floor(startTime / (24 * 60));
             const day = days[dayIndex];
-            const hour = Math.floor((startTime - 24 * 60 * dayIndex) / 60);
-            let paddedHour = hour.toString().length === 1 ? '0' + hour.toString() : hour.toString();
-            const minute = startTime % 60;
-            let paddedMinute = minute.toString().length === 1 ? '0' + minute.toString() : minute.toString();
+            const hour = (Math.floor((startTime - 24 * 60 * dayIndex) / 60)).toString();
+            let paddedHour = hour.length === 1 ? '0' + hour : hour;
+            const minute = (startTime % 60).toString();
+            let paddedMinute = minute.length === 1 ? '0' + minute : minute;
 
             const replacementDict = { '%HH': paddedHour, '%DD': day, '%MM': paddedMinute };
 
@@ -115,8 +109,10 @@ function getUnitedListOfBusyIntervals(schedule, bankTime) {
         }
         let userSchedule = schedule[user];
         for (let i = 0; i < userSchedule.length; i++) {
-            intervals.push([convertToMinutesInBankTime(userSchedule[i].from, bankTime), user, 'from']);
-            intervals.push([convertToMinutesInBankTime(userSchedule[i].to, bankTime), user, 'to']);
+            intervals.push(
+                [convertToMinutesInBankTime(userSchedule[i].from, bankTime), user, 'from']);
+            intervals.push(
+                [convertToMinutesInBankTime(userSchedule[i].to, bankTime), user, 'to']);
         }
     }
     intervals.sort((a, b)=>a[0] - b[0]);
@@ -137,6 +133,15 @@ function convertWorkingHoursToBusyIntervals(workingHours) {
     return busyIntervals;
 
 }
+
+function unionIntervalShouldBeOpened(isOpen, interval) {
+    return Object.values(isOpen).every(x=>!x) && interval.length === 0;
+}
+
+function unionIntervalShouldBeClosed(isOpen, interval) {
+    return !Object.values(isOpen).every(x=>!x) && interval.length === 1;
+}
+
 function getFreeTime(busyIntervals) {
     const isOpen = new Map();
     const resultIntervals = [];
@@ -144,9 +149,9 @@ function getFreeTime(busyIntervals) {
     for (let i = 0; i < busyIntervals.length; i++) {
         let time = busyIntervals[i];
         isOpen[time[1]] = time[2] === 'from';
-        if (Object.values(isOpen).every(x=>!x) && interval.length === 0) {
+        if (unionIntervalShouldBeOpened(isOpen, interval)) {
             interval.push(time[0]);
-        } else if (!Object.values(isOpen).every(x=>!x) && interval.length === 1) {
+        } else if (unionIntervalShouldBeClosed(isOpen, interval)) {
             interval.push(time[0]);
             resultIntervals.push(interval);
             interval = [];
@@ -154,7 +159,7 @@ function getFreeTime(busyIntervals) {
     }
 
     if (interval.length === 1) {
-        interval.push(4319);
+        interval.push(72 * 60 - 1);
         resultIntervals.push(interval);
     }
 
