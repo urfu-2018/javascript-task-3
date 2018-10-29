@@ -57,7 +57,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            const mayBeLater = successfulTimes.length !== 1;
+            const mayBeLater = successfulTimes.length > 1;
             if (mayBeLater) {
                 successfulTimes.shift();
             }
