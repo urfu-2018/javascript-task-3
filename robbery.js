@@ -4,37 +4,37 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = true;
+const isStar = false;
 let appropriateMoments;
 let bankWorkingHours;
 const newSchedule = { 'ПН': [], 'ВТ': [], 'СР': [], 'ЧТ': [], 'ПТ': [], 'СБ': [], 'ВС': [] };
 const days = ['ПН', 'ВТ', 'СР'];
 
-function parseToUtc(inputStr) {
+function parseToBankZone(inputStr) {
     let day = inputStr.slice(0, 2);
 
     const localHour = parseInt(inputStr.slice(3, 5));
     const minutes = parseInt(inputStr.slice(6, 8));
     const shift = parseInt(inputStr.slice(9, 11));
-    let fromUtcHour = localHour - shift + bankWorkingHours.shift;
+    let bankZoneHour = localHour - shift + bankWorkingHours.shift;
 
-    if (fromUtcHour < 0) {
-        fromUtcHour = (24 + fromUtcHour) % 24;
+    if (bankZoneHour < 0) {
+        bankZoneHour = (24 + bankZoneHour) % 24;
         const dayIndex = (7 + days.indexOf(day)) % 7;
         day = days[dayIndex];
     }
 
-    return { day: day, minutes: fromUtcHour * 60 + minutes };
+    return { day: day, minutes: bankZoneHour * 60 + minutes };
 }
 
 function getTimeRanges(scheduleInDay, dayName) {
     const result = [];
     let leftBorder = 0;
     for (let i = 0; i < scheduleInDay.length; i++) {
-        if (scheduleInDay[i].fromInUtc.minutes >= leftBorder) {
-            result.push({ day: dayName, from: leftBorder, to: scheduleInDay[i].fromInUtc.minutes });
+        if (scheduleInDay[i].from.minutes >= leftBorder) {
+            result.push({ day: dayName, from: leftBorder, to: scheduleInDay[i].from.minutes });
         }
-        leftBorder = scheduleInDay[i].toInUtc.minutes;
+        leftBorder = scheduleInDay[i].to.minutes;
     }
 
     const minutesInDay = 23 * 60 + 59;
@@ -50,34 +50,34 @@ function getWorkingHours(workingHours) {
 
     return {
         shift: shift,
-        fromInUtc: {
+        from: {
             minutes: (24 + fromHour) % 24 * 60 + parseInt(workingHours.from.slice(3, 5))
         },
-        toInUtc: {
+        to: {
             minutes: (24 + toHour) % 24 * 60 + parseInt(workingHours.to.slice(3, 5))
         }
     };
 }
 
 function fillSchedule(robberSchedule, robberName) {
-    const fromInUtc = parseToUtc(robberSchedule.from);
-    const toInUtc = parseToUtc(robberSchedule.to);
-    if (fromInUtc.day === toInUtc.day) {
-        newSchedule[fromInUtc.day].push(
-            { name: robberName, fromInUtc: fromInUtc, toInUtc: toInUtc });
+    const fromInBankZone = parseToBankZone(robberSchedule.from);
+    const toInBankZone = parseToBankZone(robberSchedule.to);
+    if (fromInBankZone.day === toInBankZone.day) {
+        newSchedule[fromInBankZone.day].push(
+            { name: robberName, from: fromInBankZone, to: toInBankZone });
 
         return;
     }
-    newSchedule[fromInUtc.day].push(
+    newSchedule[fromInBankZone.day].push(
         {
             name: robberName,
-            fromInUtc: fromInUtc,
-            toInUtc: { day: fromInUtc.day, minutes: 23 * 60 + 59 }
+            from: fromInBankZone,
+            to: { day: fromInBankZone.day, minutes: 23 * 60 + 59 }
         });
-    newSchedule[toInUtc.day].push({
+    newSchedule[toInBankZone.day].push({
         name: robberName,
-        fromInUtc: { day: toInUtc.day, minutes: 0 },
-        toInUtc: toInUtc
+        from: { day: toInBankZone.day, minutes: 0 },
+        to: toInBankZone
     });
 
     return newSchedule;
@@ -108,13 +108,13 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     appropriateMoments = Object.keys(newSchedule)
         .filter(x => days.includes(x))
         .map(x => newSchedule[x]
-            .sort((y, z) => y.fromInUtc.minutes - z.fromInUtc.minutes))
+            .sort((y, z) => y.from.minutes - z.from.minutes))
         .map(x => {
-            return getTimeRanges(x, x[0].fromInUtc.day)
+            return getTimeRanges(x, x[0].from.day)
                 .filter(a => a.from !== a.to)
                 .map(a => {
-                    const rightBorder = Math.min(bankWorkingHours.toInUtc.minutes, a.to);
-                    const leftBorder = Math.max(bankWorkingHours.fromInUtc.minutes, a.from);
+                    const rightBorder = Math.min(bankWorkingHours.to.minutes, a.to);
+                    const leftBorder = Math.max(bankWorkingHours.from.minutes, a.from);
 
                     return { day: a.day, from: leftBorder, to: rightBorder };
                 })
