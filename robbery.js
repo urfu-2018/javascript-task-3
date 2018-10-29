@@ -147,13 +147,13 @@ function findFreeSchedule(duration, lastTime = 0) {
         let scheduleItem = scheduleFull[j];
         if (scheduleItem.status === 'from') {
             choiseFrom(scheduleItem);
-        }
-        else if (scheduleItem.status === 'to') {
+        } else if (scheduleItem.status === 'to') {
             choiseTo(scheduleItem);
         }
         result = handler(lastTime, duration, scheduleItem, j);
-        if (result !== 0)
+        if (result !== 0) {
             return result;
+        }
     }
 
     return 0;
@@ -163,23 +163,27 @@ function handler(lastTime, duration, scheduleItem, j) {
     if (checkBank && checkDanny && checkRusty && checkLinus) {
         actualMinutes = scheduleItem.minutes + duration;
         if (actualMinutes <= scheduleFull[j + 1].minutes) {
-            if (lastTime === 0) {
-                startIndex = j;
-
-                return actualMinutes - duration + bankTimeZone * 60;
-            }
-            else if ((lastTime + 30 + duration - bankTimeZone * 60) <= scheduleFull[j + 1].minutes &&
-                (actualMinutes - duration + bankTimeZone * 60) >= lastTime) {
-                startIndex = j;
-                if ((actualMinutes - duration + bankTimeZone * 60) !== lastTime) {
-                    return actualMinutes - duration + bankTimeZone * 60;
-                }
-
-                return actualMinutes + 30 - duration + bankTimeZone * 60;
-            }
+            checkLastTime(lastTime, duration, scheduleItem, j);
         }
     }
     return 0;
+}
+
+function checkLastTime(lastTime, duration, scheduleItem, j) {
+    if (lastTime === 0) {
+        startIndex = j;
+
+        return actualMinutes - duration + bankTimeZone * 60;
+    }
+    else if ((lastTime + 30 + duration - bankTimeZone * 60) <= scheduleFull[j + 1].minutes &&
+        (actualMinutes - duration + bankTimeZone * 60) >= lastTime) {
+        startIndex = j;
+        if ((actualMinutes - duration + bankTimeZone * 60) !== lastTime) {
+            return actualMinutes - duration + bankTimeZone * 60;
+        }
+
+        return actualMinutes + 30 - duration + bankTimeZone * 60;
+    }
 }
 
 function choiseFrom(scheduleItem) {
