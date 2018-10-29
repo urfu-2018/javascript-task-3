@@ -119,7 +119,7 @@ function getIntersections(intervals1, intervals2) {
 
     intervals1.forEach(int1 => {
         intervals2.forEach(int2 => {
-            if (int1[1].value >= int2[0].value && int1[0].value <= int2[1].value) {
+            if (int1[1].value > int2[0].value && int1[0].value < int2[1].value) {
                 result.push([int1[0].max(int2[0]), int1[1].min(int2[1])]);
             }
         });
