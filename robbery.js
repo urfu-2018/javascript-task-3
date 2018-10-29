@@ -22,13 +22,13 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     const bankWorkingMinutes = [];
     for (let i = 0; i < 3; i++) {
         bankWorkingMinutes.push({
-            from: convertToMinutes(workingHours.from, bankTimeZone) + i * 24 * 60,
-            to: convertToMinutes(workingHours.to, bankTimeZone) + i * 24 * 60
+            from: convertTimeToMinutes(workingHours.from, bankTimeZone) + i * 24 * 60,
+            to: convertTimeToMinutes(workingHours.to, bankTimeZone) + i * 24 * 60
         });
     }
-    const scheduleInMinutes = convertRobersSchedule(schedule, bankTimeZone);
-    const freeSchedule = getFreeTime(scheduleInMinutes);
-    const jointFreeSchedule = getJointFreeTime(freeSchedule);
+    const scheduleInMinutes = convertRobersScheduleToMinutes(schedule, bankTimeZone);
+    const freeSchedule = getRobersFreeTime(scheduleInMinutes);
+    const jointFreeSchedule = getJointRobersFreeTime(freeSchedule);
     const timeToRob = joinTwoSchedules(jointFreeSchedule, bankWorkingMinutes);
     const suitableTimes = getSuitableTimeParts(timeToRob, duration);
 
@@ -52,7 +52,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (suitableTimes.length === 0) {
                 return '';
             }
-            const resultTime = convertFromMinutes(suitableTimes[0]);
+            const resultTime = convertTimeFromMinutes(suitableTimes[0]);
 
             return template
                 .replace(/%DD/, resultTime[0])
@@ -78,11 +78,21 @@ function getAppropriateMoment(schedule, duration, workingHours) {
  */
 function getSuitableTimeParts(schedule, duration) {
     const suitableTimes = [];
-    schedule.forEach(part => {
-        if ((part.to - part.from) >= duration) {
-            suitableTimes.push(part.from);
+    schedule.sort((a, b) => {
+        if (a.from < b.from) {
+            return -1;
         }
-    });
+        if (a.from > b.from) {
+            return 1;
+        }
+
+        return 0;
+    })
+        .forEach(part => {
+            if ((part.to - part.from) >= duration) {
+                suitableTimes.push(part.from);
+            }
+        });
 
     return suitableTimes;
 }
@@ -92,14 +102,14 @@ function getSuitableTimeParts(schedule, duration) {
  * @param {Number} bankTimeZone
  * @returns {Array} - отрезки времени занятости в минутах
  */
-function convertRobersSchedule(schedule, bankTimeZone) {
+function convertRobersScheduleToMinutes(schedule, bankTimeZone) {
     const parsedSchedule = [];
     Object.values(schedule).forEach(timetable => {
         const temp = [];
         Object.values(timetable).forEach(time => {
             temp.push({
-                from: convertToMinutes(time.from, bankTimeZone),
-                to: convertToMinutes(time.to, bankTimeZone)
+                from: convertTimeToMinutes(time.from, bankTimeZone),
+                to: convertTimeToMinutes(time.to, bankTimeZone)
             });
         });
         parsedSchedule.push(temp);
@@ -123,7 +133,7 @@ function getTimeZone(time) {
  * @param {Number} bankTimeZone
  * @returns {Number} время в минутах в часовом поясе банка
  */
-function convertToMinutes(time, bankTimeZone) {
+function convertTimeToMinutes(time, bankTimeZone) {
     const regTime = /([А-Я]{2} )?(\d{2}):(\d{2})\+(\d{1,2})$/;
     const parsed = time.match(regTime);
     const [date, hours, minutes, timeZone] = [parsed[1], parsed[2], parsed[3], parsed[4]];
@@ -137,7 +147,7 @@ function convertToMinutes(time, bankTimeZone) {
  * @param {Number} timeInMinutes
  * @returns {Array}
  */
-function convertFromMinutes(timeInMinutes) {
+function convertTimeFromMinutes(timeInMinutes) {
     let hours = Math.floor(timeInMinutes / 60);
     const minutes = timeInMinutes - hours * 60;
     let day = 'ПН';
@@ -155,7 +165,8 @@ function convertFromMinutes(timeInMinutes) {
  * @param {Array} schedule - [{from: минута1, to: минута2}, ...] - время занятости
  * @returns {Array} - [{from: ..., to: ...}, ...] - свободное время
  */
-function getFreeTime(schedule) {
+function getRobersFreeTime(schedule) {
+    const maxMinute = 3 * 24 * 60 - 1;
     const freeTimeSchedule = [];
     schedule.forEach(robber => {
         const personFreeTime = [];
@@ -169,10 +180,10 @@ function getFreeTime(schedule) {
             }
             minTime = day.to;
         });
-        if (minTime < 3 * 24 * 60) {
+        if (minTime < maxMinute) {
             personFreeTime.push({
                 from: minTime,
-                to: 3 * 24 * 60
+                to: maxMinute
             });
         }
         freeTimeSchedule.push(personFreeTime);
@@ -206,7 +217,7 @@ function joinTwoSchedules(first, second) {
  * @param {Array} schedule - [0: [0: {from: minute1, to: minute2}, ...], 1: ..., 2: ...]
  * @returns {Array} - пересечение по свободному времени
  */
-function getJointFreeTime(schedule) {
+function getJointRobersFreeTime(schedule) {
     const [danny, rusty, linus] = [schedule[0], schedule[1], schedule[2]];
     let jointFreeTime = joinTwoSchedules(danny, rusty);
     jointFreeTime = joinTwoSchedules(jointFreeTime, linus);
