@@ -161,10 +161,8 @@ function getFormatTime(timeInString, timeZoneBank) {
     const timeZonePerson = Number(parseTime[4]);
     const date = new Date(2018, 9, 1, Number(parseTime[2]), Number(parseTime[3]), 0, 0);
     date.setDate(date.getDate() + DAYS_WEEK.indexOf(parseTime[1]) - 1);
-    if (timeZoneBank > timeZonePerson) {
+    if (timeZoneBank !== timeZonePerson) {
         date.setHours(date.getHours() + timeZoneBank - timeZonePerson);
-    } else if (timeZoneBank < timeZonePerson) {
-        date.setHours(date.getHours() - timeZoneBank + timeZonePerson);
     }
 
     return {
