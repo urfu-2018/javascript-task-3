@@ -154,11 +154,6 @@ function getFreeTime(busyIntervals) {
         }
     }
 
-    if (interval.length === 1) {
-        interval.push(72 * 60 - 1);
-        resultIntervals.push(interval);
-    }
-
     return resultIntervals;
 }
 
