@@ -20,9 +20,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     const bankTimeZone = parseInt(workingHours.from.split('+')[1]);
     let oldResult = '';
     let result = findRoberyTime(schedule, duration, workingHours);
-    let answ = {};
 
-    answ = {
+    return {
 
         /**
          * Найдено ли время
@@ -48,8 +47,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 const start = new Date(result).getTime();
                 const end = new Date(result + 30 * 60000).getTime();
                 schedule.Danny.push({
-                    from: ticksToDate(start, '%DD %HH:%MM+' + bankTimeZone, bankTimeZone),
-                    to: ticksToDate(end, '%DD %HH:%MM+' + bankTimeZone, bankTimeZone)
+                    from: ticksToDate(start, '%DD %HH:%MM+' + 0, 0),
+                    to: ticksToDate(end, '%DD %HH:%MM+' + 0, 0)
                 });
                 const newMoment = getAppropriateMoment(schedule, duration, workingHours);
                 if (!newMoment.result) {
@@ -64,8 +63,6 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         },
         result
     };
-
-    return answ;
 }
 
 /**

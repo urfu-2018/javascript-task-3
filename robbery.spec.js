@@ -68,6 +68,10 @@ describe('robbery.getAppropriateMoment()', () => {
 
             assert.ok(!moment.tryLater());
             assert.strictEqual(moment.format('%DD %HH:%MM'), 'СР 10:00');
+            assert.ok(!moment.tryLater());
+            assert.strictEqual(moment.format('%DD %HH:%MM'), 'СР 10:00');
+            assert.ok(!moment.tryLater());
+            assert.strictEqual(moment.format('%DD %HH:%MM'), 'СР 10:00');
         });
     }
 });
