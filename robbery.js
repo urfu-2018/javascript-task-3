@@ -121,7 +121,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 return template.replace(/%HH|%MM|%DD/gi, m => replacementDict[m]);
             }
 
-            return '""';
+            return '';
         },
 
         /**
@@ -163,7 +163,7 @@ function handler(lastTime, duration, scheduleItem, j) {
     if (checkBank && checkDanny && checkRusty && checkLinus) {
         actualMinutes = scheduleItem.minutes + duration;
         if (actualMinutes <= scheduleFull[j + 1].minutes) {
-            checkLastTime(lastTime, duration, scheduleItem, j);
+            return checkLastTime(lastTime, duration, scheduleItem, j);
         }
     }
 
@@ -184,6 +184,7 @@ function checkLastTime(lastTime, duration, scheduleItem, j) {
 
         return actualMinutes + 30 - duration + bankTimeZone * 60;
     }
+    return 0;
 }
 
 function choiseFrom(scheduleItem) {
