@@ -234,10 +234,6 @@ function getInformationAboutBank(schedule) {
     return bankSchedule;
 }
 
-function getIndexesOfDays() {
-    return Array.from(Array(DAYS_OF_WEEK.length).keys());
-}
-
 function parseScheduleString(workingHours) {
     const SCHEDULE_STRING_REGEX = /^((.{2}) )?(\d+):(\d+)\+(\d+)$/;
     const start = workingHours.from.match(SCHEDULE_STRING_REGEX);
@@ -257,6 +253,13 @@ function parseScheduleString(workingHours) {
 }
 
 function getFreeTimeSchedule(busyTimeSchedule) {
+    if (busyTimeSchedule.length === 0) {
+        return [{
+            start: 0,
+            end: DAYS_OF_WEEK.length * MINUTES_IN_DAY
+        }];
+    }
+
     let freeTimeSchedule = [];
     const firstStart = busyTimeSchedule[0].start;
     if (firstStart > 0) {
@@ -298,6 +301,12 @@ function splitByDays(splitByDaysSchedule, element) {
 
     return splitByDaysSchedule;
 }
+
+
+function getIndexesOfDays() {
+    return Array.from(Array(DAYS_OF_WEEK.length).keys());
+}
+
 
 module.exports = {
     getAppropriateMoment,
