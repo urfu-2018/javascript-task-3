@@ -100,7 +100,7 @@ function invertIntervals(start, intervals, end) {
 
     return intervals
         .reduce((a, c, i) => a.concat(i % 2 ? [[intervals[i - 1], c]] : []), [])
-        .filter(x => x[0] !== x[1]);
+        .filter(x => x[0] !== x[1] && x[0] < x[1]);
 }
 
 function scheduleToTimeIntervals(schedule) {
@@ -114,13 +114,13 @@ function scheduleToTimeIntervals(schedule) {
 
 const numToWeek = { 1: 'ПН', 2: 'ВТ', 3: 'СР', 4: 'ЧТ', 5: 'ПТ', 6: 'СБ', 7: 'ВС' };
 
-function ticksToDate(ticks, format, timeZone) {
+function ticksToDate(ticks, format = '%DD %HH:%MM', timeZone = 5) {
     if (!ticks) {
         return '';
     }
     const date = new Date(ticks + timeZone * 3600 * 1000);
-    let hours = date.getUTCHours();
-    let minutes = date.getUTCMinutes();
+    let hours = parseInt(date.getUTCHours());
+    let minutes = parseInt(date.getUTCMinutes());
     if (hours < 10) {
         hours = '0' + hours;
     }
@@ -169,8 +169,13 @@ function findRoberyTime(schedule, duration, workingHours) {
 
     return null;
 }
-
+invertIntervals(0, [0, 10], 10); // ?
 module.exports = {
     getAppropriateMoment,
+    findGoodIntervals,
+    findRoberyTime,
+    dateToTicks,
+    ticksToDate,
+    scheduleToTimeIntervals,
     isStar
 };

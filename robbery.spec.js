@@ -42,10 +42,7 @@ describe('robbery.getAppropriateMoment()', () => {
         const moment = getMomentFor(121);
 
         assert.ok(!moment.exists());
-        assert.strictEqual(
-            moment.format('Метим на %DD, старт в %HH:%MM!'),
-            ''
-        );
+        assert.strictEqual(moment.format('Метим на %DD, старт в %HH:%MM!'), '');
     });
 
     if (robbery.isStar) {
@@ -73,4 +70,39 @@ describe('robbery.getAppropriateMoment()', () => {
             assert.strictEqual(moment.format('%DD %HH:%MM'), 'СР 10:00');
         });
     }
+});
+
+describe('Custom', () => {
+    function getMomentFor(time) {
+        return robbery.getAppropriateMoment(
+            {
+                Danny: [
+                    { from: 'ПН 10:00+5', to: 'ПН 18:00+5' },
+                    { from: 'ВТ 10:00+5', to: 'СР 18:00+5' },
+                    { from: 'ЧТ 10:00+5', to: 'ЧТ 18:00+5' }
+                ],
+                Rusty: [],
+                Linus: []
+            },
+            time,
+            { from: '10:00+5', to: '18:00+5' }
+        );
+    }
+
+    // it('должен форматировать существующий момент', () => {
+    //     const moment = getMomentFor(90);
+
+    //     assert.ok(moment.exists());
+    //     assert.strictEqual(
+    //         moment.format('Метим на %DD, старт в %HH:%MM!'),
+    //         'Метим на ВТ, старт в 11:30!'
+    //     );
+    // });
+
+    it('должен вернуть пустую строку при форматировании несуществующего момента', () => {
+        const moment = getMomentFor(121);
+
+        assert.ok(!moment.exists());
+        assert.strictEqual(moment.format('Метим на %DD, старт в %HH:%MM!'), '');
+    });
 });
