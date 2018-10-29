@@ -147,7 +147,7 @@ function unionIntervalShouldBeClosed(isOpen, interval) {
 function getFreeTime(busyIntervals) {
     const isOpen = new Map();
     const resultIntervals = [];
-    let interval = [];
+    let interval = [0];
     for (let i = 0; i < busyIntervals.length; i++) {
         let time = busyIntervals[i];
         isOpen[time[1]] = time[2] === 'from';
