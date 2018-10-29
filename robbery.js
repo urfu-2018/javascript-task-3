@@ -6,6 +6,9 @@
  */
 const isStar = false;
 
+const MINUTES_IN_HOUR = 60;
+const HOURS_IN_DAY = 24;
+
 
 const daysToIndexMap = new Map([['ПН', 0], ['ВТ', 1], ['СР', 2]]);
 const days = ['ПН', 'ВТ', 'СР'];
@@ -28,15 +31,10 @@ function parseTime(time) {
 }
 
 function getMinutesSinceBase(datetime, bankTimezone) {
-    const x = daysToIndexMap.get(datetime.day) * 24 * 60;
-    const y = datetime.time.hours * 60;
-    const z = datetime.time.minutes;
-    const w = (datetime.time.timezone - bankTimezone) * 60;
-
-    return x +
-        y +
-        z -
-        w;
+    return daysToIndexMap.get(datetime.day) * HOURS_IN_DAY * MINUTES_IN_HOUR +
+        datetime.time.hours * MINUTES_IN_HOUR +
+        datetime.time.minutes -
+        (datetime.time.timezone - bankTimezone) * MINUTES_IN_HOUR;
 }
 
 function getBankIntervals(workingHours) {
@@ -44,7 +42,7 @@ function getBankIntervals(workingHours) {
     const endTime = parseTime(workingHours.to);
     const bankTimezone = startTime.timezone;
     const intervals = [];
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < days.length; i++) {
         intervals.push({
             start: getMinutesSinceBase({
                 day: days[i],
@@ -84,12 +82,12 @@ function getRobberIntervals(segments, bankTimezone) {
     return result;
 }
 
-function findAllIntersections(a, b) {
+function findAllIntersections(intervalsA, intervalsB) {
     function generatePairs() {
         const pairs = [];
-        for (let i = 0; i < a.length; i++) {
-            for (let j = 0; j < b.length; j++) {
-                pairs.push([a[i], b[j]]);
+        for (let i = 0; i < intervalsA.length; i++) {
+            for (let j = 0; j < intervalsB.length; j++) {
+                pairs.push([intervalsA[i], intervalsB[j]]);
             }
         }
 
@@ -109,17 +107,17 @@ function findAllIntersections(a, b) {
     return intersections;
 }
 
-function findInterval(a, duration) {
+function findInterval(intervals, duration) {
     let exists = false;
     let time;
-    for (let i = 0; i < a.length; i++) {
-        if (a[i].end - a[i].start >= duration) {
+    for (let i = 0; i < intervals.length; i++) {
+        if (intervals[i].end - intervals[i].start >= duration) {
             exists = true;
-            const wholeHours = Math.floor(a[i].start / 60);
-            const wholeDays = Math.floor(wholeHours / 24);
-            let hours = (wholeHours % 24).toString();
+            const wholeHours = Math.floor(intervals[i].start / MINUTES_IN_HOUR);
+            const wholeDays = Math.floor(wholeHours / HOURS_IN_DAY);
+            let hours = (wholeHours % HOURS_IN_DAY).toString();
             hours = hours.length === 2 ? hours : '0' + hours;
-            let minutes = (a[i].start % 60).toString();
+            let minutes = (intervals[i].start % MINUTES_IN_HOUR).toString();
             minutes = minutes.length === 2 ? minutes : '0' + minutes;
             time = { day: days[wholeDays], hours, minutes };
             break;
