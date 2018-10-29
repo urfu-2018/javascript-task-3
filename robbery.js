@@ -8,7 +8,11 @@ const isStar = false;
 let appropriateMoments;
 let bankWorkingHours;
 const newSchedule = { 'ПН': [], 'ВТ': [], 'СР': [], 'ЧТ': [], 'ПТ': [], 'СБ': [], 'ВС': [] };
-const days = ['ПН', 'ВТ', 'СР'];
+const appropriateDays = ['ПН', 'ВТ', 'СР'];
+const days = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
+const MINUTES_IN_HOUR = 60;
+const HOURS_IN_DAY = 24;
+const DAYS_IN_WEEK = 7;
 
 function parseToBankZone(inputStr) {
     let day = inputStr.slice(0, 2);
@@ -17,14 +21,16 @@ function parseToBankZone(inputStr) {
     const minutes = parseInt(inputStr.slice(6, 8));
     const shift = parseInt(inputStr.slice(9, 11));
     let bankZoneHour = localHour - shift + bankWorkingHours.shift;
-
-    if (bankZoneHour < 0) {
-        bankZoneHour = (24 + bankZoneHour) % 24;
-        const dayIndex = (7 + days.indexOf(day)) % 7;
-        day = days[dayIndex];
+    let index = days.indexOf(day);
+    if (bankZoneHour > HOURS_IN_DAY) {
+        index++;
     }
+    let dayIndex = (DAYS_IN_WEEK + index) % DAYS_IN_WEEK;
+    day = days[dayIndex];
+    bankZoneHour = (HOURS_IN_DAY + bankZoneHour) % HOURS_IN_DAY;
 
-    return { day: day, minutes: bankZoneHour * 60 + minutes };
+
+    return { day: day, minutes: bankZoneHour * MINUTES_IN_HOUR + minutes };
 }
 
 function getTimeRanges(scheduleInDay, dayName) {
@@ -37,7 +43,7 @@ function getTimeRanges(scheduleInDay, dayName) {
         leftBorder = scheduleInDay[i].to.minutes;
     }
 
-    const minutesInDay = 23 * 60 + 59;
+    const minutesInDay = 23 * MINUTES_IN_HOUR + 59;
     result.push({ day: dayName, from: leftBorder, to: minutesInDay });
 
     return result;
@@ -47,14 +53,17 @@ function getWorkingHours(workingHours) {
     const fromHour = parseInt(workingHours.from.slice(0, 2));
     const toHour = parseInt(workingHours.to.slice(0, 2));
     const shift = parseInt(workingHours.from.slice(6));
+    const fromMinutes = parseInt(workingHours.from.slice(3, 5));
+    const toMinutes = parseInt(workingHours.to.slice(3, 5));
 
     return {
         shift: shift,
         from: {
-            minutes: (24 + fromHour) % 24 * 60 + parseInt(workingHours.from.slice(3, 5))
+            minutes:
+                (HOURS_IN_DAY + fromHour) % HOURS_IN_DAY * MINUTES_IN_HOUR + fromMinutes
         },
         to: {
-            minutes: (24 + toHour) % 24 * 60 + parseInt(workingHours.to.slice(3, 5))
+            minutes: (HOURS_IN_DAY + toHour) % HOURS_IN_DAY * MINUTES_IN_HOUR + toMinutes
         }
     };
 }
@@ -72,7 +81,7 @@ function fillSchedule(robberSchedule, robberName) {
         {
             name: robberName,
             from: fromInBankZone,
-            to: { day: fromInBankZone.day, minutes: 23 * 60 + 59 }
+            to: { day: fromInBankZone.day, minutes: 23 * MINUTES_IN_HOUR + 59 }
         });
     newSchedule[toInBankZone.day].push({
         name: robberName,
@@ -106,7 +115,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         }
     }
     appropriateMoments = Object.keys(newSchedule)
-        .filter(x => days.includes(x))
+        .filter(x => appropriateDays.includes(x))
         .map(x => newSchedule[x]
             .sort((y, z) => y.from.minutes - z.from.minutes))
         .map(x => {
@@ -177,6 +186,6 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
 module.exports = {
     getAppropriateMoment,
-
+    parseToBankZone,
     isStar
 };
