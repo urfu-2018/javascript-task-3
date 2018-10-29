@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = false;
+const isStar = true;
 const numToWeek = { 1: 'ПН', 2: 'ВТ', 3: 'СР', 4: 'ЧТ', 5: 'ПТ', 6: 'СБ', 7: 'ВС' };
 const weekToNum = { ПН: 1, ВТ: 2, СР: 3, ЧТ: 4, ПТ: 5, СБ: 6, ВС: 7 };
 
@@ -18,17 +18,20 @@ const weekToNum = { ПН: 1, ВТ: 2, СР: 3, ЧТ: 4, ПТ: 5, СБ: 6, ВС: 
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
     const bankTimeZone = parseInt(workingHours.from.split('+')[1]);
-    const result = findRoberyTime(schedule, duration, workingHours);
+    let result = findRoberyTime(schedule, duration, workingHours);
+    let answ = {};
+    function updateAnswer(exists, format) {
+        answ.exists = exists;
+        answ.format = format;
+    }
 
-    return {
+    answ = {
 
         /**
          * Найдено ли время
          * @returns {Boolean}
          */
-        exists: function () {
-            return Boolean(result);
-        },
+        exists: () => Boolean(result),
 
         /**
          * Возвращает отформатированную строку с часами для ограбления
@@ -36,9 +39,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @param {String} template
          * @returns {String}
          */
-        format: function (template) {
-            return ticksToDate(result, template, bankTimeZone);
-        },
+        format: template => ticksToDate(result, template, bankTimeZone),
 
         /**
          * Попробовать найти часы для ограбления позже [*]
@@ -46,9 +47,24 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            return false;
-        }
+            const start = new Date(result).getTime();
+            const end = new Date(result + 30 * 60000).getTime();
+            schedule.Danny.push({
+                from: ticksToDate(start, '%DD %HH:%MM+' + bankTimeZone, bankTimeZone),
+                to: ticksToDate(end, '%DD %HH:%MM+' + bankTimeZone, bankTimeZone)
+            });
+            const newMoment = getAppropriateMoment(schedule, duration, workingHours);
+            if (newMoment.result) {
+                updateAnswer(newMoment.exists, newMoment.format);
+                result = newMoment.result;
+            }
+
+            return newMoment.result;
+        },
+        result
     };
+
+    return answ;
 }
 
 /**
