@@ -5,7 +5,6 @@
  * Реализовано оба метода и tryLater
  */
 const isStar = false;
-let bankTimeZone;
 
 /**
  * @param {Object} schedule – Расписание Банды
@@ -16,7 +15,7 @@ let bankTimeZone;
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    bankTimeZone = parseInt(workingHours.from.split('+')[1]);
+    const bankTimeZone = parseInt(workingHours.from.split('+')[1]);
     const result = findRoberyTime(schedule, duration, workingHours);
 
     return {
@@ -68,7 +67,6 @@ function dateToTicks(date) {
  */
 function unionOfIntervals(intervals) {
     intervals = intervals.sort((x, y) => x[0] - y[0]);
-    // const rint = numIntervalsToDateIntervals(intervals);
     const result = [intervals[0]];
 
     for (let interval of intervals.slice(1)) {
@@ -87,26 +85,26 @@ function unionOfIntervals(intervals) {
  * @returns {[]}
  */
 function invertIntervals(intervals) {
-    const start = dateToTicks('ПН 00:00+' + bankTimeZone);
-    const end = dateToTicks('СР 23:59+' + bankTimeZone);
     intervals = intervals.sort((x, y) => x[0] > y[0]).reduce((a, b) => a.concat(b), []);
+    const minTime = dateToTicks('ПН 00:00+0');
+    const maxTime = dateToTicks('СР 23:59+14');
 
-    if (intervals[0] === start) {
+    if (intervals[0] === minTime) {
         intervals.shift();
     } else {
-        intervals.unshift(start);
+        intervals.unshift(minTime);
     }
-    if (intervals.slice(-1) === end) {
+    if (intervals.slice(-1) === maxTime) {
         intervals.pop();
     } else {
-        intervals.push(end);
+        intervals.push(maxTime);
     }
 
     return intervals
         .reduce((a, c, i) => a.concat(i % 2 ? [[intervals[i - 1], c]] : []), [])
         .filter(x => x[0] < x[1]);
 }
-// invertIntervals(10, [[10, 20], [40, 110]], 100); // ?
+
 function scheduleToTimeIntervals(schedule) {
     const result = [];
     for (let interval of schedule) {
@@ -145,22 +143,12 @@ function findGoodIntervals(schedule, workingHours) {
         { from: 'ВТ ' + workingHours.from, to: 'ВТ ' + workingHours.to },
         { from: 'СР ' + workingHours.from, to: 'СР ' + workingHours.to }
     ];
-
-    const busyRobbersIntervals = scheduleToTimeIntervals(
+    const robbersBusy = scheduleToTimeIntervals(
         schedule.Danny.concat(schedule.Rusty).concat(schedule.Linus)
     );
-    // const bri = numIntervalsToDateIntervals(busyRobbersIntervals);
-    // const bankNotWorking = numIntervalsToDateIntervals(
-    // invertIntervals(scheduleToTimeIntervals(bankSchedule))
-    // );
-    const busyAll = unionOfIntervals(
-        invertIntervals(scheduleToTimeIntervals(bankSchedule)).concat(busyRobbersIntervals)
-    );
-    // const ball = numIntervalsToDateIntervals(busyAll);
-    const freeAll = invertIntervals(busyAll);
-    // const fall = numIntervalsToDateIntervals(freeAll);
+    const bankNotWorking = invertIntervals(scheduleToTimeIntervals(bankSchedule));
 
-    return freeAll;
+    return invertIntervals(unionOfIntervals(bankNotWorking.concat(robbersBusy)));
 }
 
 function findRoberyTime(schedule, duration, workingHours) {
@@ -173,15 +161,6 @@ function findRoberyTime(schedule, duration, workingHours) {
 
     return null;
 }
-
-// function numIntervalsToDateIntervals(intervals) {
-//     const result = [];
-//     for (let i of intervals) {
-//         result.push([ticksToDate(i[0]), ticksToDate(i[1])]);
-//     }
-
-//     return result;
-// }
 
 module.exports = {
     getAppropriateMoment,
