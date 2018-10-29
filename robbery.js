@@ -5,7 +5,7 @@
  * Реализовано оба метода и tryLater
  */
 const isStar = true;
-const daysOfTheWeek = ['ПН', 'ВТ', 'СР', 'ЧТ'];
+const daysOfTheWeek = ['ПН', 'ВТ', 'СР'];
 const minutesInHour = 60;
 const minutesInDay = 24 * minutesInHour;
 
@@ -144,11 +144,12 @@ function getDifference(freeBankInterval, otherInterval) {
             new TimeInterval(otherInterval.to, freeBankInterval.to)];
     }
 
-    if (otherInterval.to < freeBankInterval.from || freeBankInterval.to < otherInterval.from) {
-        return [freeBankInterval];
+    if (freeBankInterval.to < otherInterval.to && otherInterval.from < freeBankInterval.from) {
+        return [];
     }
+    let interval = getIfNotIntersection(freeBankInterval, otherInterval);
 
-    return getIfIntersection(freeBankInterval, otherInterval);
+    return interval ? interval : getIfIntersection(freeBankInterval, otherInterval);
 }
 
 function getIfIntersection(freeBankInterval, otherInterval) {
@@ -158,6 +159,12 @@ function getIfIntersection(freeBankInterval, otherInterval) {
 
     if (freeBankInterval.from > otherInterval.from || freeBankInterval.to > otherInterval.to) {
         return [new TimeInterval(otherInterval.to, freeBankInterval.to)];
+    }
+}
+
+function getIfNotIntersection(freeBankInterval, otherInterval) {
+    if (otherInterval.to < freeBankInterval.from || freeBankInterval.to < otherInterval.from) {
+        return [freeBankInterval];
     }
 }
 
