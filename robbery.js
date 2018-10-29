@@ -93,10 +93,13 @@ function getRobbersFreeTimetable(robbersTimetable) {
 
 function parseTimeToDateString(time) {
     const day = Math.trunc(Number(time) / (hoursInDay * minutesInHour));
-    const hours = Math.trunc((time - day * hoursInDay * minutesInHour) / 60);
+    let hours = Math.trunc((time - day * hoursInDay * minutesInHour) / 60).toString();
     let minutes = (time - day * hoursInDay * minutesInHour - hours * minutesInHour).toString();
     if (minutes.length === 1) {
         minutes = '0' + minutes;
+    }
+    if (hours.length === 1) {
+        hours = '0' + hours;
     }
 
     return [['ПН', 'ВТ', 'СР'][day], hours, minutes];
