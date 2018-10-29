@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = true;
+const isStar = false;
 
 const weekDays = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
 const minutesInHour = 60;
