@@ -25,8 +25,11 @@ function parseToBankZone(inputStr) {
     if (bankZoneHour > HOURS_IN_DAY) {
         index++;
     }
-    let dayIndex = (DAYS_IN_WEEK + index) % DAYS_IN_WEEK;
-    day = days[dayIndex];
+    if (bankZoneHour < 0) {
+        index--;
+    }
+    index = (DAYS_IN_WEEK + index) % DAYS_IN_WEEK;
+    day = days[index];
     bankZoneHour = (HOURS_IN_DAY + bankZoneHour) % HOURS_IN_DAY;
 
 
