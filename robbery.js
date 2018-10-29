@@ -83,8 +83,10 @@ const cartesianOfThree = (a, b, ...c) => (b ? cartesianOfThree(cartesianOfTwo(a,
 
 function findTimeForRobbery(schedule1, schedule2, schedule3, duration) {
     for (let element of cartesianOfThree(schedule1, schedule2, schedule3)) {
-        if (checkEnoughTimeForRobbery(...element, duration)) {
-            return chooseLatest(...element);
+        const intersectionStart = chooseLatestStart(...element);
+        const intersectionEnd = chooseEarliestEnd(...element);
+        if (hasEnoughTime(intersectionStart, intersectionEnd, duration)) {
+            return intersectionStart;
         }
     }
 }
@@ -111,25 +113,16 @@ function hasEnoughTime(freeTimeStart, freeTimeEnd, neededTime) {
     return freeTimeEnd - freeTimeStart >= neededTime * 60 * 1000;
 }
 
-function enoughTimeInIntersection(interval1, interval2, duration) {
-    const intersectionStart = interval1.from > interval2.from ? interval1.from : interval2.from;
-    const intersectionEnd = interval1.to > interval2.to ? interval2.to : interval1.to;
-
-    return hasEnoughTime(intersectionStart, intersectionEnd, duration);
-}
-
-function checkEnoughTimeForRobbery(interval1, interval2, interval3, duration) {
-    return (
-        enoughTimeInIntersection(interval1, interval2, duration) &&
-        enoughTimeInIntersection(interval2, interval3, duration) &&
-        enoughTimeInIntersection(interval1, interval3, duration)
-    );
-}
-
-function chooseLatest(time1, time2, time3) {
+function chooseLatestStart(time1, time2, time3) {
     const timesArray = [time1.from, time2.from, time3.from];
 
     return timesArray.sort().pop();
+}
+
+function chooseEarliestEnd(time1, time2, time3) {
+    const timesArray = [time1.to, time2.to, time3.to];
+
+    return timesArray.sort()[0];
 }
 
 function getGoodTimeForRobberySchedule(schedule, duration, bankWorkingHours) {
