@@ -150,7 +150,9 @@ function findGoodIntervals(schedule, workingHours) {
             invertIntervals(minTime, scheduleToTimeIntervals(bankSchedule), maxTime).concat(
                 scheduleToTimeIntervals(
                     schedule.Danny.concat(schedule.Rusty).concat(schedule.Linus)
-                ).filter(x => x[0] < maxTime)
+                )
+                    .filter(x => x[0] < maxTime)
+                    .map(x => (x[1] > maxTime ? [x[0], maxTime] : x))
             )
         ),
         maxTime
