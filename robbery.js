@@ -164,14 +164,15 @@ function getIntervalsWithShifts(intervals, duration) {
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    const freeTimeIntervals = getFreeTimeIntervals(toMinutesFromWeekStart(schedule));
+    const formatedSchedule = toMinutesFromWeekStart(schedule);
+    const freeTimeIntervals = getFreeTimeIntervals(formatedSchedule);
     const workingHoursInterval = {
         from: getMinutesFromDayStart(dayRegex.exec(workingHours.from)),
         to: getMinutesFromDayStart(dayRegex.exec(workingHours.to)) };
     const formatedWorkingHours = getIntervalObjectsForWeek(workingHoursInterval);
     const bankTimezone = dayRegex.exec(workingHours.from)[3];
-    const possibleIntervals = getPossibleIntervals(
-        freeTimeIntervals, formatedWorkingHours, bankTimezone);
+    const possibleIntervals = freeTimeIntervals.length > 0 ? getPossibleIntervals(
+        freeTimeIntervals, formatedWorkingHours, bankTimezone) : [];
     const validIntervals =
         possibleIntervals.length > 0 ? getIntervalsWithDuration(possibleIntervals, duration) : [];
     const validIntervalsWithShifts =
