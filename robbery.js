@@ -4,8 +4,8 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-// const isStar = true;
-const isStar = false;
+const isStar = true;
+// const isStar = false;
 
 const weekDates = { ПН: 0, ВТ: 24, СР: 48 };
 
@@ -52,7 +52,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (suitableTimeParts.length === 0) {
                 return '';
             }
-            const resultTime = convertTimeFromMinutes(suitableTimeParts[0]);
+            const resultTime = convertTimeFromMinutes(suitableTimeParts[0].from);
 
             return template
                 .replace(/%DD/, resultTime[0])
@@ -66,6 +66,18 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
+            if (suitableTimeParts.length === 0) {
+                return false;
+            } else if ((suitableTimeParts[0].to - (suitableTimeParts[0].from + 30)) >= duration) {
+                suitableTimeParts[0].from += 30;
+
+                return true;
+            } else if (suitableTimeParts.length >= 2) {
+                suitableTimeParts.shift();
+
+                return true;
+            }
+
             return false;
         }
     };
@@ -82,7 +94,10 @@ function getSuitableTimeParts(schedule, duration) {
         .sort((a, b) => a.from - b.from)
         .forEach(part => {
             if ((part.to - part.from) >= duration) {
-                suitableTimes.push(part.from);
+                suitableTimes.push({
+                    from: part.from,
+                    to: part.to
+                });
             }
         });
 
