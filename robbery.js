@@ -13,55 +13,54 @@ const minutesInDay = 1440;
 const minutesInHour = 60;
 const open = 0;
 const close = 1;
+
 let timeBeforeStart;
 let timeAfterEnd;
 
 function getMinutesFromWeekStart(timeString) {
-    const parsed = timeRE.exec(timeString);
-    const days = dayNames.indexOf(parsed[1]);
-    const hours = parseInt(parsed[2]) - parseInt(parsed[4]);
-    const minutes = parseInt(parsed[3]);
+    const matched = timeRE.exec(timeString);
+    const days = dayNames.indexOf(matched[1]);
+    const hours = parseInt(matched[2]) - parseInt(matched[4]);
+    const minutes = parseInt(matched[3]);
 
     return days * minutesInDay + hours * minutesInHour + minutes;
 }
 
-function getEvents(schedule) {
-    return schedule.reduce((events, timePeriod) => {
-        events.push({ time: getMinutesFromWeekStart(timePeriod.from), type: open });
-        events.push({ time: getMinutesFromWeekStart(timePeriod.to), type: close });
+function populateEvents(schedule, events, reverse = false) {
+    for (let { from, to } of schedule) {
+        events.push({ time: getMinutesFromWeekStart(from), type: reverse ? close : open });
+        events.push({ time: getMinutesFromWeekStart(to), type: reverse ? open : close });
+    }
+}
 
-        return events;
-    }, []);
+function getEvents(schedule) {
+    let events = [];
+    populateEvents(schedule, events);
+
+    return events;
 }
 
 function getEventsFromRobberSchedule(robberSchedule) {
-    let result = robberSchedule.reduce((events, timePeriod) => {
-        events.push({ time: getMinutesFromWeekStart(timePeriod.from), type: close });
-        events.push({ time: getMinutesFromWeekStart(timePeriod.to), type: open });
+    let events = [{ time: timeBeforeStart, type: open }];
+    populateEvents(robberSchedule, events, true);
+    events.push({ time: timeAfterEnd, type: close });
 
-        return events;
-    }, [{ time: timeBeforeStart, type: open }]);
-    result.push({ time: timeAfterEnd, type: close });
-
-    return result;
+    return events;
 }
 
-function getEventsFromBankWorkingHours(bankWorkingHours) {
+function getEventsFromBankWorkingHours({ from, to }) {
     let bankWorkingHoursByDays = dayNames.slice(0, 3)
         .map(day => {
             return {
-                from: day + ' ' + bankWorkingHours.from,
-                to: day + ' ' + bankWorkingHours.to
+                from: `${day} ${from}`,
+                to: `${day} ${to}`
             };
         });
 
     return getEvents(bankWorkingHoursByDays);
 }
 
-// Use ScanLine algorithm
-// Don't really know how to simplify it, so just disable warning
-// eslint-disable-next-line complexity
-function getCommonMomentRanges(events, enoughOpenedForRobbery) {
+function sortEvents(events) {
     events.sort((first, second) => {
         let result = first.time - second.time;
         if (result !== 0) {
@@ -70,6 +69,13 @@ function getCommonMomentRanges(events, enoughOpenedForRobbery) {
 
         return first.type - second.type;
     });
+}
+
+// Use ScanLine algorithm
+// Don't really know how to simplify it, so just disable warning
+// eslint-disable-next-line complexity
+function getCommonMomentRanges(events, enoughOpenedForRobbery) {
+    sortEvents(events);
     let openedCount = 0;
     const notStarted = timeBeforeStart - 1;
     let rangeStarted = notStarted;
