@@ -7,7 +7,7 @@
 const isStar = false;
 let appropriateMoments;
 let bankWorkingHours;
-const days = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
+const days = ['ПН', 'ВТ', 'СР'];
 const MINUTES_IN_HOUR = 60;
 const HOURS_IN_DAY = 24;
 const MINUTES_IN_DAY = MINUTES_IN_HOUR * HOURS_IN_DAY;
@@ -120,7 +120,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             }
 
             return template.replace(
-                '%HH', Math.floor(appropriateMoments[0].from % MINUTES_IN_DAY / MINUTES_IN_HOUR))
+                '%HH', Math.floor(appropriateMoments[0].from % MINUTES_IN_DAY / MINUTES_IN_HOUR)
+                    .toString()
+                    .padStart(2, '0'))
                 .replace('%MM', (appropriateMoments[0].from % MINUTES_IN_HOUR).toString()
                     .padStart(2, '0'))
                 .replace('%DD', days[Math.floor(appropriateMoments[0].from / MINUTES_IN_DAY)]);
