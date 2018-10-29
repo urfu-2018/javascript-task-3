@@ -15,6 +15,7 @@ let checkBank = false;
 let checkDanny = true;
 let checkRusty = true;
 let checkLinus = true;
+let actualMinutes;
 
 function createItemSchedule(minutes, name, status) {
     return { minutes, name, status };
@@ -81,7 +82,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         createSchedulesBank(workingHours);
         scheduleFull.sort(compare);
     }
-    let templateMinute = findFreeSchedule(scheduleFull, duration);
+    let templateMinute = findFreeSchedule(duration);
 
     return {
 
@@ -108,7 +109,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 const weekdayIndex = Math.floor(templateMinute / (24 * 60));
                 const weekday = weekdays[weekdayIndex];
                 const hour = (Math.floor((templateMinute - 24 * 60 * weekdayIndex) /
-                60)).toString();
+                    60)).toString();
                 let paddedHour = hour.length === 1 ? '0' + hour : hour;
                 const minute = (templateMinute % 60).toString();
                 let paddedMinute = minute.length === 1 ? '0' + minute : minute;
@@ -129,8 +130,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            templateMinute = findFreeSchedule(scheduleFull, duration,
-                templateMinute);
+            templateMinute = findFreeSchedule(duration, templateMinute);
             if (templateMinute !== 0) {
                 return true;
             }
@@ -140,36 +140,46 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     };
 }
 
-function findFreeSchedule(scheduleFull, duration, lastTime = 0) {
-    let actualMinutes = 0;
-    for (let i = startIndex; i < scheduleFull.length; i++) {
-        let scheduleItem = scheduleFull[i];
+function findFreeSchedule(duration, lastTime = 0) {
+    actualMinutes = 0;
+    let result;
+    for (let j = startIndex; j < scheduleFull.length; j++) {
+        let scheduleItem = scheduleFull[j];
         if (scheduleItem.status === 'from') {
             choiseFrom(scheduleItem);
         }
         else if (scheduleItem.status === 'to') {
             choiseTo(scheduleItem);
         }
-        if (checkBank && checkDanny && checkRusty && checkLinus) {
-            actualMinutes = scheduleItem.minutes + duration;
-            if (actualMinutes <= scheduleFull[i + 1].minutes) {
-                if (lastTime === 0) {
-                    startIndex = i;
+        result = handler(lastTime, duration, scheduleItem, j);
+        if (result !== 0)
+            return result;
+    }
 
+    return 0;
+}
+
+function handler(lastTime, duration, scheduleItem, j) {
+    if (checkBank && checkDanny && checkRusty && checkLinus) {
+        actualMinutes = scheduleItem.minutes + duration;
+        if (actualMinutes <= scheduleFull[j + 1].minutes) {
+            if (lastTime === 0) {
+                startIndex = j;
+
+                return actualMinutes - duration + bankTimeZone * 60;
+            }
+            else if ((lastTime + 30 + duration - bankTimeZone * 60) <= scheduleFull[j + 1].minutes &&
+                (actualMinutes - duration + bankTimeZone * 60) >= lastTime) {
+                startIndex = j;
+                if ((actualMinutes - duration + bankTimeZone * 60) !== lastTime) {
                     return actualMinutes - duration + bankTimeZone * 60;
                 }
-                else if ((lastTime + 30 + duration - bankTimeZone * 60) <= scheduleFull[i + 1].minutes &&
-                    (actualMinutes - duration + bankTimeZone * 60) >= lastTime) {
-                    startIndex = i;
-                    if ((actualMinutes - duration + bankTimeZone * 60) !== lastTime) {
-                        return actualMinutes - duration + bankTimeZone * 60;
-                    }
 
-                    return actualMinutes + 30 - duration + bankTimeZone * 60;
-                }
+                return actualMinutes + 30 - duration + bankTimeZone * 60;
             }
         }
     }
+    return 0;
 }
 
 function choiseFrom(scheduleItem) {
