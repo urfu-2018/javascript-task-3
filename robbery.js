@@ -94,7 +94,7 @@ function find(timePoints, isFree, duration, workingHours) {
         const second = timePoints[i];
         updateIsFree(isFree, first);
         if (Object.keys(isFree).every(name => isFree[name]) &&
-            second.minute - first.minute >= duration &&
+            (second.minute - first.minute) >= duration &&
             isWorkingTime(workingHours, first, second)) {
 
             return { 'start': first, 'end': second, 'found': true };
@@ -105,12 +105,12 @@ function find(timePoints, isFree, duration, workingHours) {
 }
 
 function formatAnswer(foundObj, workingHours) {
-    const bankTimeZone = parseInt(workingHours.from.slice(6));
+    const bankTimeZone = parseInt(workingHours.from.slice(workingHours.from.length - 1));
     foundObj.start.minute += bankTimeZone * 60;
     const dayNumber = Math.floor(foundObj.start.minute / (24 * 60));
     const day = Object.keys(days)
         .find(d => days[d] === dayNumber);
-    const hour = Math.floor((foundObj.start.minute % (24 * 60)) / 60);
+    const hour = Math.floor(foundObj.start.minute / 60) % 24;
     const minute = Math.floor(foundObj.start.minute % 60);
 
     return { day, hour, minute };
