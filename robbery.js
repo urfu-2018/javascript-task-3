@@ -56,7 +56,7 @@ function isWorkingTime(workingHours, start, end) {
     const to = getMinuteFromTimeStart('ПН', workingHours.to.slice(0, 5), workingHours.to.slice(6));
     const st = start.minute % (24 * 60);
 
-    return st >= from && st + duration <= to;
+    return st >= from && st + duration < to;
 }
 
 function addOpenCloseBankTime(workingHours, timePoints) {
