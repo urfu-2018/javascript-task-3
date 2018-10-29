@@ -86,8 +86,8 @@ function unionOfIntervals(intervals) {
  */
 function invertIntervals(intervals) {
     intervals = intervals.sort((x, y) => x[0] > y[0]).reduce((a, b) => a.concat(b), []);
-    const minTime = dateToTicks('ПН 00:00+0');
-    const maxTime = dateToTicks('СР 23:59+14');
+    const minTime = dateToTicks('ПН 00:00+14');
+    const maxTime = dateToTicks('СР 23:59+0');
 
     if (intervals[0] === minTime) {
         intervals.shift();
