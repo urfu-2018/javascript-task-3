@@ -4,7 +4,10 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = true;
+// const isStar = true;
+const isStar = false;
+
+const weekDates = { ПН: 0, ВТ: 24, СР: 48 };
 
 /**
  * @param {Object} schedule – Расписание Банды
@@ -15,7 +18,19 @@ const isStar = true;
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    console.info(schedule, duration, workingHours);
+    const bankTimeZone = getTimeZone(workingHours.from);
+    const bankWorkingMinutes = [];
+    for (let i = 0; i < 3; i++) {
+        bankWorkingMinutes.push({
+            from: convertToMinutes(workingHours.from, bankTimeZone) + i * 24 * 60,
+            to: convertToMinutes(workingHours.to, bankTimeZone) + i * 24 * 60
+        });
+    }
+    const scheduleInMinutes = convertRobersSchedule(schedule, bankTimeZone);
+    const freeSchedule = getFreeTime(scheduleInMinutes);
+    const jointFreeSchedule = getJointFreeTime(freeSchedule);
+    const timeToRob = joinTwoSchedules(jointFreeSchedule, bankWorkingMinutes);
+    const suitableTimes = getSuitableTimeParts(timeToRob, duration);
 
     return {
 
@@ -24,7 +39,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            return false;
+            return suitableTimes.length !== 0;
         },
 
         /**
@@ -34,7 +49,15 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            return template;
+            if (suitableTimes.length === 0) {
+                return '';
+            }
+            const resultTime = convertFromMinutes(suitableTimes[0]);
+
+            return template
+                .replace(/%DD/, resultTime[0])
+                .replace(/%HH/, resultTime[1])
+                .replace(/%MM/, resultTime[2]);
         },
 
         /**
@@ -48,8 +71,150 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     };
 }
 
+/**
+ * @param {Array} schedule
+ * @param {Number} duration
+ * @returns {Array}
+ */
+function getSuitableTimeParts(schedule, duration) {
+    const suitableTimes = [];
+    schedule.forEach(part => {
+        if ((part.to - part.from) >= duration) {
+            suitableTimes.push(part.from);
+        }
+    });
+
+    return suitableTimes;
+}
+
+/**
+ * @param {Object} schedule - {Danny: [{from: ..., to: ...}, ...], Rusty: ..., Linus: ...}
+ * @param {Number} bankTimeZone
+ * @returns {Array} - отрезки времени занятости в минутах
+ */
+function convertRobersSchedule(schedule, bankTimeZone) {
+    const parsedSchedule = [];
+    Object.values(schedule).forEach(timetable => {
+        const temp = [];
+        Object.values(timetable).forEach(time => {
+            temp.push({
+                from: convertToMinutes(time.from, bankTimeZone),
+                to: convertToMinutes(time.to, bankTimeZone)
+            });
+        });
+        parsedSchedule.push(temp);
+    });
+
+    return parsedSchedule;
+}
+
+/**
+ * @param {String} time - 01:01+5
+ * @returns {Number} часовой пояс
+ * */
+function getTimeZone(time) {
+    const reg = /\d{1,2}$/;
+
+    return Number(time.match(reg));
+}
+
+/**
+ * @param {String} time - формат ПН 01:01+5
+ * @param {Number} bankTimeZone
+ * @returns {Number} время в минутах в часовом поясе банка
+ */
+function convertToMinutes(time, bankTimeZone) {
+    const regTime = /([А-Я]{2} )?(\d{2}):(\d{2})\+(\d{1,2})$/;
+    const parsed = time.match(regTime);
+    const [date, hours, minutes, timeZone] = [parsed[1], parsed[2], parsed[3], parsed[4]];
+    const timeInMinutes = (Number(hours) + bankTimeZone - Number(timeZone)) * 60 + Number(minutes);
+
+    return typeof date === 'undefined' ? timeInMinutes
+        : timeInMinutes + weekDates[date.slice(0, 2)] * 60;
+}
+
+/**
+ * @param {Number} timeInMinutes
+ * @returns {Array}
+ */
+function convertFromMinutes(timeInMinutes) {
+    let hours = Math.floor(timeInMinutes / 60);
+    const minutes = timeInMinutes - hours * 60;
+    let day = 'ПН';
+    if (hours >= 24 && hours < 48) {
+        day = 'ВТ';
+    } else if (hours >= 48) {
+        day = 'СР';
+    }
+    hours = hours % 24;
+
+    return [day, hours, minutes];
+}
+
+/**
+ * @param {Array} schedule - [{from: минута1, to: минута2}, ...] - время занятости
+ * @returns {Array} - [{from: ..., to: ...}, ...] - свободное время
+ */
+function getFreeTime(schedule) {
+    const freeTimeSchedule = [];
+    schedule.forEach(robber => {
+        const personFreeTime = [];
+        let minTime = 0;
+        robber.forEach(day => {
+            if (minTime < day.from) {
+                personFreeTime.push({
+                    from: minTime,
+                    to: day.from
+                });
+            }
+            minTime = day.to;
+        });
+        if (minTime < 3 * 24 * 60) {
+            personFreeTime.push({
+                from: minTime,
+                to: 3 * 24 * 60
+            });
+        }
+        freeTimeSchedule.push(personFreeTime);
+    });
+
+    return freeTimeSchedule;
+}
+
+/**
+ * @param {Array} first - [0: {from: minute1, to: minute2}, ...]
+ * @param {Array} second - [0: {from: minute1, to: minute2}, ...]
+ * @returns {Array} - пересечение по свободному времени
+ */
+function joinTwoSchedules(first, second) {
+    const jointFreeTime = [];
+    first.forEach(f => {
+        second.forEach(s => {
+            if (f.from < s.to && f.to > s.from) {
+                jointFreeTime.push({
+                    from: Math.max(f.from, s.from),
+                    to: Math.min(f.to, s.to)
+                });
+            }
+        });
+    });
+
+    return jointFreeTime;
+}
+
+/**
+ * @param {Array} schedule - [0: [0: {from: minute1, to: minute2}, ...], 1: ..., 2: ...]
+ * @returns {Array} - пересечение по свободному времени
+ */
+function getJointFreeTime(schedule) {
+    const [danny, rusty, linus] = [schedule[0], schedule[1], schedule[2]];
+    let jointFreeTime = joinTwoSchedules(danny, rusty);
+    jointFreeTime = joinTwoSchedules(jointFreeTime, linus);
+
+    return jointFreeTime;
+}
+
 module.exports = {
     getAppropriateMoment,
-
     isStar
 };
