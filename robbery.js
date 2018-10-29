@@ -7,8 +7,14 @@
 const isStar = true;
 
 const weekdays = ['ПН', 'ВТ', 'СР'];
-let i = 0, scheduleFull = [], bankTimeZone, startIndex,
-    checkBank = false, checkDanny = true, checkRusty = true, checkLinus = true;
+let i = 0;
+let scheduleFull = [];
+let bankTimeZone;
+let startIndex;
+let checkBank = false;
+let checkDanny = true;
+let checkRusty = true;
+let checkLinus = true;
 
 function createItemSchedule(minutes, name, status) {
     return { minutes, name, status };
@@ -27,14 +33,12 @@ function createSchedulesCompanions(schedule) {
             scheduleItem = participant.from.split(/\ |:|\+/);
             scheduleFull[i] = createItemSchedule(
                 createMinutesOfDay(scheduleItem[1], scheduleItem[2],
-                    scheduleItem[3], scheduleItem[0]),
-                name, 'from');
+                    scheduleItem[3], scheduleItem[0]), name, 'from');
             i++;
             scheduleItem = participant.to.split(/\ |:|\+/);
             scheduleFull[i] = createItemSchedule(
                 createMinutesOfDay(scheduleItem[1], scheduleItem[2],
-                    scheduleItem[3], scheduleItem[0]),
-                name, 'to');
+                    scheduleItem[3], scheduleItem[0]), name, 'to');
             i++;
         });
     });
@@ -49,13 +53,11 @@ function createSchedulesBank(workingHours) {
     weekdays.forEach(weekday => {
         scheduleFull[i] = createItemSchedule(
             createMinutesOfDay(scheduleItemFrom[0], scheduleItemFrom[1],
-                scheduleItemFrom[2], weekday),
-            'Bank', 'from');
+                scheduleItemFrom[2], weekday), 'Bank', 'from');
         i++;
         scheduleFull[i] = createItemSchedule(
             createMinutesOfDay(scheduleItemTo[0], scheduleItemTo[1],
-                scheduleItemTo[2], weekday),
-            'Bank', 'to');
+                scheduleItemTo[2], weekday), 'Bank', 'to');
         i++;
     });
 }
@@ -80,6 +82,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         scheduleFull.sort(compare);
     }
     let templateMinute = findFreeSchedule(scheduleFull, duration);
+
     return {
         /**
          * Найдено ли время
@@ -89,6 +92,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (templateMinute !== 0) {
                 return true;
             }
+
             return false;
         },
         /**
@@ -110,8 +114,10 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                     '%HH': paddedHour, '%DD': weekday,
                     '%MM': paddedMinute
                 };
+
                 return template.replace(/%HH|%MM|%DD/gi, m => replacementDict[m]);
             }
+
             return '""';
         },
         /**
@@ -125,6 +131,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (templateMinute !== 0) {
                 return true;
             }
+
             return false;
         }
     };
