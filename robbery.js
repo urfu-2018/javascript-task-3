@@ -172,7 +172,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     const bankTimezone = dayRegex.exec(workingHours.from)[3];
     const possibleIntervals = getPossibleIntervals(
         freeTimeIntervals, formatedWorkingHours, bankTimezone);
-    const validIntervals = getIntervalsWithDuration(possibleIntervals, duration);
+    const validIntervals =
+        possibleIntervals.length > 0 ? getIntervalsWithDuration(possibleIntervals, duration) : [];
     const validIntervalsWithShifts =
         validIntervals.length > 0 ? getIntervalsWithShifts(validIntervals, duration) : [];
 
