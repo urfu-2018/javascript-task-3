@@ -56,7 +56,7 @@ function isWorkingTime(workingHours, start, end) {
     const to = getMinuteFromTimeStart('ПН', workingHours.to.slice(0, 5), workingHours.to.slice(6));
     const st = start.minute % (24 * 60);
 
-    return st >= from && st + duration < to;
+    return st >= from && (st + duration) < to;
 }
 
 function addOpenCloseBankTime(workingHours, timePoints) {
@@ -82,9 +82,9 @@ function addOpenCloseBankTime(workingHours, timePoints) {
 
 function updateIsFree(isFree, point) {
     if (point.priority === 2) {
-        isFree[point.name] = true;
+        ++isFree[point.name];
     } else if (point.priority === 1) {
-        isFree[point.name] = false;
+        --isFree[point.name];
     }
 }
 
@@ -135,7 +135,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     const isFree = {};
     Object.keys(schedule)
         .forEach(name => {
-            isFree[name] = true;
+            isFree[name] = 1;
         });
     const timePoints = getTimePoints(schedule);
     addOpenCloseBankTime(workingHours, timePoints);
