@@ -76,6 +76,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
+            if (goodTimes.length === 0) {
+                return false;
+            }
             if (goodTimes[0][1] - goodTimes[0][0] >= duration + 30) {
                 goodTimes[0][0] += 30;
 
