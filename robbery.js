@@ -5,6 +5,8 @@
  * Реализовано оба метода и tryLater
  */
 const isStar = false;
+const numToWeek = { 1: 'ПН', 2: 'ВТ', 3: 'СР', 4: 'ЧТ', 5: 'ПТ', 6: 'СБ', 7: 'ВС' };
+const weekToNum = { ПН: 1, ВТ: 2, СР: 3, ЧТ: 4, ПТ: 5, СБ: 6, ВС: 7 };
 
 /**
  * @param {Object} schedule – Расписание Банды
@@ -48,8 +50,6 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         }
     };
 }
-
-const weekToNum = { ПН: 1, ВТ: 2, СР: 3, ЧТ: 4, ПТ: 5, СБ: 6, ВС: 7 };
 
 /**
  * @param {String} date – Дата, например, "ПН 12:00+5"
@@ -100,9 +100,7 @@ function invertIntervals(intervals) {
         intervals.push(maxTime);
     }
 
-    return intervals
-        .reduce((a, c, i) => a.concat(i % 2 ? [[intervals[i - 1], c]] : []), [])
-        .filter(x => x[0] < x[1]);
+    return intervals.reduce((a, c, i) => a.concat(i % 2 ? [[intervals[i - 1], c]] : []), []);
 }
 
 function scheduleToTimeIntervals(schedule) {
@@ -114,27 +112,19 @@ function scheduleToTimeIntervals(schedule) {
     return result;
 }
 
-const numToWeek = { 1: 'ПН', 2: 'ВТ', 3: 'СР', 4: 'ЧТ', 5: 'ПТ', 6: 'СБ', 7: 'ВС' };
-
 function ticksToDate(ticks, format = '%DD %HH:%MM', timeZone = 5) {
     if (!ticks) {
         return '';
     }
     const date = new Date(ticks + timeZone * 3600 * 1000);
-    let hours = parseInt(date.getUTCHours());
-    let minutes = parseInt(date.getUTCMinutes());
-    if (hours < 10) {
-        hours = '0' + hours;
-    }
-    if (minutes < 10) {
-        minutes = '0' + minutes;
-    }
+    const hours = date.getUTCHours().toString();
+    const minutes = date.getUTCMinutes().toString();
     const week = numToWeek[date.getUTCDay()];
 
     return format
         .replace(/%DD/gi, week)
-        .replace(/%HH/gi, hours)
-        .replace(/%MM/gi, minutes);
+        .replace(/%HH/gi, hours.padStart(2, '0'))
+        .replace(/%MM/gi, minutes.padStart(2, '0'));
 }
 
 function findGoodIntervals(schedule, workingHours) {
@@ -164,10 +154,5 @@ function findRoberyTime(schedule, duration, workingHours) {
 
 module.exports = {
     getAppropriateMoment,
-    findGoodIntervals,
-    findRoberyTime,
-    dateToTicks,
-    ticksToDate,
-    scheduleToTimeIntervals,
     isStar
 };
