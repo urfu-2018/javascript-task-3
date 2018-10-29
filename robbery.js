@@ -30,7 +30,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     const freeSchedule = getRobersFreeTime(scheduleInMinutes);
     const jointFreeSchedule = getJointRobersFreeTime(freeSchedule);
     const timeToRob = joinTwoSchedules(jointFreeSchedule, bankWorkingMinutes);
-    const suitableTimes = getSuitableTimeParts(timeToRob, duration);
+    const suitableTimeParts = getSuitableTimeParts(timeToRob, duration);
 
     return {
 
@@ -39,7 +39,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            return suitableTimes.length !== 0;
+            return suitableTimeParts.length !== 0;
         },
 
         /**
@@ -49,10 +49,10 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            if (suitableTimes.length === 0) {
+            if (suitableTimeParts.length === 0) {
                 return '';
             }
-            const resultTime = convertTimeFromMinutes(suitableTimes[0]);
+            const resultTime = convertTimeFromMinutes(suitableTimeParts[0]);
 
             return template
                 .replace(/%DD/, resultTime[0])
@@ -148,7 +148,7 @@ function convertTimeFromMinutes(timeInMinutes) {
     } else if (hours >= 48) {
         day = 'СР';
     }
-    hours = hours % 24;
+    hours = String(hours % 24);
 
     return [day,
         hours.length === 1 ? `0${hours}` : hours,
