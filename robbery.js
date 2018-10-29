@@ -7,17 +7,16 @@
 const isStar = true;
 
 const weekdays = ['ПН', 'ВТ', 'СР'];
-let i = 0;
-let scheduleFull = [];
-let bankTimeZone, startIndex;
-let checkBank = false, checkDanny = true, checkRusty = true, checkLinus = true;
+let i = 0, scheduleFull = [], bankTimeZone, startIndex,
+    checkBank = false, checkDanny = true, checkRusty = true, checkLinus = true;
 
 function createItemSchedule(minutes, name, status) {
     return { minutes, name, status };
 }
 
 function createMinutesOfDay(hour, minute, timezone, weekday = 0) {
-    return weekdays.indexOf(weekday) * 24 * 60 + (parseInt(hour) - parseInt(timezone)) * 60 + parseInt(minute);
+    return weekdays.indexOf(weekday) * 24 * 60 + (parseInt(hour) -
+        parseInt(timezone)) * 60 + parseInt(minute);
 }
 
 function createSchedulesCompanions(schedule) {
@@ -27,12 +26,14 @@ function createSchedulesCompanions(schedule) {
         schedule[name].forEach(participant => {
             scheduleItem = participant.from.split(/\ |:|\+/);
             scheduleFull[i] = createItemSchedule(
-                createMinutesOfDay(scheduleItem[1], scheduleItem[2], scheduleItem[3], scheduleItem[0]),
+                createMinutesOfDay(scheduleItem[1], scheduleItem[2],
+                    scheduleItem[3], scheduleItem[0]),
                 name, 'from');
             i++;
             scheduleItem = participant.to.split(/\ |:|\+/);
             scheduleFull[i] = createItemSchedule(
-                createMinutesOfDay(scheduleItem[1], scheduleItem[2], scheduleItem[3], scheduleItem[0]),
+                createMinutesOfDay(scheduleItem[1], scheduleItem[2],
+                    scheduleItem[3], scheduleItem[0]),
                 name, 'to');
             i++;
         });
@@ -47,11 +48,13 @@ function createSchedulesBank(workingHours) {
     bankTimeZone = scheduleItemFrom[2];
     weekdays.forEach(weekday => {
         scheduleFull[i] = createItemSchedule(
-            createMinutesOfDay(scheduleItemFrom[0], scheduleItemFrom[1], scheduleItemFrom[2], weekday),
+            createMinutesOfDay(scheduleItemFrom[0], scheduleItemFrom[1],
+                scheduleItemFrom[2], weekday),
             'Bank', 'from');
         i++;
         scheduleFull[i] = createItemSchedule(
-            createMinutesOfDay(scheduleItemTo[0], scheduleItemTo[1], scheduleItemTo[2], weekday),
+            createMinutesOfDay(scheduleItemTo[0], scheduleItemTo[1],
+                scheduleItemTo[2], weekday),
             'Bank', 'to');
         i++;
     });
@@ -98,11 +101,15 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (templateMinute !== 0) {
                 const weekdayIndex = Math.floor(templateMinute / (24 * 60));
                 const weekday = weekdays[weekdayIndex];
-                const hour = (Math.floor((templateMinute - 24 * 60 * weekdayIndex) / 60)).toString();
+                const hour = (Math.floor((templateMinute - 24 * 60 * weekdayIndex)
+                    / 60)).toString();
                 let paddedHour = hour.length === 1 ? '0' + hour : hour;
                 const minute = (templateMinute % 60).toString();
                 let paddedMinute = minute.length === 1 ? '0' + minute : minute;
-                const replacementDict = { '%HH': paddedHour, '%DD': weekday, '%MM': paddedMinute };
+                const replacementDict = {
+                    '%HH': paddedHour, '%DD': weekday,
+                    '%MM': paddedMinute
+                };
                 return template.replace(/%HH|%MM|%DD/gi, m => replacementDict[m]);
             }
             return '""';
@@ -113,7 +120,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            templateMinute = findFreeSchedule(scheduleFull, duration, templateMinute);
+            templateMinute = findFreeSchedule(scheduleFull, duration,
+                templateMinute);
             if (templateMinute !== 0) {
                 return true;
             }
@@ -124,67 +132,14 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
 function findFreeSchedule(scheduleFull, duration, lastTime = 0) {
     let actualMinutes = 0;
-    //let checkExit = false;
     for (let i = startIndex; i < scheduleFull.length; i++) {
         let scheduleItem = scheduleFull[i];
-        //if (!checkExit) {
         if (scheduleItem.status === 'from') {
-            switch (scheduleItem.name) {
-                case 'Bank':
-                    checkBank = true;
-                    break;
-                case 'Danny':
-                    checkDanny = false;
-                    // if (actualMinutes > scheduleItem.minutes) {
-                    //     actualMinutes = 0;
-                    // }
-                    // else if (actualMinutes !== 0) {
-                    //     checkExit = true;
-                    // }
-                    break;
-                case 'Rusty':
-                    checkRusty = false;
-                    // if (actualMinutes > scheduleItem.minutes) {
-                    //     actualMinutes = 0;
-                    // }
-                    // else if (actualMinutes !== 0) {
-                    //     checkExit = true;
-                    // }
-                    break;
-                case 'Linus':
-                    checkLinus = false;
-                    // if (actualMinutes > scheduleItem.minutes) {
-                    //     actualMinutes = 0;
-                    // }
-                    // else if (actualMinutes !== 0) {
-                    //     checkExit = true;
-                    // }
-                    break;
-            }
+            choiseFrom(scheduleItem);
         }
         else if (scheduleItem.status === 'to') {
-            switch (scheduleItem.name) {
-                case 'Bank':
-                    checkBank = false;
-                    // if (actualMinutes > scheduleItem.minutes) {
-                    //     actualMinutes = 0;
-                    // }
-                    // else if (actualMinutes !== 0) {
-                    //     checkExit = true;
-                    // }
-                    break;
-                case 'Danny':
-                    checkDanny = true;
-                    break;
-                case 'Rusty':
-                    checkRusty = true;
-                    break;
-                case 'Linus':
-                    checkLinus = true;
-                    break;
-            }
+            choiseTo(scheduleItem);
         }
-        //}
         if (checkBank && checkDanny && checkRusty && checkLinus) {
             actualMinutes = scheduleItem.minutes + duration;
             if (actualMinutes <= scheduleFull[i + 1].minutes) {
@@ -196,7 +151,7 @@ function findFreeSchedule(scheduleFull, duration, lastTime = 0) {
                 else if ((lastTime + 30 + duration - bankTimeZone * 60) <= scheduleFull[i + 1].minutes &&
                     (actualMinutes - duration + bankTimeZone * 60) >= lastTime) {
                     startIndex = i;
-                    if((actualMinutes - duration + bankTimeZone * 60)!==lastTime){
+                    if ((actualMinutes - duration + bankTimeZone * 60) !== lastTime) {
                         return actualMinutes - duration + bankTimeZone * 60;
                     }
 
@@ -207,6 +162,40 @@ function findFreeSchedule(scheduleFull, duration, lastTime = 0) {
     }
 
     return 0;
+
+    function choiseFrom(scheduleItem) {
+        switch (scheduleItem.name) {
+            case 'Bank':
+                checkBank = true;
+                break;
+            case 'Danny':
+                checkDanny = false;
+                break;
+            case 'Rusty':
+                checkRusty = false;
+                break;
+            case 'Linus':
+                checkLinus = false;
+                break;
+        }
+    }
+
+    function choiseTo(scheduleItem) {
+        switch (scheduleItem.name) {
+            case 'Bank':
+                checkBank = false;
+                break;
+            case 'Danny':
+                checkDanny = true;
+                break;
+            case 'Rusty':
+                checkRusty = true;
+                break;
+            case 'Linus':
+                checkLinus = true;
+                break;
+        }
+    }
 }
 
 module.exports = {
