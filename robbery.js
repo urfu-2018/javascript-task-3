@@ -135,29 +135,17 @@ function div(val, by) {
 }
 
 function getDateTimeFromMinutes(minutes) {
-    if (minutes >= 2 * minInDay) {
-        const hours = div((minutes - 2 * minInDay), 60);
-        const min = (minutes - 2 * minInDay) % 60;
+    for (const day of ['СР', 'ВТ', 'ПН']) {
+        const minutesInCurrentDay = dayToMinutesShith[day] * minInDay;
+        if (minutes >= minutesInCurrentDay) {
+            const hours = toTwoDigitNumber(div((minutes - minutesInCurrentDay), 60));
+            const min = toTwoDigitNumber((minutes - minutesInCurrentDay) % 60);
 
-        return { 'day': 'СР', hours: toTwoDigit(hours), minutes: toTwoDigit(min) };
-    }
-
-    if (minutes >= minInDay) {
-        const hours = div((minutes - minInDay), 60);
-        const min = (minutes - minInDay) % 60;
-
-        return { 'day': 'ВТ', hours: toTwoDigit(hours), minutes: toTwoDigit(min) };
-
-    }
-
-    if (minutes >= 0) {
-        const hours = div(minutes, 60);
-        const min = minutes % 60;
-
-        return { 'day': 'ПН', hours: toTwoDigit(hours), minutes: toTwoDigit(min) };
+            return { day, hours: hours, minutes: min };
+        }
     }
 }
-function toTwoDigit(digit) {
+function toTwoDigitNumber(digit) {
     if (digit < 10) {
         return '0' + digit.toString();
     }
