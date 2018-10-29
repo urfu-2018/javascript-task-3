@@ -145,7 +145,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         return diff !== 0 ? diff : a.priority - b.priority;
     });
     const foundObj = find(timePoints, isFree, duration, workingHours);
-    let answer
+    let answer;
     if (foundObj.found) {
         answer = formatAnswer(foundObj, workingHours);
     }
