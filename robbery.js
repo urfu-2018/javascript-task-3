@@ -21,16 +21,11 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     console.info(schedule, duration, workingHours);
     const bankTimeZone = getTimeZone(workingHours.from);
 
-    const [dannyRobberyTime, rustyRobberyTime, linusRobberyTime] = Object.values(schedule).map(
-        personSchedule => getGoodTimeForRobberySchedule(personSchedule, duration, workingHours)
+    const timeForRobberySchedule = Object.values(schedule).map(personSchedule =>
+        getGoodTimeForRobberySchedule(personSchedule, duration, workingHours)
     );
 
-    let robberyTimes = findTimeForRobbery(
-        dannyRobberyTime,
-        rustyRobberyTime,
-        linusRobberyTime,
-        duration
-    );
+    let robberyTimes = findTimeForRobbery(timeForRobberySchedule, duration, bankTimeZone);
 
     return {
         robberyTimes,
@@ -55,7 +50,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             }
             const robberyTime = robberyTimes[0].from;
             const weekDay = numberToWeekDay[robberyTime.getDay()];
-            const hours = formatTime(robberyTime.getHours() + bankTimeZone);
+            const hours = formatTime(robberyTime.getHours());
             const minutes = formatTime(robberyTime.getMinutes());
 
             return template
@@ -99,12 +94,14 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 const cartesianOfTwo = (a, b) => [].concat(...a.map(d => b.map(e => [].concat(d, e))));
 const cartesianOfThree = (a, b, ...c) => (b ? cartesianOfThree(cartesianOfTwo(a, b), ...c) : a);
 
-function findTimeForRobbery(schedule1, schedule2, schedule3, duration) {
+function findTimeForRobbery(schedule, duration, timeZone) {
     let result = [];
-    for (let element of cartesianOfThree(schedule1, schedule2, schedule3)) {
-        const intersectionStart = chooseLatestStart(...element);
-        const intersectionEnd = chooseEarliestEnd(...element);
+    for (let element of cartesianOfThree(...schedule)) {
+        const intersectionStart = new Date(chooseLatestStart(...element));
+        const intersectionEnd = new Date(chooseEarliestEnd(...element));
         if (hasEnoughTime(intersectionStart, intersectionEnd, duration)) {
+            intersectionStart.setHours(intersectionStart.getHours() + timeZone);
+            intersectionEnd.setHours(intersectionEnd.getHours() + timeZone);
             result.push({ from: intersectionStart, to: intersectionEnd });
         }
     }
