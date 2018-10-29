@@ -30,12 +30,12 @@ function createSchedulesCompanions(schedule) {
     let scheduleItem;
     keys.forEach(name => {
         schedule[name].forEach(participant => {
-            scheduleItem = participant.from.split(/\ |:|\+/);
+            scheduleItem = participant.from.split(/ |:|\+/);
             scheduleFull[i] = createItemSchedule(
                 createMinutesOfDay(scheduleItem[1], scheduleItem[2],
                     scheduleItem[3], scheduleItem[0]), name, 'from');
             i++;
-            scheduleItem = participant.to.split(/\ |:|\+/);
+            scheduleItem = participant.to.split(/ |:|\+/);
             scheduleFull[i] = createItemSchedule(
                 createMinutesOfDay(scheduleItem[1], scheduleItem[2],
                     scheduleItem[3], scheduleItem[0]), name, 'to');
@@ -47,8 +47,8 @@ function createSchedulesCompanions(schedule) {
 function createSchedulesBank(workingHours) {
     let scheduleItemFrom;
     let scheduleItemTo;
-    scheduleItemFrom = workingHours.from.split(/\ |:|\+/);
-    scheduleItemTo = workingHours.to.split(/\ |:|\+/);
+    scheduleItemFrom = workingHours.from.split(/ |:|\+/);
+    scheduleItemTo = workingHours.to.split(/ |:|\+/);
     bankTimeZone = scheduleItemFrom[2];
     weekdays.forEach(weekday => {
         scheduleFull[i] = createItemSchedule(
@@ -84,6 +84,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     let templateMinute = findFreeSchedule(scheduleFull, duration);
 
     return {
+
         /**
          * Найдено ли время
          * @returns {Boolean}
@@ -95,6 +96,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
             return false;
         },
+
         /**
          * Возвращает отформатированную строку с часами для ограбления
          * Например, "Начинаем в %HH:%MM (%DD)" -> "Начинаем в 14:59 (СР)"
@@ -105,8 +107,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (templateMinute !== 0) {
                 const weekdayIndex = Math.floor(templateMinute / (24 * 60));
                 const weekday = weekdays[weekdayIndex];
-                const hour = (Math.floor((templateMinute - 24 * 60 * weekdayIndex)
-                    / 60)).toString();
+                const hour = (Math.floor((templateMinute - 24 * 60 * weekdayIndex) / 60)).toString();
                 let paddedHour = hour.length === 1 ? '0' + hour : hour;
                 const minute = (templateMinute % 60).toString();
                 let paddedMinute = minute.length === 1 ? '0' + minute : minute;
@@ -120,6 +121,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
             return '""';
         },
+
         /**
          * Попробовать найти часы для ограбления позже [*]
          * @star
@@ -147,60 +149,62 @@ function findFreeSchedule(scheduleFull, duration, lastTime = 0) {
         else if (scheduleItem.status === 'to') {
             choiseTo(scheduleItem);
         }
-        if (checkBank && checkDanny && checkRusty && checkLinus) {
-            actualMinutes = scheduleItem.minutes + duration;
-            if (actualMinutes <= scheduleFull[i + 1].minutes) {
-                if (lastTime === 0) {
-                    startIndex = i;
+        handler(actualMinutes,scheduleItem,duration,scheduleFull,lastTime,startIndex, i);
+    }
+}
 
+function choiseFrom(scheduleItem) {
+    switch (scheduleItem.name) {
+        case 'Bank':
+            checkBank = true;
+            break;
+        case 'Danny':
+            checkDanny = false;
+            break;
+        case 'Rusty':
+            checkRusty = false;
+            break;
+        case 'Linus':
+            checkLinus = false;
+            break;
+    }
+}
+
+function choiseTo(scheduleItem) {
+    switch (scheduleItem.name) {
+        case 'Bank':
+            checkBank = false;
+            break;
+        case 'Danny':
+            checkDanny = true;
+            break;
+        case 'Rusty':
+            checkRusty = true;
+            break;
+        case 'Linus':
+            checkLinus = true;
+            break;
+    }
+}
+
+function handler(actualMinutes, scheduleItem, duration, scheduleFull, lastTime, startIndex, i) {
+    if (checkBank && checkDanny && checkRusty && checkLinus) {
+        actualMinutes = scheduleItem.minutes + duration;
+        if (actualMinutes <= scheduleFull[i + 1].minutes) {
+            if (lastTime === 0) {
+                startIndex = i;
+
+                return actualMinutes - duration + bankTimeZone * 60;
+            }
+            else if ((lastTime + 30 + duration - bankTimeZone * 60) <= scheduleFull[i + 1].minutes &&
+                (actualMinutes - duration + bankTimeZone * 60) >= lastTime) {
+                startIndex = i;
+                if ((actualMinutes - duration + bankTimeZone * 60) !== lastTime) {
                     return actualMinutes - duration + bankTimeZone * 60;
                 }
-                else if ((lastTime + 30 + duration - bankTimeZone * 60) <= scheduleFull[i + 1].minutes &&
-                    (actualMinutes - duration + bankTimeZone * 60) >= lastTime) {
-                    startIndex = i;
-                    if ((actualMinutes - duration + bankTimeZone * 60) !== lastTime) {
-                        return actualMinutes - duration + bankTimeZone * 60;
-                    }
 
-                    return actualMinutes + 30 - duration + bankTimeZone * 60;
-                }
+                return actualMinutes + 30 - duration + bankTimeZone * 60;
             }
-        }
-    }
-
-    return 0;
-
-    function choiseFrom(scheduleItem) {
-        switch (scheduleItem.name) {
-            case 'Bank':
-                checkBank = true;
-                break;
-            case 'Danny':
-                checkDanny = false;
-                break;
-            case 'Rusty':
-                checkRusty = false;
-                break;
-            case 'Linus':
-                checkLinus = false;
-                break;
-        }
-    }
-
-    function choiseTo(scheduleItem) {
-        switch (scheduleItem.name) {
-            case 'Bank':
-                checkBank = false;
-                break;
-            case 'Danny':
-                checkDanny = true;
-                break;
-            case 'Rusty':
-                checkRusty = true;
-                break;
-            case 'Linus':
-                checkLinus = true;
-                break;
         }
     }
 }
