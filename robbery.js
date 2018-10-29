@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = false;
+const isStar = true;
 
 const DAYS_OF_WEEK = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
 const WORKING_DAYS = ['ПН', 'ВТ', 'СР'];
@@ -118,7 +118,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     const startTime = parseTime('ПН 00:00+' + timezone);
     const endTime = parseTime('ВС 23:59+' + timezone);
     const events = prepareEvents(schedule, workingHours, startTime, endTime);
-    let intervals = getRobberyIntervals(events, duration, 4);
+    let intervals = getRobberyIntervals(events, duration, Object.values(schedule).length + 1);
 
     return {
 
