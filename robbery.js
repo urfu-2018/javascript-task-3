@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = true;
+const isStar = false;
 
 const TIME_RE = /^(\d{2}):(\d{2})\+(\d{1,2})$/;
 const DATE_TIME_RE = /^(ПН|ВТ|СР) (\d{2}):(\d{2})\+(\d{1,2})$/;
