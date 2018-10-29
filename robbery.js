@@ -106,29 +106,7 @@ function findTimeForRobbery(schedule, duration, timeZone) {
         }
     }
 
-    return uniteIntervals(result.sort((x, y) => x.from - y.from));
-}
-
-function uniteIntervals(listOfIntervals) {
-    if (!listOfIntervals.length) {
-        return [];
-    }
-    let result = [listOfIntervals[0]];
-    for (let i = 0; i < listOfIntervals.length - 1; i++) {
-        const interval1 = listOfIntervals[i];
-        const interval2 = listOfIntervals[i + 1];
-        if (interval1.to >= interval2.from) {
-            result.pop();
-            result.push({
-                from: interval1.from,
-                to: interval1.to > interval2.to ? interval1.to : interval2.to
-            });
-        } else {
-            result.push(interval2);
-        }
-    }
-
-    return result;
+    return result.sort((x, y) => x.from - y.from);
 }
 
 function formatTime(timeValue) {
