@@ -98,6 +98,10 @@ function getGangFreeTimeIntervals(schedule) {
 function findAllIntersections(schedules, robbingDeadlines, workingHours, duration) {
     let intersection = findIntersections(robbingDeadlines, workingHours, duration);
 
+    if (!intersection) {
+        return null;
+    }
+
     gangMembers.forEach(gangMember => {
         intersection = findIntersections(schedules[gangMember], intersection, duration);
         if (!intersection) {
