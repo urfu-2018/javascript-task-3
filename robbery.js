@@ -147,7 +147,7 @@ function getDateTimeFromMinutes(minutes) {
 }
 function toTwoDigitNumber(digit) {
     if (digit < 10) {
-        return '0' + digit.toString();
+        return `0${digit.toString()}`;
     }
 
     return digit;
@@ -178,15 +178,11 @@ function getAdditionTimes(intervals, duration) {
 }
 function getAppropriateMoment(schedule, duration, workingHours) {
     const bankInterval = parseBankTime(workingHours);
-    const dannyIntervals = reverseIntervals(getIntervalsForPerson(schedule.Danny,
-        bankInterval.shift));
-    const rustyIntervals = reverseIntervals(getIntervalsForPerson(schedule.Rusty,
-        bankInterval.shift));
-    const linusIntervals = reverseIntervals(getIntervalsForPerson(schedule.Linus,
-        bankInterval.shift));
+    const participantIntervals = Object.keys(schedule).map(part =>
+        reverseIntervals(getIntervalsForPerson(schedule[part], bankInterval.shift)));
     const bankIntervals = getBankOpenIntervals(bankInterval);
-    const arr = [dannyIntervals, rustyIntervals, linusIntervals, bankIntervals];
-    let res = findIntersectionOfAllGroups(arr, duration);
+    participantIntervals.push(bankIntervals);
+    let res = findIntersectionOfAllGroups(participantIntervals, duration);
     res = toSet(res);
     res = getAdditionTimes(res, duration);
     let pointer = 0;
