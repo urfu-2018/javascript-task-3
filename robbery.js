@@ -83,7 +83,7 @@ function getDateFromMinutes(minutesFromWeekStart, bankTimezone = 0) {
     minutesFromWeekStart += bankTimezone * minutesInHour;
     const dayNumber = Math.floor(minutesFromWeekStart / minutesInDay);
     const day = dayFromNumber[dayNumber];
-    let hours = Math.floor(minutesFromWeekStart % minutesInDay / minutesInHour);
+    let hours = Math.floor((minutesFromWeekStart % minutesInDay) / minutesInHour);
     let minutes = minutesFromWeekStart - dayNumber * minutesInDay - hours * minutesInHour;
 
     hours = String(hours).length === 1 ? '0' + hours : hours;
@@ -108,12 +108,12 @@ function haveIntersection(firstInterval, secondInterval) {
     secondInterval.from <= firstInterval.to && secondInterval.to >= firstInterval.from;
 }
 
-function getPossibleIntervals(schedule, workingHours) {
+function getPossibleIntervals(schedule, workingHours, bankTimezone) {
     let possibleIntervals = [];
 
     workingHours.forEach(bankInterval => {
         schedule.forEach(robberInterval => {
-            if (bankInterval.to <= lastAppropriateMoment &&
+            if (bankInterval.to <= lastAppropriateMoment - bankTimezone * minutesInHour &&
                     haveIntersection(bankInterval, robberInterval)) {
                 possibleIntervals.push({
                     from: Math.max(bankInterval.from, robberInterval.from),
@@ -167,7 +167,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         to: getMinutesFromDayStart(dayRegex.exec(workingHours.to)) };
     const formatedWorkingHours = getIntervalObjectsForWeek(workingHoursInterval);
     const bankTimezone = dayRegex.exec(workingHours.from)[3];
-    const possibleIntervals = getPossibleIntervals(freeTimeIntervals, formatedWorkingHours);
+    const possibleIntervals = getPossibleIntervals(
+        freeTimeIntervals, formatedWorkingHours, bankTimezone);
     const validIntervals = getIntervalsWithDuration(possibleIntervals, duration);
     const validIntervalsWithShifts =
         validIntervals.length > 0 ? getIntervalsWithShifts(validIntervals, duration) : [];
