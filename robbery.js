@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = true;
+const isStar = false;
 
 const HOURS_IN_DAY = 24;
 const MINUTES_IN_HOUR = 60;
