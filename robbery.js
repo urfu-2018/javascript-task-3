@@ -147,22 +147,27 @@ function findGoodIntervals(schedule, workingHours) {
     const minTime = dateToTicks('ПН ' + workingHours.from);
     const maxTime = dateToTicks('СР ' + workingHours.to);
 
-    return invertIntervals(
-        minTime,
-        unionOfIntervals(
-            invertIntervals(minTime, scheduleToTimeIntervals(bankSchedule), maxTime).concat(
-                scheduleToTimeIntervals(
-                    schedule.Danny.concat(schedule.Rusty)
-                        .concat(schedule.Linus)
-                        .filter(x => ['ПН', 'ВТ', 'СР'].includes(x.from.split(' ')[0]))
-                )
-                    .filter(x => x[0] < maxTime && x[1] > minTime)
-                    .map(x => (x[1] > maxTime ? [x[0], maxTime] : x))
-                    .map(x => (x[0] > minTime ? [minTime, x[1]] : x))
-            )
-        ),
-        maxTime
+    const busyRobbersIntervals = scheduleToTimeIntervals(
+        schedule.Danny.concat(schedule.Rusty)
+            .concat(schedule.Linus)
+            .filter(x => ['ПН', 'ВТ', 'СР'].includes(x.from.split(' ')[0]))
+    )
+        .filter(x => x[0] < maxTime && x[1] > minTime)
+        .map(x => (x[1] > maxTime ? [x[0], maxTime] : x))
+        .map(x => (x[0] < minTime ? [minTime, x[1]] : x));
+
+    // const brir = numIntervalsToDateIntervals(busyRobbersIntervals);
+
+    const busyAll = unionOfIntervals(
+        invertIntervals(minTime, scheduleToTimeIntervals(bankSchedule), maxTime).concat(
+            busyRobbersIntervals
+        )
     );
+    // const ball = numIntervalsToDateIntervals(busyAll);
+    const freeAll = invertIntervals(minTime, busyAll, maxTime);
+    // const fall = numIntervalsToDateIntervals(freeAll);
+
+    return freeAll;
 }
 
 function findRoberyTime(schedule, duration, workingHours) {
@@ -175,6 +180,16 @@ function findRoberyTime(schedule, duration, workingHours) {
 
     return null;
 }
+
+// function numIntervalsToDateIntervals(intervals) {
+//     const result = [];
+//     for (let i of intervals) {
+//         result.push([ticksToDate(i[0]), ticksToDate(i[1])]);
+//     }
+
+//     return result;
+// }
+
 invertIntervals(0, [0, 10], 10); // ?
 module.exports = {
     getAppropriateMoment,
