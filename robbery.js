@@ -18,12 +18,9 @@ const weekToNum = { ПН: 1, ВТ: 2, СР: 3, ЧТ: 4, ПТ: 5, СБ: 6, ВС: 
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
     const bankTimeZone = parseInt(workingHours.from.split('+')[1]);
+    let oldResult = '';
     let result = findRoberyTime(schedule, duration, workingHours);
     let answ = {};
-    function updateAnswer(exists, format) {
-        answ.exists = exists;
-        answ.format = format;
-    }
 
     answ = {
 
@@ -39,7 +36,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @param {String} template
          * @returns {String}
          */
-        format: template => ticksToDate(result, template, bankTimeZone),
+        format: template => ticksToDate(result || oldResult, template, bankTimeZone),
 
         /**
          * Попробовать найти часы для ограбления позже [*]
@@ -47,19 +44,23 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            const start = new Date(result).getTime();
-            const end = new Date(result + 30 * 60000).getTime();
-            schedule.Danny.push({
-                from: ticksToDate(start, '%DD %HH:%MM+' + bankTimeZone, bankTimeZone),
-                to: ticksToDate(end, '%DD %HH:%MM+' + bankTimeZone, bankTimeZone)
-            });
-            const newMoment = getAppropriateMoment(schedule, duration, workingHours);
-            if (newMoment.result) {
-                updateAnswer(newMoment.exists, newMoment.format);
+            if (result) {
+                const start = new Date(result).getTime();
+                const end = new Date(result + 30 * 60000).getTime();
+                schedule.Danny.push({
+                    from: ticksToDate(start, '%DD %HH:%MM+' + bankTimeZone, bankTimeZone),
+                    to: ticksToDate(end, '%DD %HH:%MM+' + bankTimeZone, bankTimeZone)
+                });
+                const newMoment = getAppropriateMoment(schedule, duration, workingHours);
+                if (!newMoment.result) {
+                    oldResult = result;
+                }
                 result = newMoment.result;
+
+                return result;
             }
 
-            return newMoment.result;
+            return false;
         },
         result
     };
