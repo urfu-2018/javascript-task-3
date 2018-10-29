@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = true;
+const isStar = false;
 const daysOfTheWeek = ['ПН', 'ВТ', 'СР'];
 const minutesInHour = 60;
 const minutesInDay = 24 * minutesInHour;
