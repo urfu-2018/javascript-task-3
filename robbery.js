@@ -34,14 +34,43 @@ function convertToMinutes(str) {
     return minutesFromWeekStart + hours * 60 + minutes;
 }
 
+// Надеюсь, я смогу это отрефакторить, но пока пусть будет так.
+// eslint-disable-next-line max-statements
 function parseTimePoints(schedule) {
+    let minStartTime = startOfWeek;
+    let maxEndTime = endOfWeek;
     let res = [];
-    schedule.forEach(time => {
-        res.push(convertToMinutes(time.from));
-        res.push(convertToMinutes(time.to));
-    });
+    for (let i = 0; i < schedule.length; i++) {
+        const time = schedule[i];
+        const endOldFreeTime = convertToMinutes(time.from);
+        const startNewFreeTime = convertToMinutes(time.to);
+        if (isIntervalBeyoundBorder(endOldFreeTime, startNewFreeTime, minStartTime, maxEndTime)) {
+            continue;
+        }
+        if (isIntervalOverlapMoment(endOldFreeTime, startNewFreeTime, minStartTime)) {
+            minStartTime = startNewFreeTime;
+            continue;
+        }
+        if (isIntervalOverlapMoment(endOldFreeTime, startNewFreeTime, maxEndTime)) {
+            maxEndTime = endOldFreeTime;
+            continue;
+        }
+        res.push(endOldFreeTime);
+        res.push(startNewFreeTime);
+    }
+    res.unshift(minStartTime);
+    res.push(maxEndTime);
 
     return res;
+}
+
+function isIntervalOverlapMoment(left, right, moment) {
+    return left <= moment && right >= moment;
+}
+
+function isIntervalBeyoundBorder(left, right, leftBorder, rightBorder) {
+    return left <= leftBorder && right <= leftBorder ||
+        left >= rightBorder && right >= rightBorder;
 }
 
 function combineTimePoints(timePoints) {
@@ -57,33 +86,13 @@ function combineTimePoints(timePoints) {
 }
 
 function getGangFreeTimeIntervals(schedule) {
-    let freeIntervals = {
-        Danny: [startOfWeek],
-        Rusty: [startOfWeek],
-        Linus: [startOfWeek]
-    };
+    let freeIntervals = {};
 
     gangMembers.forEach(gangMember => {
-        freeIntervals[gangMember].push(...(parseTimePoints(schedule[gangMember])
-            .sort((a, b) => a > b)));
-        freeIntervals[gangMember].push(endOfWeek);
-        freeIntervals[gangMember] =
-            combineTimePoints(fixTimeTable(freeIntervals[gangMember]));
+        freeIntervals[gangMember] = combineTimePoints(parseTimePoints(schedule[gangMember]));
     });
 
     return freeIntervals;
-}
-
-function fixTimeTable(timePoints) {
-    while (timePoints[1] <= startOfWeek) {
-        timePoints = timePoints.slice(2);
-    }
-
-    while (timePoints[timePoints.length - 2] >= endOfWeek) {
-        timePoints = timePoints.slice(0, timePoints.length - 2);
-    }
-
-    return timePoints;
 }
 
 function findAllIntersections(schedules, robbingDeadlines, workingHours, duration) {
