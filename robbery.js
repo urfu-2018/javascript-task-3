@@ -15,18 +15,20 @@ const minutesInDay = hoursInDay * minutesInHour;
 const lastAppropriateMoment = days['ЧТ'] * minutesInDay - 1;
 const delay = 30;
 
-function getMinutesFromWeekStart(splitedDate) {
+function getMinutesFromWeekStart(splitedDate, bankTimezone = 0) {
     let minutesFromWeekStart = 0;
     minutesFromWeekStart += days[splitedDate[1].toUpperCase()] * minutesInDay;
-    minutesFromWeekStart += (Number(splitedDate[2]) - Number(splitedDate[4])) * minutesInHour;
+    minutesFromWeekStart +=
+        (Number(splitedDate[2]) - Number(splitedDate[4]) + bankTimezone) * minutesInHour;
     minutesFromWeekStart += Number(splitedDate[3]);
 
     return minutesFromWeekStart;
 }
 
-function getMinutesFromDayStart(splitedDate) {
+function getMinutesFromDayStart(splitedDate, bankTimezone = 0) {
     let minutesFromDayStart = 0;
-    minutesFromDayStart += (Number(splitedDate[1]) - Number(splitedDate[3])) * minutesInHour;
+    minutesFromDayStart +=
+        (Number(splitedDate[1]) - Number(splitedDate[3]) + bankTimezone) * minutesInHour;
     minutesFromDayStart += Number(splitedDate[2]);
 
     return minutesFromDayStart;
@@ -36,21 +38,20 @@ function getIntervalObject(from, to) {
     return { from, to };
 }
 
-function toMinutesFromWeekStart(schedule) {
+function toMinutesFromWeekStart(schedule, bankTimezone = 0) {
     return Object.values(schedule).map(robber =>
         robber
             .map(time => getIntervalObject(
                 weekRegex.exec(time.from),
                 weekRegex.exec(time.to)))
-            .map(splited => getIntervalObject((getMinutesFromWeekStart(splited.from)),
-                (getMinutesFromWeekStart(splited.to))))
+            .map(splited => getIntervalObject((getMinutesFromWeekStart(splited.from, bankTimezone)),
+                (getMinutesFromWeekStart(splited.to, bankTimezone))))
             .sort((first, second) => first.from > second.from));
 }
 
-function getFreeTimeIntervals(schedule, bankTimezone = 0) {
+function getFreeTimeIntervals(schedule) {
     let freeTimeIntervals = [];
     let times = [];
-    const bankTimezoneShift = bankTimezone * minutesInHour;
     schedule.forEach(robber => {
         robber.forEach(interval => {
             times.push({ from: true, value: interval.from });
@@ -73,15 +74,14 @@ function getFreeTimeIntervals(schedule, bankTimezone = 0) {
             busyNumber -= 1;
         }
     });
-    if (leftBorder <= lastAppropriateMoment - bankTimezoneShift) {
+    if (leftBorder <= lastAppropriateMoment) {
         freeTimeIntervals.push({ from: leftBorder, to: lastAppropriateMoment });
     }
 
     return freeTimeIntervals;
 }
 
-function getDateFromMinutes(minutesFromWeekStart, bankTimezone = 0) {
-    minutesFromWeekStart += bankTimezone * minutesInHour;
+function getDateFromMinutes(minutesFromWeekStart) {
     const dayNumber = Math.floor(minutesFromWeekStart / minutesInDay);
     const day = dayFromNumber[dayNumber];
     let hours = Math.floor((minutesFromWeekStart % minutesInDay) / minutesInHour);
@@ -109,19 +109,14 @@ function haveIntersection(firstInterval, secondInterval) {
     secondInterval.from <= firstInterval.to && secondInterval.to >= firstInterval.from;
 }
 
-function getPossibleIntervals(schedule, workingHours, bankTimezone = 0) {
+function getPossibleIntervals(schedule, workingHours) {
     let possibleIntervals = [];
-    const bankTimezoneShift = bankTimezone * minutesInHour;
     workingHours.forEach(bankInterval => {
         schedule.forEach(robberInterval => {
-            let leftBankBorder = Math.min(
-                bankInterval.from, lastAppropriateMoment - bankTimezoneShift);
-            let rightBankBorder = Math.min(
-                bankInterval.to, lastAppropriateMoment - bankTimezoneShift);
-            if (haveIntersection({ from: leftBankBorder, to: rightBankBorder }, robberInterval)) {
+            if (haveIntersection(bankInterval, robberInterval)) {
                 possibleIntervals.push({
-                    from: Math.max(leftBankBorder, robberInterval.from),
-                    to: Math.min(rightBankBorder, robberInterval.to)
+                    from: Math.max(bankInterval.from, robberInterval.from),
+                    to: Math.min(bankInterval.to, robberInterval.to)
                 });
             }
         });
@@ -167,15 +162,15 @@ function getIntervalsWithShifts(intervals, duration) {
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    const bankTimezone = dayRegex.exec(workingHours.from)[3];
-    const formatedSchedule = toMinutesFromWeekStart(schedule);
-    const freeTimeIntervals = getFreeTimeIntervals(formatedSchedule, bankTimezone);
+    const bankTimezone = Number(dayRegex.exec(workingHours.from)[3]);
+    const formatedSchedule = toMinutesFromWeekStart(schedule, bankTimezone);
+    const freeTimeIntervals = getFreeTimeIntervals(formatedSchedule);
     const workingHoursInterval = {
-        from: getMinutesFromDayStart(dayRegex.exec(workingHours.from)),
-        to: getMinutesFromDayStart(dayRegex.exec(workingHours.to)) };
+        from: getMinutesFromDayStart(dayRegex.exec(workingHours.from), bankTimezone),
+        to: getMinutesFromDayStart(dayRegex.exec(workingHours.to), bankTimezone) };
     const formatedWorkingHours = getIntervalObjectsForWeek(workingHoursInterval);
     const possibleIntervals = getPossibleIntervals(
-        freeTimeIntervals, formatedWorkingHours, bankTimezone);
+        freeTimeIntervals, formatedWorkingHours);
     const validIntervals = getIntervalsWithDuration(possibleIntervals, duration);
     const validIntervalsWithShifts =
         validIntervals.length > 0 ? getIntervalsWithShifts(validIntervals, duration) : [];
@@ -200,8 +195,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (validIntervalsWithShifts.length === 0) {
                 return '';
             }
-            const date = getDateFromMinutes(validIntervalsWithShifts[0].from,
-                bankTimezone);
+            const date = getDateFromMinutes(validIntervalsWithShifts[0].from);
 
             template = template.replace('%DD', date.day);
             template = template.replace('%HH', date.hours);
