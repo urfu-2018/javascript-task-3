@@ -10,7 +10,7 @@ const minInDay = minInHour * 24;
 
 const timeRegex = new RegExp('([А-Я]{2}) (\\d{2}):(\\d{2})\\+(\\d+)');
 const bankTimeRegex = new RegExp('(\\d{2}):(\\d{2})\\+(\\d+)');
-const dayToMinutesShith = { 'ПН': 0, 'ВТ': 1, 'СР': 2, 'ЧТ': 3 };
+const dayToMinutesShith = { 'ПН': 0, 'ВТ': 1, 'СР': 2 };
 class Interval {
     constructor(leftPoint, rightPoint) {
         this.leftPoint = leftPoint;
@@ -22,9 +22,7 @@ class Interval {
     }
 }
 Interval.prototype.toString = function intervalToString() {
-    var ret = this.leftPoint + ' ' + this.rightPoint;
-
-    return ret;
+    return `${this.leftPoint} ${this.rightPoint}`;
 };
 
 /**
@@ -90,11 +88,14 @@ function getBankOpenIntervals(bankInterval) {
     return result;
 }
 function findIntersectionOfAllGroups(intervals, duration) {
-    var a = findIntersectionsTwoGroupsOfIntervals(intervals[0], intervals[1], duration);
-    var b = findIntersectionsTwoGroupsOfIntervals(a, intervals[2], duration);
-    var c = findIntersectionsTwoGroupsOfIntervals(b, intervals[3], duration);
+    let currentIntercestions = findIntersectionsTwoGroupsOfIntervals(intervals[0],
+        intervals[1], duration);
+    for (let i = 2; i < intervals.length; i++) {
+        currentIntercestions = findIntersectionsTwoGroupsOfIntervals(
+            currentIntercestions, intervals[i], duration);
+    }
 
-    return c;
+    return currentIntercestions;
 }
 
 function findIntersectionsTwoGroupsOfIntervals(firstIntervals, secondIntervals, duration) {
@@ -132,12 +133,12 @@ function div(val, by) {
     return (val - val % by) / by;
 }
 
-function getDateTimeFromMinutes(minutes) {
+function getDateTimeFromMinutes(minRelativeWeekStart) {
     for (const day of ['СР', 'ВТ', 'ПН']) {
-        const minutesInCurrentDay = dayToMinutesShith[day] * minInDay;
-        if (minutes >= minutesInCurrentDay) {
-            const hours = toTwoDigitNumber(div((minutes - minutesInCurrentDay), minInHour));
-            const min = toTwoDigitNumber((minutes - minutesInCurrentDay) % minInHour);
+        const minInCurrDay = dayToMinutesShith[day] * minInDay;
+        if (minRelativeWeekStart >= minInCurrDay) {
+            const hours = toTwoDigitNumber(div((minRelativeWeekStart - minInCurrDay), minInHour));
+            const min = toTwoDigitNumber((minRelativeWeekStart - minInCurrDay) % minInHour);
 
             return { day, hours: hours, minutes: min };
         }
@@ -159,7 +160,7 @@ function removeDuplicates(arr) {
 
 }
 
-function getAdditionTimes(intervals, duration) {
+function addAdditionTimes(intervals, duration) {
     const result = [];
     for (const interval of intervals) {
         let currLeftPart = interval.leftPoint;
@@ -182,9 +183,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         bankInterval.shift));
     const bankIntervals = getBankOpenIntervals(bankInterval);
     const arr = [dannyIntervals, rustyIntervals, linusIntervals, bankIntervals];
-    let res = findIntersectionOfAllGroups(arr, duration);
-    res = removeDuplicates(res);
-    res = getAdditionTimes(res, duration);
+    let availableIntervals = removeDuplicates(findIntersectionOfAllGroups(arr, duration));
+    availableIntervals = addAdditionTimes(availableIntervals, duration);
     let pointer = 0;
 
     return {
@@ -194,7 +194,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            return pointer < res.length;
+            return pointer < availableIntervals.length;
         },
 
         /**
@@ -204,15 +204,17 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            if (res.length === 0) {
+            if (availableIntervals.length === 0) {
                 return '';
             }
-            const date = getDateTimeFromMinutes(res[pointer].leftPoint);
-            let result = template.replace('%DD', date.day);
-            result = result.replace('%HH', date.hours);
-            result = result.replace('%MM', date.minutes);
+            const date = getDateTimeFromMinutes(availableIntervals[pointer].leftPoint);
 
-            return result;
+            return template
+                .replace('%DD', date.day)
+                .replace('%HH', date.hours)
+                .replace('%MM', date.minutes);
+
+
         },
 
         /**
@@ -221,7 +223,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            if (pointer < res.length - 1) {
+            if (pointer < availableIntervals.length - 1) {
                 pointer++;
 
                 return true;
