@@ -23,20 +23,20 @@ const dayOfWeek = {
     'ВС': 7
 };
 
-function parseDate(str) {
+function parseDate(str, shiftGmt = 0, noGmt = false) {
     var splitFullTime = str.split(' ');
     var weekday = splitFullTime.length > 1 ? splitFullTime[0] : 'ПН';
     var time = (splitFullTime.length > 1 ? splitFullTime[1] : splitFullTime[0]).split(':');
     var h = Number(time[0]);
     var m = Number(time[1].substring(0, 2));
-    var gmt = Number(time[1].substring(3));
+    var gmt = noGmt ? 0 : Number(time[1].substring(3));
 
-    return new Date(2018, 9, dayOfWeek[weekday], h - gmt, m);
+    return new Date(2018, 9, dayOfWeek[weekday], h - gmt + shiftGmt, m);
 }
 
-function parseTimeTemplate(template, date, timeZone) {
+function parseTimeTemplate(template, date) {
     var weekday = Object.keys(dayOfWeek)[date.getDay() - 1];
-    var hours = date.getHours() + timeZone;
+    var hours = date.getHours();
     var minutes = date.getMinutes();
 
     return template
@@ -47,8 +47,8 @@ function parseTimeTemplate(template, date, timeZone) {
 
 function getWorkTimeBank(workingHours) {
     var interval = [];
-    var startWork = parseDate(workingHours.from);
-    var endWork = parseDate(workingHours.to);
+    var startWork = parseDate(workingHours.from, 0, true);
+    var endWork = parseDate(workingHours.to, 0, true);
     var numberOfThursday = 3;
 
     for (var numberOfDayWeek = 0; numberOfDayWeek < numberOfThursday; numberOfDayWeek++) {
@@ -177,11 +177,13 @@ function getAllBadActsDay(schedule, workingHours, duration, howManyTry) {
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
+    var timeZoneBank = Number(workingHours.from.split('+')[1]);
+
     var overallSchedule = Object.keys(schedule).map(function (scheduleOne) {
         return schedule[scheduleOne].map(function (e) {
             return {
-                from: parseDate(e.from),
-                to: parseDate(e.to)
+                from: parseDate(e.from, timeZoneBank),
+                to: parseDate(e.to, timeZoneBank)
             };
         });
     });
@@ -198,7 +200,6 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         );
     var busyIntervals = combineTimeIntervals(sortIntervals);
     var goodTimes = [];
-    var timeZoneBank = Number(workingHours.from.split('+')[1]);
 
     goodTimes = getAllBadActsDay(busyIntervals, normalWorkingHoursBank, duration, attemptOffset);
 
@@ -219,7 +220,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            return this.exists() ? parseTimeTemplate(template, goodTimes[0], timeZoneBank) : '';
+            return this.exists() ? parseTimeTemplate(template, goodTimes[0]) : '';
         },
 
         /**
