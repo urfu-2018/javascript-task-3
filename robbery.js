@@ -152,7 +152,9 @@ function findGoodIntervals(schedule, workingHours) {
         unionOfIntervals(
             invertIntervals(minTime, scheduleToTimeIntervals(bankSchedule), maxTime).concat(
                 scheduleToTimeIntervals(
-                    schedule.Danny.concat(schedule.Rusty).concat(schedule.Linus)
+                    schedule.Danny.concat(schedule.Rusty)
+                        .concat(schedule.Linus)
+                        .filter(x => ['ПН', 'ВТ', 'СР'].includes(x.from.split(' ')[0]))
                 )
                     .filter(x => x[0] < maxTime)
                     .map(x => (x[1] > maxTime ? [x[0], maxTime] : x))

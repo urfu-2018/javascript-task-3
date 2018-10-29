@@ -156,32 +156,22 @@ describe('Custom bank always open', () => {
     });
 });
 
-describe('Custom bank always open', () => {
-    function getMomentFor(time) {
-        return robbery.getAppropriateMoment(
-            {
-                Danny: [{ from: 'ПН 00:00+5', to: 'СР 23:59+5' }],
-                Rusty: [],
-                Linus: []
-            },
-            time,
-            { from: '00:00+0', to: '23:59+0' }
-        );
-    }
+// describe('Custom tz', () => {
+//     function getMomentFor(time) {
+//         return robbery.getAppropriateMoment(
+//             {
+//                 Danny: [{ from: 'ПН 00:00+5', to: 'ВТ 23:59+5' }],
+//                 Rusty: [{ from: 'ЧТ 00:00+5', to: 'ЧТ 23:59+5' }],
+//                 Linus: [{ from: 'ВТ 00:00+5', to: 'СР 23:59+5' }]
+//             },
+//             time,
+//             { from: '00:00+0', to: '23:59+0' }
+//         );
+//     }
 
-    it('должен форматировать существующий момент', () => {
-        const moment = getMomentFor(60);
-
-        assert.ok(moment.exists());
-        assert.strictEqual(
-            moment.format('Метим на %DD, старт в %HH:%MM!'),
-            'Метим на СР, старт в 18:59!'
-        );
-    });
-
-    it('должен вернуть пустую строку при форматировании несуществующего момента', () => {
-        const moment = getMomentFor(5 * 60 + 1);
-        assert.ok(!moment.exists());
-        assert.strictEqual(moment.format('Метим на %DD, старт в %HH:%MM!'), '');
-    });
-});
+//     it('должен вернуть пустую строку при форматировании несуществующего момента', () => {
+//         const moment = getMomentFor(2);
+//         // assert.ok(!moment.exists());
+//         assert.strictEqual(moment.format('Метим на %DD, старт в %HH:%MM!'), '');
+//     });
+// });
