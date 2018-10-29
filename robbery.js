@@ -12,13 +12,41 @@ let startOfWeek;
 let endOfWeek;
 let robbingSchedule;
 
+class TimeInterval {
+    constructor(from, to) {
+        this.from = from;
+        this.to = to;
+    }
+
+    overlapsMoment(moment) {
+        return this.from <= moment && this.to >= moment;
+    }
+
+    doesNotIntersect(timeInterval) {
+        return this.from <= timeInterval.from && this.to <= timeInterval.from ||
+            this.from >= timeInterval.to && this.to >= timeInterval.to;
+    }
+
+    getIntersection(interval) {
+        const left = Math.max(this.from, interval.from);
+        const right = Math.min(this.to, interval.to);
+
+        return new TimeInterval(left, right);
+    }
+
+    getDuration() {
+        return Math.abs(this.from - this.to);
+    }
+
+    static fromStrings(strFrom, strTo) {
+        return new TimeInterval(convertToMinutes(strFrom), convertToMinutes(strTo));
+    }
+}
+
 function getRobbingSchedule(bankTimeZone) {
-    return days.slice(0, 3).map(day => {
-        return {
-            from: convertToMinutes(`${day} 00:00+${bankTimeZone}`),
-            to: convertToMinutes(`${day} 23:59+${bankTimeZone}`)
-        };
-    });
+    return days.slice(0, 3).map(day =>
+        TimeInterval.fromStrings(`${day} 00:00+${bankTimeZone}`, `${day} 23:59+${bankTimeZone}`)
+    );
 }
 
 function getMinutesFromWeekStart(day) {
@@ -37,49 +65,38 @@ function convertToMinutes(str) {
 // Надеюсь, я смогу это отрефакторить, но пока пусть будет так.
 // eslint-disable-next-line max-statements
 function parseTimePoints(schedule) {
-    let minStartTime = startOfWeek;
-    let maxEndTime = endOfWeek;
+    let weekInterval = new TimeInterval(startOfWeek, endOfWeek);
+
     let res = [];
     for (let i = 0; i < schedule.length; i++) {
         const time = schedule[i];
-        const endOldFreeTime = convertToMinutes(time.from);
-        const startNewFreeTime = convertToMinutes(time.to);
-        if (isIntervalBeyoundBorder(endOldFreeTime, startNewFreeTime, minStartTime, maxEndTime)) {
+        const busyTime = TimeInterval.fromStrings(time.from, time.to);
+        if (busyTime.doesNotIntersect(weekInterval)) {
             continue;
         }
-        if (isIntervalOverlapMoment(endOldFreeTime, startNewFreeTime, minStartTime)) {
-            minStartTime = startNewFreeTime;
+
+        if (busyTime.overlapsMoment(weekInterval.from)) {
+            weekInterval.from = busyTime.to;
             continue;
         }
-        if (isIntervalOverlapMoment(endOldFreeTime, startNewFreeTime, maxEndTime)) {
-            maxEndTime = endOldFreeTime;
+
+        if (busyTime.overlapsMoment(weekInterval.to)) {
+            weekInterval.to = busyTime.from;
             continue;
         }
-        res.push(endOldFreeTime);
-        res.push(startNewFreeTime);
+        res.push(busyTime.from);
+        res.push(busyTime.to);
     }
-    res.unshift(minStartTime);
-    res.push(maxEndTime);
+    res.unshift(weekInterval.from);
+    res.push(weekInterval.to);
 
     return res;
-}
-
-function isIntervalOverlapMoment(left, right, moment) {
-    return left <= moment && right >= moment;
-}
-
-function isIntervalBeyoundBorder(left, right, leftBorder, rightBorder) {
-    return left <= leftBorder && right <= leftBorder ||
-        left >= rightBorder && right >= rightBorder;
 }
 
 function combineTimePoints(timePoints) {
     let result = [];
     for (let i = 0; i < timePoints.length - 1; i += 2) {
-        result.push({
-            from: timePoints[i],
-            to: timePoints[i + 1]
-        });
+        result.push(new TimeInterval(timePoints[i], timePoints[i + 1]));
     }
 
     return result;
@@ -127,21 +144,12 @@ function findIntersections(scheduleOne, scheduleTwo, duration) {
 }
 
 function getMomentsIntersection(dateOne, dateTwo, duration) {
-    if (dateOne.to <= dateTwo.from || dateOne.from >= dateTwo.to) {
+    if (dateOne.doesNotIntersect(dateTwo)) {
         return null;
     }
+    const intersection = dateOne.getIntersection(dateTwo);
 
-    const left = Math.max(dateOne.from, dateTwo.from);
-    const right = Math.min(dateOne.to, dateTwo.to);
-
-    if (Math.abs(right - left) < duration) {
-        return null;
-    }
-
-    return {
-        from: left,
-        to: right
-    };
+    return intersection.getDuration() < duration ? null : intersection;
 }
 
 function extractDayHoursMinutes(timeInMinutes) {
@@ -162,12 +170,10 @@ function formatTemplate(template, day, hours, minutes) {
 
 function fillBankSchedule(bankWorkingHours) {
     let bankSchedule = [];
-    days.forEach(day => {
-        bankSchedule.push({
-            from: convertToMinutes(`${day} ${bankWorkingHours.from}`),
-            to: convertToMinutes(`${day} ${bankWorkingHours.to}`)
-        });
-    });
+    days.forEach(day =>
+        bankSchedule.push(
+            TimeInterval.fromStrings(`${day} ${bankWorkingHours.from}`,
+                `${day} ${bankWorkingHours.to}`)));
 
     return bankSchedule;
 }
