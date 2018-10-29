@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = false;
+const isStar = true;
 
 const daysForRobbery = { ПН: 1, ВТ: 2, СР: 3 };
 const numberToWeekDay = { 1: 'ПН', 2: 'ВТ', 3: 'СР' };
@@ -19,32 +19,23 @@ const numberToWeekDay = { 1: 'ПН', 2: 'ВТ', 3: 'СР' };
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
     console.info(schedule, duration, workingHours);
-    const bankTImeZone = getTimeZone(workingHours.from);
+    const bankTimeZone = getTimeZone(workingHours.from);
 
-    const [dannyRobberyTime, rustyRobberyTime, linusRobberyTime] = Object.values(schedule).map(
-        personSchedule => getGoodTimeForRobberySchedule(personSchedule, duration, workingHours)
+    const timeForRobberySchedule = Object.values(schedule).map(personSchedule =>
+        getGoodTimeForRobberySchedule(personSchedule, duration, workingHours)
     );
 
-    let robberyTime = findTimeForRobbery(
-        dannyRobberyTime,
-        rustyRobberyTime,
-        linusRobberyTime,
-        duration
-    );
-    if (robberyTime) {
-        const hoursInUTC = robberyTime.getHours();
-        robberyTime.setHours(hoursInUTC + bankTImeZone);
-    }
+    let robberyTimes = findTimeForRobbery(timeForRobberySchedule, duration, bankTimeZone);
 
     return {
-        robberyTime,
+        robberyTimes,
 
         /**
          * Найдено ли время
          * @returns {Boolean}
          */
         exists: function () {
-            return typeof robberyTime !== 'undefined';
+            return robberyTimes.length > 0;
         },
 
         /**
@@ -57,6 +48,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (!this.exists()) {
                 return '';
             }
+            const robberyTime = robberyTimes[0].from;
             const weekDay = numberToWeekDay[robberyTime.getDay()];
             const hours = formatTime(robberyTime.getHours());
             const minutes = formatTime(robberyTime.getMinutes());
@@ -73,6 +65,27 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
+            if (!this.exists()) {
+                return false;
+            }
+            const shift = 30 * 60 * 1000;
+            let possibleTime;
+            let firstElement = true;
+            while (robberyTimes.length > 0) {
+                possibleTime = robberyTimes.shift();
+                const possibleStart = firstElement
+                    ? new Date(possibleTime.from.getTime() + shift)
+                    : possibleTime.from;
+                const end = possibleTime.to;
+                if (hasEnoughTime(possibleStart, end, duration)) {
+                    robberyTimes.unshift({ from: possibleStart, to: end });
+
+                    return true;
+                }
+                firstElement = false;
+            }
+            robberyTimes.unshift(possibleTime);
+
             return false;
         }
     };
@@ -81,14 +94,41 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 const cartesianOfTwo = (a, b) => [].concat(...a.map(d => b.map(e => [].concat(d, e))));
 const cartesianOfThree = (a, b, ...c) => (b ? cartesianOfThree(cartesianOfTwo(a, b), ...c) : a);
 
-function findTimeForRobbery(schedule1, schedule2, schedule3, duration) {
-    for (let element of cartesianOfThree(schedule1, schedule2, schedule3)) {
-        const intersectionStart = chooseLatestStart(...element);
-        const intersectionEnd = chooseEarliestEnd(...element);
+function findTimeForRobbery(schedule, duration, timeZone) {
+    let result = [];
+    for (let element of cartesianOfThree(...schedule)) {
+        const intersectionStart = new Date(chooseLatestStart(...element));
+        const intersectionEnd = new Date(chooseEarliestEnd(...element));
         if (hasEnoughTime(intersectionStart, intersectionEnd, duration)) {
-            return intersectionStart;
+            intersectionStart.setHours(intersectionStart.getHours() + timeZone);
+            intersectionEnd.setHours(intersectionEnd.getHours() + timeZone);
+            result.push({ from: intersectionStart, to: intersectionEnd });
         }
     }
+
+    return uniteIntervals(result.sort((x, y) => x.from - y.from));
+}
+
+function uniteIntervals(listOfIntervals) {
+    if (!listOfIntervals.length) {
+        return [];
+    }
+    let result = [listOfIntervals[0]];
+    for (let i = 0; i < listOfIntervals.length - 1; i++) {
+        const interval1 = listOfIntervals[i];
+        const interval2 = listOfIntervals[i + 1];
+        if (interval1.to >= interval2.from) {
+            result.pop();
+            result.push({
+                from: interval1.from,
+                to: interval1.to > interval2.to ? interval1.to : interval2.to
+            });
+        } else {
+            result.push(interval2);
+        }
+    }
+
+    return result;
 }
 
 function formatTime(timeValue) {
