@@ -54,17 +54,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
     const shift = 30;
     let lastIndex = 0;
-    let lastCorrectInterval;
 
-    let allIntervals = getRobberyFreeIntervals(workingHours, schedule);
-
-    for (let i = 0; i < allIntervals.length; i++) {
-        if (allIntervals[i].length() >= duration) {
-            lastIndex = i;
-            lastCorrectInterval = allIntervals[i];
-            break;
-        }
-    }
+    let allIntervals = getRobberyFreeIntervals(workingHours, schedule)
+        .filter(i => i.length() >= duration);
 
     return {
 
@@ -73,7 +65,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            if (lastCorrectInterval) {
+            if (allIntervals.length > 0) {
                 return true;
             }
 
@@ -89,8 +81,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         format: function (template) {
             let bankTimeZone = parseInt(workingHours.from.slice(5));
 
-            return lastCorrectInterval
-                ? formatTimeInterval(lastCorrectInterval, bankTimeZone, template)
+            return (allIntervals.length > 0)
+                ? formatTimeInterval(allIntervals[lastIndex], bankTimeZone, template)
                 : '';
         },
 
@@ -101,22 +93,24 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            if (!lastCorrectInterval) {
+            if (!(allIntervals.length > 0)) {
                 return false;
             }
 
-            lastCorrectInterval.from += shift;
-            for (let i = lastIndex; i < allIntervals.length; i++) {
-                if (!(allIntervals[i].length() >= duration)) {
-                    continue;
-                }
-                lastIndex = i;
-                lastCorrectInterval = allIntervals[i];
+            allIntervals[lastIndex].from += shift;
+            if (allIntervals[lastIndex].length() >= duration) {
+                return true;
+            }
+
+            if (lastIndex < allIntervals.length - 1) {
+                lastIndex++;
 
                 return true;
-
             }
-            lastCorrectInterval.from -= shift;
+
+            if (lastIndex < allIntervals.length) {
+                allIntervals[lastIndex].from -= shift;
+            }
 
             return false;
 
