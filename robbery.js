@@ -180,7 +180,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     console.info(schedule, duration, workingHours);
     const bankTimezone = parseInt(workingHours.from.slice(6));
     startOfWeek = convertToMinutes(`ПН 00:00+${bankTimezone}`);
-    endOfWeek = convertToMinutes(`ВС 23:59+${bankTimezone}`);
+    endOfWeek = convertToMinutes(`СР 23:59+${bankTimezone}`);
     robbingSchedule = getRobbingSchedule(bankTimezone);
 
     const gangSchedule = getGangFreeTimeIntervals(schedule);
