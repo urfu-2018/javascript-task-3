@@ -135,43 +135,29 @@ function div(val, by) {
 }
 
 function getDateTimeFromMinutes(minutes) {
-    if (minutes >= 2 * minInDay) {
-        const hours = div((minutes - 2 * minInDay), 60);
-        const min = (minutes - 2 * minInDay) % 60;
+    for (const day of ['СР', 'ВТ', 'ПН']) {
+        const minutesInCurrentDay = dayToMinutesShith[day] * minInDay;
+        if (minutes >= minutesInCurrentDay) {
+            const hours = toTwoDigitNumber(div((minutes - minutesInCurrentDay), 60));
+            const min = toTwoDigitNumber((minutes - minutesInCurrentDay) % 60);
 
-        return { 'day': 'СР', hours: toTwoDigit(hours), minutes: toTwoDigit(min) };
-    }
-
-    if (minutes >= minInDay) {
-        const hours = div((minutes - minInDay), 60);
-        const min = (minutes - minInDay) % 60;
-
-        return { 'day': 'ВТ', hours: toTwoDigit(hours), minutes: toTwoDigit(min) };
-
-    }
-
-    if (minutes >= 0) {
-        const hours = div(minutes, 60);
-        const min = minutes % 60;
-
-        return { 'day': 'ПН', hours: toTwoDigit(hours), minutes: toTwoDigit(min) };
+            return { day, hours: hours, minutes: min };
+        }
     }
 }
-function toTwoDigit(digit) {
+function toTwoDigitNumber(digit) {
     if (digit < 10) {
-        return '0' + digit.toString();
+        return `0${digit.toString()}`;
     }
 
     return digit;
 }
 
-function toSet(arr) {
-    const names = new Set();
+function filterDuplicate(arr) {
+    const existingItems = new Set();
 
-    const a = arr.filter(item => !names.has(item.toString())
-        ? names.add(item.toString()) : false);
-
-    return a;
+    return arr.filter(item => !existingItems.has(item.toString())
+        ? existingItems.add(item.toString()) : false);
 
 }
 
@@ -190,18 +176,14 @@ function getAdditionTimes(intervals, duration) {
 }
 function getAppropriateMoment(schedule, duration, workingHours) {
     const bankInterval = parseBankTime(workingHours);
-    const dannyIntervals = reverseIntervals(getIntervalsForPerson(schedule.Danny,
-        bankInterval.shift));
-    const rustyIntervals = reverseIntervals(getIntervalsForPerson(schedule.Rusty,
-        bankInterval.shift));
-    const linusIntervals = reverseIntervals(getIntervalsForPerson(schedule.Linus,
-        bankInterval.shift));
-    const bankIntervals = getBankOpenIntervals(bankInterval);
-    const arr = [dannyIntervals, rustyIntervals, linusIntervals, bankIntervals];
-    let res = findIntersectionOfAllGroups(arr, duration);
-    res = toSet(res);
-    res = getAdditionTimes(res, duration);
+    const participantIntervals = Object.keys(schedule).map(part =>
+        reverseIntervals(getIntervalsForPerson(schedule[part], bankInterval.shift)));
+    participantIntervals.push(getBankOpenIntervals(bankInterval));
+    let availableIntervals = filterDuplicate(findIntersectionOfAllGroups(participantIntervals,
+        duration));
+    availableIntervals = getAdditionTimes(availableIntervals, duration);
     let pointer = 0;
+    console.info(availableIntervals);
 
     return {
 
@@ -210,7 +192,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            return pointer < res.length;
+            return pointer < availableIntervals.length;
         },
 
         /**
@@ -220,15 +202,15 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            if (res.length === 0) {
+            if (availableIntervals.length === 0) {
                 return '';
             }
-            const date = getDateTimeFromMinutes(res[pointer].leftPoint);
-            let result = template.replace('%DD', date.day);
-            result = result.replace('%HH', date.hours);
-            result = result.replace('%MM', date.minutes);
+            const date = getDateTimeFromMinutes(availableIntervals[pointer].leftPoint);
 
-            return result;
+            return template
+                .replace('%DD', date.day)
+                .replace('%HH', date.hours)
+                .replace('%MM', date.minutes);
         },
 
         /**
@@ -237,7 +219,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            if (pointer < res.length - 1) {
+            if (pointer < availableIntervals.length - 1) {
                 pointer++;
 
                 return true;
