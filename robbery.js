@@ -110,14 +110,17 @@ function haveIntersection(firstInterval, secondInterval) {
 
 function getPossibleIntervals(schedule, workingHours, bankTimezone) {
     let possibleIntervals = [];
-
+    const bankTimezoneShift = bankTimezone * minutesInHour;
     workingHours.forEach(bankInterval => {
         schedule.forEach(robberInterval => {
-            if (bankInterval.to <= lastAppropriateMoment - bankTimezone * minutesInHour &&
-                    haveIntersection(bankInterval, robberInterval)) {
+            let leftBankBorder = Math.min(
+                bankInterval.from, lastAppropriateMoment - bankTimezoneShift);
+            let rightBankBorder = Math.min(
+                bankInterval.to, lastAppropriateMoment - bankTimezoneShift);
+            if (haveIntersection({ from: leftBankBorder, to: rightBankBorder }, robberInterval)) {
                 possibleIntervals.push({
-                    from: Math.max(bankInterval.from, robberInterval.from),
-                    to: Math.min(bankInterval.to, robberInterval.to)
+                    from: Math.max(leftBankBorder, robberInterval.from),
+                    to: Math.min(rightBankBorder, robberInterval.to)
                 });
             }
         });
