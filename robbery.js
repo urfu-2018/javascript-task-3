@@ -166,6 +166,7 @@ function handler(lastTime, duration, scheduleItem, j) {
             checkLastTime(lastTime, duration, scheduleItem, j);
         }
     }
+
     return 0;
 }
 
@@ -174,8 +175,7 @@ function checkLastTime(lastTime, duration, scheduleItem, j) {
         startIndex = j;
 
         return actualMinutes - duration + bankTimeZone * 60;
-    }
-    else if ((lastTime + 30 + duration - bankTimeZone * 60) <= scheduleFull[j + 1].minutes &&
+    } else if ((lastTime + 30 + duration - bankTimeZone * 60) <= scheduleFull[j + 1].minutes &&
         (actualMinutes - duration + bankTimeZone * 60) >= lastTime) {
         startIndex = j;
         if ((actualMinutes - duration + bankTimeZone * 60) !== lastTime) {
@@ -200,6 +200,8 @@ function choiseFrom(scheduleItem) {
         case 'Linus':
             checkLinus = false;
             break;
+        default:
+            break;
     }
 }
 
@@ -216,6 +218,8 @@ function choiseTo(scheduleItem) {
             break;
         case 'Linus':
             checkLinus = true;
+            break;
+        default:
             break;
     }
 }
