@@ -117,7 +117,11 @@ function findInterval(a, duration) {
             exists = true;
             const wholeHours = Math.floor(a[i].start / 60);
             const wholeDays = Math.floor(wholeHours / 24);
-            time = { day: days[wholeDays], hours: wholeHours % 24, minutes: a[i].start % 60 };
+            let hours = (wholeHours % 24).toString();
+            hours = hours.length === 2 ? hours : '0' + hours;
+            let minutes = (a[i].start % 60).toString();
+            minutes = minutes.length === 2 ? minutes : '0' + minutes;
+            time = { day: days[wholeDays], hours, minutes };
             break;
         }
     }
