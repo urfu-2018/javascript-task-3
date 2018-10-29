@@ -33,20 +33,20 @@ function parseToBankZone(inputStr) {
     bankZoneHour = (HOURS_IN_DAY + bankZoneHour) % HOURS_IN_DAY;
 
 
-    return { day: day, minutes: bankZoneHour * MINUTES_IN_HOUR + minutes };
+    return { day: day, timestamp: bankZoneHour * MINUTES_IN_HOUR + minutes };
 }
 
-function getTimeRanges(scheduleInDay, dayName) {
+function getTimeRanges(robberSchedule, dayName) {
     const result = [];
     let leftBorder = 0;
-    for (let i = 0; i < scheduleInDay.length; i++) {
-        if (scheduleInDay[i].from.minutes >= leftBorder) {
-            result.push({ day: dayName, from: leftBorder, to: scheduleInDay[i].from.minutes });
+    for (let i = 0; i < robberSchedule.length; i++) {
+        if (robberSchedule[i].from >= leftBorder) {
+            result.push({ day: dayName, from: leftBorder, to: robberSchedule[i].from });
         }
-        leftBorder = scheduleInDay[i].to.minutes;
+        leftBorder = robberSchedule[i].to;
     }
 
-    const minutesInDay = 23 * MINUTES_IN_HOUR + 59;
+    const minutesInDay = HOURS_IN_DAY * MINUTES_IN_HOUR - 1;
     result.push({ day: dayName, from: leftBorder, to: minutesInDay });
 
     return result;
@@ -61,35 +61,29 @@ function getWorkingHours(workingHours) {
 
     return {
         shift: shift,
-        from: {
-            minutes:
-                (HOURS_IN_DAY + fromHour) % HOURS_IN_DAY * MINUTES_IN_HOUR + fromMinutes
-        },
-        to: {
-            minutes: (HOURS_IN_DAY + toHour) % HOURS_IN_DAY * MINUTES_IN_HOUR + toMinutes
-        }
+        from: fromHour * MINUTES_IN_HOUR + fromMinutes,
+        to: toHour * MINUTES_IN_HOUR + toMinutes
+
     };
 }
 
-function fillSchedule(robberSchedule, robberName) {
+function fillSchedule(robberSchedule) {
     const fromInBankZone = parseToBankZone(robberSchedule.from);
     const toInBankZone = parseToBankZone(robberSchedule.to);
     if (fromInBankZone.day === toInBankZone.day) {
         newSchedule[fromInBankZone.day].push(
-            { name: robberName, from: fromInBankZone, to: toInBankZone });
+            { from: fromInBankZone.timestamp, to: toInBankZone.timestamp });
 
         return;
     }
     newSchedule[fromInBankZone.day].push(
         {
-            name: robberName,
-            from: fromInBankZone,
-            to: { day: fromInBankZone.day, minutes: 23 * MINUTES_IN_HOUR + 59 }
+            from: fromInBankZone.timestamp,
+            to: HOURS_IN_DAY * MINUTES_IN_HOUR - 1
         });
     newSchedule[toInBankZone.day].push({
-        name: robberName,
-        from: { day: toInBankZone.day, minutes: 0 },
-        to: toInBankZone
+        from: 0,
+        to: toInBankZone.timestamp
     });
 
     return newSchedule;
@@ -114,19 +108,17 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         }
         const robberSchedule = schedule[propName];
         for (let i = 0; i < robberSchedule.length; i++) {
-            fillSchedule(robberSchedule[i], propName);
+            fillSchedule(robberSchedule[i]);
         }
     }
     appropriateMoments = Object.keys(newSchedule)
         .filter(x => appropriateDays.includes(x))
-        .map(x => newSchedule[x]
-            .sort((y, z) => y.from.minutes - z.from.minutes))
         .map(x => {
-            return getTimeRanges(x, x[0].from.day)
+            return getTimeRanges(newSchedule[x].sort((y, z) => y.from - z.from), x)
                 .filter(a => a.from !== a.to)
                 .map(a => {
-                    const rightBorder = Math.min(bankWorkingHours.to.minutes, a.to);
-                    const leftBorder = Math.max(bankWorkingHours.from.minutes, a.from);
+                    const rightBorder = Math.min(bankWorkingHours.to, a.to);
+                    const leftBorder = Math.max(bankWorkingHours.from, a.from);
 
                     return { day: a.day, from: leftBorder, to: rightBorder };
                 })
