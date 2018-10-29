@@ -184,6 +184,7 @@ function checkLastTime(lastTime, duration, scheduleItem, j) {
 
         return actualMinutes + 30 - duration + bankTimeZone * 60;
     }
+
     return 0;
 }
 
