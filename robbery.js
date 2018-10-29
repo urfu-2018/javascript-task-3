@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = false;
+const isStar = true;
 
 const weekDays = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
 const minutesInHour = 60;
@@ -135,6 +135,9 @@ function hasFreeSectors(element, t, duration) {
 function getGoodSectors(freeSectors, workingHoursInMinute, duration) {
     // console.info('GetGOOD SECTORS' + freeSectors + '    ' + workingHoursInMinute +
     // '    ' + duration);
+    if (workingHoursInMinute[1] - workingHoursInMinute[0] < duration) {
+        return [];
+    }
     let result = [];
     for (let index = 0; index < 3; index++) {
         let workingTime = [workingHoursInMinute[0] + index * minutesInDay,
