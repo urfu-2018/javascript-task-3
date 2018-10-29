@@ -21,10 +21,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
     const TARGET_TIME_ZONE = parseInt(workingHours.from.split('+')[1]);
 
-    const weekEnum = Object.freeze({
-        'ПН': 0, 'ВТ': 1, 'СР': 2,
-        0: 'ПН', 1: 'ВТ', 2: 'СР'
-    });
+    const WEEK_DAYS = Object.freeze({ 'ПН': 0, 'ВТ': 1, 'СР': 2 });
+    const WEEK_DAYS_REVERSED = Object.freeze({ 0: 'ПН', 1: 'ВТ', 2: 'СР' });
 
     /**
      * Собирает все входные данные в один массив, приводя к минутам с ПН 00:00+зона_банка
@@ -37,7 +35,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @param {Object} time
          * @returns {Object}
          */
-        function transformInterval(time) {
+        function transformTime(time) {
             // 'ПН 09:35+5' => [ПН, 09, 35, 5]
             const regex = /^(.{2}) (\d{2}):(\d{2})+.(\d)+$/g;
 
@@ -46,32 +44,23 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 time = 'ПН ' + time;
             }
             const intervalParts = time.split(regex).filter(part => part.length > 0);
-            const day = weekEnum[time.split(' ')[0]] * MINUTES_IN_DAY;
+            const day = WEEK_DAYS[time.split(' ')[0]] * MINUTES_IN_DAY;
             const timeOfDay = parseInt(intervalParts[1]) * 60 + parseInt(intervalParts[2]);
             const timezoneShift = (TARGET_TIME_ZONE - parseInt(intervalParts[3])) * 60;
 
             return day + timeOfDay + timezoneShift;
         }
 
-        let workTimes = [];
-        const transformed = {
-            from: transformInterval(workingHours.from),
-            to: transformInterval(workingHours.to) };
-        for (let i = 0; i < 3; i ++) { // формируем расписание банка (3: до среды)
-            workTimes.push({
-                from: transformed.from + MINUTES_IN_DAY * i,
-                to: transformed.to + MINUTES_IN_DAY * i
-            });
-        }
+        const workTimes = Object.values(WEEK_DAYS).map(day => ({
+            from: transformTime(workingHours.from) + MINUTES_IN_DAY * day,
+            to: transformTime(workingHours.to) + MINUTES_IN_DAY * day
+        }));
 
-        let busyTimes = [];
-        for (let person of Object.values(schedule)) { // читаем расписание грабителей
-            for (let interval of person) {
-                busyTimes.push({
-                    from: transformInterval(interval.from),
-                    to: transformInterval(interval.to) });
-            }
-        }
+        const busyTimes = [];
+        Object.values(schedule).map(person => person.map(interval => busyTimes.push({
+            from: transformTime(interval.from),
+            to: transformTime(interval.to)
+        })));
 
         return { bank: workTimes, people: busyTimes };
     }
@@ -177,7 +166,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             }
 
             const time = firstCandidate.from;
-            const day = weekEnum[Math.floor(time / MINUTES_IN_DAY)];
+            const day = WEEK_DAYS_REVERSED[Math.floor(time / MINUTES_IN_DAY)];
             let hour = Math.floor(time % MINUTES_IN_DAY / 60);
             if (hour < 10) {
                 hour = '0' + hour;
@@ -199,12 +188,15 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          */
         tryLater: function () {
             const backup = firstCandidate;
+            // Если можем передвинуть время внутри того же интервала
             if (firstCandidate.to - firstCandidate.from >= 30 + duration) {
                 firstCandidate.from += 30;
             } else {
+                // Иначе выбираем первый интервал, что начинается хотя бы через 30 минут
                 firstCandidate = candidates.filter(interval =>
-                    interval.from >= firstCandidate.from + 30)[0];
+                    interval.from > firstCandidate.from + 30)[0];
             }
+            // Если такие не нашлись
             if (firstCandidate === undefined) {
                 firstCandidate = backup;
 
