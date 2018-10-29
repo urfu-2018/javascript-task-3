@@ -4,11 +4,11 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = false;
+const isStar = true;
 
 const HOURS_IN_DAY = 24;
 const MINUTES_IN_HOUR = 60;
-const DAYS = ['ПН', 'ВТ', 'СР'];
+const DAYS = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ'];
 const OFFSET_IN_MINUTES = 30;
 const MAX_TIME_FOR_ROBBERY_IN_MINUTES = 4320;
 
@@ -94,9 +94,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
     function getWorkingTimeOfBank() {
         const result = [];
-        for (let day of DAYS) {
-            const from = getTimeInMinutes(day + ' ' + workingHours.from);
-            const to = getTimeInMinutes(day + ' ' + workingHours.to);
+        for (let i = 0; i < DAYS.length; i++) {
+            const from = getTimeInMinutes(DAYS[i] + ' ' + workingHours.from);
+            const to = getTimeInMinutes(DAYS[i] + ' ' + workingHours.to);
             result.push([from, to]);
         }
 
@@ -106,14 +106,18 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     function getFreeTimeForOnePerson(person) {
         const workingTimesInMinutes = [];
         let result = [];
+
         for (let time of schedule[person]) {
-            const from = getTimeInMinutes(time.from);
-            const to = getTimeInMinutes(time.to);
-            workingTimesInMinutes.push([from, to]);
+            workingTimesInMinutes.push([getTimeInMinutes(time.from), getTimeInMinutes(time.to)]);
         }
-        const minTime = workingTimesInMinutes[0][0];
+        if (workingTimesInMinutes.length === 0) {
+            result.push([0, MAX_TIME_FOR_ROBBERY_IN_MINUTES]);
+
+            return result;
+        }
+
         const tempTimes = workingTimesInMinutes[workingTimesInMinutes.length - 1];
-        const maxTime = tempTimes[tempTimes.length - 1];
+        const [minTime, maxTime] = [workingTimesInMinutes[0][0], tempTimes[tempTimes.length - 1]];
         if (minTime > 0) {
             result.push([0, minTime]);
         }
