@@ -12,7 +12,7 @@ const dayRegex = /^(\d{2}):(\d{2})\+(\d+)$/;
 const hoursInDay = 24;
 const minutesInHour = 60;
 const minutesInDay = hoursInDay * minutesInHour;
-const lastAppropriateMoment = days['ЧТ'] * minutesInDay;
+const lastAppropriateMoment = days['ЧТ'] * minutesInDay - 1;
 const delay = 30;
 
 function getMinutesFromWeekStart(splitedDate) {
@@ -59,20 +59,22 @@ function getFreeTimeIntervals(schedule) {
     times = times.sort(function (first, second) {
         return first.value - second.value;
     });
-    let left = 0;
+    let leftBorder = 0;
     let busyNumber = 0;
     times.forEach(time => {
         if (busyNumber === 0) {
-            freeTimeIntervals.push({ from: left, to: time.value });
+            freeTimeIntervals.push({ from: leftBorder, to: time.value });
         }
         if (time.from) {
             busyNumber += 1;
         } else {
-            left = time.value;
+            leftBorder = time.value;
             busyNumber -= 1;
         }
     });
-    freeTimeIntervals.push({ from: left, to: lastAppropriateMoment });
+    if (leftBorder <= lastAppropriateMoment) {
+        freeTimeIntervals.push({ from: leftBorder, to: lastAppropriateMoment });
+    }
 
     return freeTimeIntervals;
 }
