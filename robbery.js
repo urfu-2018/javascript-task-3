@@ -77,35 +77,28 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            let _schedule = Object.keys(schedule).map(x => schedule[x]);
+            let _schedule = [];
+            Object
+                .keys(schedule)
+                .map(x => schedule[x])
+                .forEach(x => x.forEach(y=>_schedule.push(y)));
             let sections = [];
             for (let i = 0; i < 3; i++) {
                 sections[i] = [];
             }
             for (let i of _schedule) {
-                for (let j of i) {
-                    let from = parseTime(j.from);
-                    let to = parseTime(j.to);
-                    if (from.day !== to.day) {
-                        sections[from.day].push(new Section(from, new Time(1440, from.day)));
-                        sections[to.day].push(new Section(new Time(0, to.day), to));
-                    } else {
-                        sections[from.day].push(new Section(from, to));
-                    }
+                let from = parseTime(i.from);
+                let to = parseTime(i.to);
+                if (from.day !== to.day) {
+                    sections[from.day].push(new Section(from, new Time(1440, from.day)));
+                    sections[to.day].push(new Section(new Time(0, to.day), to));
+                } else {
+                    sections[from.day].push(new Section(from, to));
                 }
             }
             let result = findTime(duration, sections, workingHours);
-            if (result === null) {
-                return '';
-            }
-            result = result.getTimeFromMinutes();
-            let _template = template.replace(/%HH:%MM/,
-                `${result.hours}:${result.minutes}`);
-            _template = _template.replace(/%DD/,
-                result.day.toString());
 
-            return _template;
-
+            return result !== null ? formatTime(template, result.getTimeFromMinutes()) : '';
         },
 
         /**
@@ -119,63 +112,81 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     };
 }
 
-function findTime(duration, sections, workingHours) {
+function formatTime(template, time) {
+    let _template = template.replace(/%HH:%MM/,
+        `${time.hours}:${time.minutes}`);
+    _template = _template.replace(/%DD/,
+        time.day);
+
+    return _template;
+}
+
+function findWithOneIntersection(intersections, day, workingHours, duration) {
     let result = null;
     let whFromTime = parseWorkingHours(workingHours.from);
     let whToTime = parseWorkingHours(workingHours.to);
+    let min = intersections[0][0].from.getMinutes();
+    let max = intersections[0][intersections.length - 1].to.getMinutes();
+    if (min - whFromTime.getMinutes() >= duration) {
+        result = new Time(whFromTime.getMinutes(), day);
+    }
+    if (whToTime.getMinutes() - max >= duration) {
+        result = new Time(max, day);
+    }
+
+    return result;
+}
+
+function findWithSomeIntersections(intersections, day, workingHours, duration) {
+    let result = null;
+    let _sections = [];
+    for (let n of intersections) {
+        let _from = n[0].from.getMinutes();
+        let _to = n[0].to.getMinutes();
+        _sections.push(new Section(_from, _to));
+    }
+    result = findWithoutIntersection(_sections, day, workingHours, duration);
+
+    return result;
+}
+
+function findTime(duration, sections, workingHours) {
+    let result = null;
+    sections = sections.map(x=> x.sort((a, b) => {
+        return a.from.getMinutes() - b.from.getMinutes();
+    }));
+
     for (let i = 0; i < 3; i++) {
         let intersections = [];
-        let section = sections[i].sort((a, b) => {
-            return a.from.getMinutes() - b.from.getMinutes();
-        });
-        for (let j = 0; j < section.length; j++) {
-            let intersection = section.filter(x => x === section[j] ||
-                !section[j].isNoIntersection(x));
-            if (intersection.length !== 0) {
-                intersections.push(intersection);
-                intersections = intersections.filter(x => {
-                    return (x === intersection ||
-                        JSON.stringify(x) !== JSON.stringify(intersection));
-                });
-            }
-            if (intersection.length === section.length) {
-                break;
-            }
+        let section = sections[i]
+            .sort((a, b) => {
+                return a.from.getMinutes() - b.from.getMinutes();
+            });
+        for (let j of section) {
+            let intersection = section.filter(x => x === j ||
+                !j.isNoIntersection(x));
+            intersections.push(intersection);
+            intersections = intersections.filter(x => {
+                return (x === intersection ||
+                    JSON.stringify(x) !== JSON.stringify(intersection));
+            });
         }
         if (intersections.length === 1) {
-            console.info(intersections[0][0]);
-            let min = Array.min(intersections.map(x => x[0].from.getMinutes()));
-            let max = Array.max(intersections.map(x => x[0].to.getMinutes()));
-            if (min - whFromTime.getMinutes() >= duration) {
-                result = new Time(whFromTime.getMinutes(), i);
-            }
-            if (whToTime.getMinutes() - max >= duration) {
-                result = new Time(max, i);
-            }
+            findWithOneIntersection(intersections, i, workingHours, duration);
         } else if (intersections.length === 0) {
-            result = findWithoutIntersection(intersections, i, whFromTime, whToTime, duration);
-            if (result !== null) {
-                return result;
-            }
+            result = findWithoutIntersection(intersections, i, workingHours, duration);
         } else {
-            let _sections = [];
-            for (let n = 0; n < intersections.length; n++) {
-                let _from = Array.min(intersections[n].map(x => x.from.getMinutes()));
-                let _to = Array.max(intersections[n].map(x => x.to.getMinutes()));
-                _sections.push(new Section(_from, _to));
-            }
-            result = findWithoutIntersection(_sections, i, whFromTime, whToTime, duration);
-            if (result !== null) {
-                return result;
-            }
+            result = findWithSomeIntersections(intersections, i, workingHours, duration);
         }
     }
 
     return result;
 }
 
-function findWithoutIntersection(section, day, whFromTime, whToTime, duration) {
+function findWithoutIntersection(section, day, workingHours, duration) {
     let result = null;
+    let whFromTime = parseWorkingHours(workingHours.from);
+    let whToTime = parseWorkingHours(workingHours.to);
     let start = whFromTime.getMinutes();
     for (let m of section) {
         if (m.from - start >= duration && m.from < whToTime.getMinutes()) {
@@ -191,14 +202,6 @@ function findWithoutIntersection(section, day, whFromTime, whToTime, duration) {
 
     return result;
 }
-
-Array.max = function (array) {
-    return Math.max.apply(Math, array);
-};
-
-Array.min = function (array) {
-    return Math.min.apply(Math, array);
-};
 
 function parseWorkingHours(str) {
     timezone = parseInt(str.substr(6, 2));
