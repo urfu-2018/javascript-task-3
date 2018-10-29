@@ -19,10 +19,11 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
     const MINUTES_IN_DAY = 60 * 24;
 
-    const TARGET_TIME_ZONE = parseInt(workingHours.from.split('+')[1]);
-
     const WEEK_DAYS = Object.freeze({ 'ПН': 0, 'ВТ': 1, 'СР': 2 });
     const WEEK_DAYS_REVERSED = Object.freeze({ 0: 'ПН', 1: 'ВТ', 2: 'СР' });
+
+    const TARGET_TIME_ZONE = parseInt(workingHours.from.split('+')[1]);
+
 
     /**
      * Собирает все входные данные в один массив, приводя к минутам с ПН 00:00+зона_банка
@@ -112,6 +113,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                     from: intervalB.to,
                     to: intervalA.to }];
             }
+            // следующие два if отличаются только .to или .from во втором аргументе, вынести?
             if (liesInBetween(intervalA.from, intervalB.to, intervalA.to)) {
                 return [{
                     from: intervalB.to,
@@ -187,6 +189,10 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
+            if (firstCandidate === undefined) {
+                return false;
+            }
+
             const backup = firstCandidate;
             // Если можем передвинуть время внутри того же интервала
             if (firstCandidate.to - firstCandidate.from >= 30 + duration) {
