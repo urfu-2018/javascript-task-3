@@ -46,7 +46,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            return intersections.length !== 0;
+            return !isEmpty(intersections);
         },
 
         /**
@@ -167,6 +167,10 @@ function changeIntersections(interval, daySchedule) {
 
 function filterIntersictions(duration) {
     intersections = intersections.filter(interval => interval.to - interval.from >= duration);
+}
+
+function isEmpty(array) {
+    return array.length === 0;
 }
 
 module.exports = {
