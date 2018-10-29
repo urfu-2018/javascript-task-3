@@ -16,7 +16,7 @@ function parseToUtc(inputStr) {
     const localHour = parseInt(inputStr.slice(3, 5));
     const minutes = parseInt(inputStr.slice(6, 8));
     const shift = parseInt(inputStr.slice(9, 11));
-    let fromUtcHour = localHour - shift;
+    let fromUtcHour = localHour - shift + bankWorkingHours.shift;
 
     if (fromUtcHour < 0) {
         fromUtcHour = (24 + fromUtcHour) % 24;
@@ -51,10 +51,10 @@ function getWorkingHours(workingHours) {
     return {
         shift: shift,
         fromInUtc: {
-            minutes: (24 + fromHour - shift) % 24 * 60 + parseInt(workingHours.from.slice(3, 5))
+            minutes: (24 + fromHour) % 24 * 60 + parseInt(workingHours.from.slice(3, 5))
         },
         toInUtc: {
-            minutes: (24 + toHour - shift) % 24 * 60 + parseInt(workingHours.to.slice(3, 5))
+            minutes: (24 + toHour) % 24 * 60 + parseInt(workingHours.to.slice(3, 5))
         }
     };
 }
@@ -148,7 +148,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             }
 
             return template.replace(
-                '%HH', Math.floor(appropriateMoments[0].from / 60) + bankWorkingHours.shift)
+                '%HH', Math.floor(appropriateMoments[0].from / 60))
                 .replace('%MM', (appropriateMoments[0].from % 60).toString()
                     .padStart(2, '0'))
                 .replace('%DD', appropriateMoments[0].day);
