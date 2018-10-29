@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = true;
+const isStar = false;
 
 const daysForRobbery = { ПН: 1, ВТ: 2, СР: 3 };
 const numberToWeekDay = { 1: 'ПН', 2: 'ВТ', 3: 'СР' };
@@ -25,23 +25,26 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         personSchedule => getGoodTimeForRobberySchedule(personSchedule, duration, workingHours)
     );
 
-    let robberyTimes = findTimeForRobbery(
+    let robberyTime = findTimeForRobbery(
         dannyRobberyTime,
         rustyRobberyTime,
         linusRobberyTime,
         duration
     );
+    if (robberyTime) {
+        const hoursInUTC = robberyTime.getHours();
+        robberyTime.setHours(hoursInUTC + bankTImeZone);
+    }
 
     return {
-        robberyTimes,
-        bankTImeZone,
+        robberyTime,
 
         /**
          * Найдено ли время
          * @returns {Boolean}
          */
         exists: function () {
-            return robberyTimes.length > 0;
+            return typeof robberyTime !== 'undefined';
         },
 
         /**
@@ -54,9 +57,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (!this.exists()) {
                 return '';
             }
-            const robberyTime = robberyTimes[0].from;
             const weekDay = numberToWeekDay[robberyTime.getDay()];
-            const hours = formatTime(robberyTime.getHours() + bankTImeZone);
+            const hours = formatTime(robberyTime.getHours());
             const minutes = formatTime(robberyTime.getMinutes());
 
             return template
@@ -71,27 +73,6 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            if (!this.exists()) {
-                return false;
-            }
-            const shift = 30 * 60 * 1000;
-            let possibleTime;
-            let firstElement = true;
-            while (robberyTimes.length > 0) {
-                possibleTime = robberyTimes.shift();
-                const possibleStart = firstElement
-                    ? new Date(possibleTime.from.getTime() + shift)
-                    : possibleTime.from;
-                const end = possibleTime.to;
-                if (hasEnoughTime(possibleStart, end, duration)) {
-                    robberyTimes.unshift({ from: possibleStart, to: end });
-
-                    return true;
-                }
-                firstElement = false;
-            }
-            robberyTimes.unshift(possibleTime);
-
             return false;
         }
     };
@@ -101,14 +82,11 @@ const cartesianOfTwo = (a, b) => [].concat(...a.map(d => b.map(e => [].concat(d,
 const cartesianOfThree = (a, b, ...c) => (b ? cartesianOfThree(cartesianOfTwo(a, b), ...c) : a);
 
 function findTimeForRobbery(schedule1, schedule2, schedule3, duration) {
-    let result = [];
     for (let element of cartesianOfThree(schedule1, schedule2, schedule3)) {
         if (checkEnoughTimeForRobbery(...element, duration)) {
-            result.push({ from: chooseLatestStart(...element), to: chooseEarliestEnd(...element) });
+            return chooseLatest(...element);
         }
     }
-
-    return result;
 }
 
 function formatTime(timeValue) {
@@ -148,16 +126,10 @@ function checkEnoughTimeForRobbery(interval1, interval2, interval3, duration) {
     );
 }
 
-function chooseLatestStart(time1, time2, time3) {
+function chooseLatest(time1, time2, time3) {
     const timesArray = [time1.from, time2.from, time3.from];
 
     return timesArray.sort().pop();
-}
-
-function chooseEarliestEnd(time1, time2, time3) {
-    const timesArray = [time1.to, time2.to, time3.to];
-
-    return timesArray.sort()[0];
 }
 
 function getGoodTimeForRobberySchedule(schedule, duration, bankWorkingHours) {
