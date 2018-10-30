@@ -48,7 +48,6 @@ function processBorders(borders) {
         if (section.from === -1 && borders[i] > 0) {
             section.from = borders[i];
             i++;
-            continue;
         }
         if (section.to === -1 && borders[i] < 0) {
             section.to = -borders[i];
