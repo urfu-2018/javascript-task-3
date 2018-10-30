@@ -119,8 +119,8 @@ function correctWorkingHours(workingHours) {
 
         return false;
     }
-    if (typeof getTimeForBank(workingHours.from) !== 'number' ||
-        typeof getTimeForBank(workingHours.to) !== 'number') {
+    if (isNaN(getTimeForBank(workingHours.from)) || isNaN(getTimeForBank(workingHours.to))) {
+
         return false;
     }
 
