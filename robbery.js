@@ -17,25 +17,18 @@ const days = ['ПН', 'ВТ', 'СР'];
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
     const bankTimeZone = parseInt(workingHours.from.substring(6));
-    // console.info(schedule, duration, workingHours);
     let bankSchedule = getNewScheduleBank(workingHours, bankTimeZone);
     let newSchedule = getNewScheduleFormat(schedule, bankTimeZone);
-    // const emptyDays = possibleWeHaveEmptyDay(schedule, newSchedule, bankSchedule);
     let mergedSchedule = bankSchedule;
     Object.keys(newSchedule).forEach(key => {
         mergedSchedule = merge(newSchedule[key], mergedSchedule);
     });
-    // let possibleTimes = findDifference(mergedSchedule, bankSchedule);
-    // if (emptyDays.length > 0) {
-    //  possibleTimes.push(...emptyDays);
-    // }
     const rightTimes = (mergedSchedule
         .filter(t => t.to - t.from >= duration))
         .map(t => minutesToDateObject(t.from));
 
     return {
         moments: rightTimes,
-        index: 0,
 
         exists: function () {
             return this.moments.length > 0;
@@ -45,7 +38,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (!this.exists()) {
                 return '';
             }
-            const moment = this.moments[this.index];
+            const moment = this.moments[0];
             template = template.replace(/%DD/, moment.day);
             template = template.replace(/%HH/, moment.hours);
             template = template.replace(/%MM/, moment.minutes);
@@ -54,44 +47,10 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         },
 
         tryLater: function () {
-            if (this.moments[this.index + 1] === undefined) {
-                return false;
-            }
-            this.index += 1;
-
-            return true;
+            return false;
         }
     };
 }
-
-/* function possibleWeHaveEmptyDay(schedule, newSchedule, bankSchedule) {
-    const emptyDays = [];
-    const countDayInSschedule = { 'ПН': 0, 'ВТ': 0, 'СР': 0 };
-    Object.keys(schedule).forEach(key => {
-        schedule[key].forEach(r => {
-            if ((r.from + r.to).indexOf('ПН') !== -1) {
-                countDayInSschedule['ПН']++;
-            }
-            if ((r.from + r.to).indexOf('ВТ') !== -1) {
-                countDayInSschedule['ВТ']++;
-            }
-            if ((r.from + r.to).indexOf('СР') !== -1) {
-                countDayInSschedule['СР']++;
-            }
-        });
-    });
-    Object.keys(countDayInSschedule).forEach(k => {
-        // if (countDayInSschedule[k] === 0) {
-        emptyDays.push({
-            from: dayToMinutes(k) + bankSchedule[0].from,
-            to: (bankSchedule[0].to + dayToMinutes(k) + 24 * 60)
-        });
-        //  }
-    });
-    // const svobVremay = findDifference(emptyDays, newSchedule)
-
-    return emptyDays;
-} */
 
 function dayToMinutes(day) {
     if (day === 'ПН') {
@@ -205,16 +164,14 @@ function revertSchedule(schedule) {
 function getFreeTimeSchedule(schedule) {
     const freeTimeSchedule = [];
     let left = -1;
-    schedule.forEach(function (timeRange) {
+    schedule.forEach(timeRange => {
         if (left < timeRange.from) {
-            const freeTimeRange = { from: left, to: timeRange.from };
-            freeTimeSchedule.push(freeTimeRange);
+            freeTimeSchedule.push({ from: left, to: timeRange.from });
         }
         left = timeRange.to;
     });
-    const end = days.length * 60 * 24;
-    if (left < end) {
-        freeTimeSchedule.push({ 'from': left, 'to': end });
+    if (left < days.length * 60 * 24) {
+        freeTimeSchedule.push({ 'from': left, 'to': days.length * 60 * 24 });
     }
 
     return freeTimeSchedule;
@@ -229,26 +186,6 @@ function getNewScheduleRowFormat(r, bankTimeZone) {
     return { from: newFrom, to: newTo };
 }
 
-/*
-const days = ['ПН', 'ВТ', 'СР'];
-function mmayb1eDays(scheduleBoy) {
-    days.forEach(e => {
-        if (!maybeDay(scheduleBoy, e)) {
-            days.splice(days.indexOf(e), 1)
-        }
-    });
-}
-
-function maybeDay(schedule, day) {
-    let haveTimeIsCurrentDay = false;
-    schedule.forEach(element => {
-        if (element.from.indexOf(day) !== -1) {
-            haveTimeIsCurrentDay = true;
-        }
-    });
-    return haveTimeIsCurrentDay;
-}
-*/
 function parseTimeToMinutes(time, bankTimeZone) {
     return parseInt(time.substring(0, 2)) * 60 +
         parseInt(time.substring(3, 5)) +
