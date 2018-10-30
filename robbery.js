@@ -121,6 +121,8 @@ function findNearByTime(possibleTimes) {
             return [day, possibleTimes[day][0]];
         }
     }
+
+    return [];
 }
 
 function formatNumber(number) {
@@ -131,6 +133,24 @@ function formatNumber(number) {
     }
 
     return '0' + formatted;
+}
+
+const daysPriority = { ПН: 1, ВТ: 2, СР: 3 };
+
+function moveToNextTime(closestTime, possibleTimes) {
+    const days = Object.keys(possibleTimes);
+    const currentTime = closestTime[1];
+
+    for (const day of days) {
+        const filtered = possibleTimes[day].filter(possibleTime => possibleTime > currentTime);
+        if (day === closestTime[0] && filtered.length) {
+            return [day, filtered[0]];
+        } else if (daysPriority[day] > daysPriority[closestTime[0]] && possibleTimes[day].length) {
+            return [day, possibleTimes[day][0]];
+        }
+    }
+
+    return closestTime;
 }
 
 function getAppropriateMoment(schedule, duration, workingHours) {
@@ -167,7 +187,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            if (closestTime) {
+            if (closestTime.length) {
                 return template
                     .replace('%HH', formatNumber(parseInt(closestTime[1] / 60)))
                     .replace('%MM', formatNumber(closestTime[1] % 60))
@@ -184,30 +204,15 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          */
         // eslint-disable-next-line
         tryLater: function() {
-            const days = Object.keys(possibleTimes);
-            const currentTime = closestTime[1];
+            const newTime = moveToNextTime(closestTime, possibleTimes);
 
-            for (const day of days) {
-                const filtered = possibleTimes[day].filter(
-                    possibleTime => possibleTime > currentTime
-                );
-                if (day === closestTime[0] && filtered.length) {
-                    closestTime[1] = filtered[0];
-
-                    return true;
-                } else if (
-                    ((day === 'ВТ' && closestTime[0] === 'ПН') ||
-                        (day === 'СР' && closestTime[0] === 'ВТ') ||
-                        (day === 'СР' && closestTime[0] === 'ПН')) &&
-                    possibleTimes[day].length
-                ) {
-                    closestTime = [day, possibleTimes[day][0]];
-
-                    return true;
-                }
+            if (closestTime[0] === newTime[0] && closestTime[1] === newTime[1]) {
+                return false;
             }
 
-            return false;
+            closestTime = newTime;
+
+            return true;
         }
     };
 }
