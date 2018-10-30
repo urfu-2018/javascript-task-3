@@ -194,10 +194,8 @@ function differenceIntervals(freeTime, unsuitableTime) {
                         to: intervals[i].to
                     });
                 } else {
-                    if (fromIncludedInTheInterval) {
-                        intervals[i].to.time = value.from.time;
-                    } else if (toIncludedInTheInterval) {
-                        intervals[i].from.time = value.to.time;
+                    intervals[i] = d(fromIncludedInTheInterval, toIncludedInTheInterval,
+                        intervals[i], value);
                 }
             }
 
@@ -210,6 +208,14 @@ function differenceIntervals(freeTime, unsuitableTime) {
     });
 
     return arrayFreeTime;
+}
+
+function d(fromIncludedInTheInterval, toIncludedInTheInterval, intervals, value) {
+    if (fromIncludedInTheInterval) {
+        intervals.to.time = value.from.time;
+    } else if (toIncludedInTheInterval) {
+        intervals.from.time = value.to.time;
+    }
 }
 
 function getUnsuitableTime(intervals, timeZone) {
