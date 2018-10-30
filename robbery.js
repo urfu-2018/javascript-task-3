@@ -5,8 +5,6 @@
  * Реализовано оба метода и tryLater
  */
 const isStar = true;
-
-
 const MINUTEINDAY = 24 * 60;
 const DAYS = {
     'ПН': 0,
@@ -116,7 +114,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            return resultTime.length > 0;
+            return resultTime !== null && resultTime.length > 0;
         },
 
         /**
@@ -160,7 +158,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            if (resultTime.length === 0) {
+            if (!this.exists()) {
                 return false;
             }
             let interval = resultTime[0];
