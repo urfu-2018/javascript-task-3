@@ -122,21 +122,26 @@ function getRobberyFreeIntervals(workingHours, schedule) {
             parseTimeToMinutes(`${day} ${workingHours.to}`)));
     }
 
-    let freeIntervals = getFreeIntervals(bankTimeIntervals, schedule.Danny);
-    freeIntervals = getFreeIntervals(freeIntervals, schedule.Rusty);
-    freeIntervals = getFreeIntervals(freeIntervals, schedule.Linus);
+    var dannyIntervals = getRobberyIntervals(schedule.Danny);
+    var rustyIntervals = getRobberyIntervals(schedule.Rusty);
+    var linusIntervals = getRobberyIntervals(schedule.Linus);
 
-    return freeIntervals;
+    let freeIntervals = getIntersectingIntervals(dannyIntervals, rustyIntervals);
+    let freeRobberyIntervals = getIntersectingIntervals(freeIntervals, linusIntervals);
+
+    return getIntersectingIntervals(bankTimeIntervals, freeRobberyIntervals);
 }
 
-function getFreeIntervals(bankIntervals, robberySchedule) {
-    let robberyIntervals = invertIntervals(robberySchedule.map(
+function getRobberyIntervals(schedule) {
+    return invertIntervals(schedule.map(
         x => new TimeInterval(parseTimeToMinutes(x.from), parseTimeToMinutes(x.to)))
         .sort((a, b) => a.from > b.from));
+}
 
+function getIntersectingIntervals(intervalsFirst, intervalsSecond) {
     let intervals = [];
-    for (const interval of bankIntervals) {
-        for (const otherInterval of robberyIntervals) {
+    for (const interval of intervalsFirst) {
+        for (const otherInterval of intervalsSecond) {
             intervals.push(interval.intersects(otherInterval));
         }
     }
