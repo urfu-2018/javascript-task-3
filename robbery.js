@@ -137,7 +137,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     }
     var appropriate = findAppropriate({
         from: 0,
-        to: 3 * MINUTES_IN_DAY - 1
+        to: 3 * MINUTES_IN_DAY
     });
 
     return {
@@ -188,7 +188,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
             var newLimit = {
                 from: appropriate.from + 30,
-                to: 3 * MINUTES_IN_DAY - 1
+                to: 3 * MINUTES_IN_DAY
             };
             var newAppropriate = findAppropriate(newLimit);
 
