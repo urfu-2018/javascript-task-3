@@ -8,11 +8,12 @@ function timeToMinute(time) {
     return parseInt(partsTime[0]) * 60 + parseInt(partsTime[1]);
 }
 
-function getMinuteFromTimeStart(day, time, timeZone) {
+function getMinuteFromTimeStart(day, time, timeZone, workingHours) {
     let minute = 0;
     minute += days[day] * 24 * 60;
     minute += timeToMinute(time);
     minute -= parseInt(timeZone) * 60;
+    minute += parseInt(workingHours.from.slice(workingHours.from.length - 1)) * 60;
 
     return minute;
 }
@@ -21,16 +22,17 @@ function parseDatetime(datetime) {
     return datetime.split(new RegExp('[+ ]', 'g'));
 }
 
-function getTimePoints(schedule) {
+function getTimePoints(schedule, workingHours) {
     const timePoints = [];
     Object.keys(schedule)
         .forEach(name => {
             schedule[name].forEach(evnt => {
                 const timePartsFrom = parseDatetime(evnt.from);
                 const from = getMinuteFromTimeStart(timePartsFrom[0], timePartsFrom[1],
-                    timePartsFrom[2]);
+                    timePartsFrom[2], workingHours);
                 const timePartsTo = parseDatetime(evnt.to);
-                const to = getMinuteFromTimeStart(timePartsTo[0], timePartsTo[1], timePartsTo[2]);
+                const to = getMinuteFromTimeStart(timePartsTo[0], timePartsTo[1],
+                    timePartsTo[2], workingHours);
                 timePoints.push({
                     'name': name,
                     'minute': from,
@@ -56,14 +58,15 @@ function addOpenCloseBankTime(workingHours, timePoints) {
             const datetimeFrom = day + ' ' + workingHours.from;
             const partsTimeFrom = parseDatetime(datetimeFrom);
             timePoints.push({
-                'minute': getMinuteFromTimeStart(day, partsTimeFrom[1], partsTimeFrom[2]),
+                'minute':
+                    getMinuteFromTimeStart(day, partsTimeFrom[1], partsTimeFrom[2], workingHours),
                 'priority': 0,
                 'datetime': datetimeFrom
             });
             const datetimeTo = day + ' ' + workingHours.to;
             const partsTimeTo = parseDatetime(datetimeTo);
             timePoints.push({
-                'minute': getMinuteFromTimeStart(day, partsTimeTo[1], partsTimeTo[2]),
+                'minute': getMinuteFromTimeStart(day, partsTimeTo[1], partsTimeTo[2], workingHours),
                 'priority': 3,
                 'datetime': datetimeTo
             });
@@ -100,9 +103,7 @@ function find(timePoints, isFree, duration) {
     return { 'found': false };
 }
 
-function formatAnswer(foundObj, workingHours) {
-    const bankTimeZone = parseInt(workingHours.from.slice(workingHours.from.length - 1));
-    foundObj.start.minute += bankTimeZone * 60;
+function formatAnswer(foundObj) {
     const dayNumber = Math.floor(foundObj.start.minute / (24 * 60));
     const day = Object.keys(days)
         .find(d => days[d] === dayNumber);
@@ -137,7 +138,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         .forEach(name => {
             isFree[name] = 1;
         });
-    const timePoints = getTimePoints(schedule);
+    const timePoints = getTimePoints(schedule, workingHours);
     addOpenCloseBankTime(workingHours, timePoints);
     timePoints.sort((a, b) => {
         const diff = a.minute - b.minute;
@@ -147,7 +148,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     const foundObj = find(timePoints, isFree, duration);
     let answer;
     if (foundObj.found) {
-        answer = formatAnswer(foundObj, workingHours);
+        answer = formatAnswer(foundObj);
     }
 
     return {
