@@ -9,7 +9,6 @@ const isStar = true;
 const weekDays = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
 const minutesInHour = 60;
 const minutesInDay = 1440;
-let goodSectors;
 
 function convertToMinute(element, workingHours) {
     let from = convert(element.from, workingHours);
@@ -60,7 +59,7 @@ function removeTimeZone(timeZone, workingHours) {
 }
 
 function mergeIntersections(element, busyDates) {
-    let preResult = [1, 0];// 1просто так, 0 ложное значение для проверок
+    let preResult = [1, 0];// 1 просто так, 0 ложное значение для проверок
     for (let index = busyDates.indexOf(element); index < busyDates.length; index++) {
         if (preResult[1]) { // если мы дошли до отрезка который не входит в текущий,
             // то значит и все остальные тоже лишние (sort)
@@ -138,30 +137,14 @@ function getGoodSectors(freeSectors, workingHoursInMinute, duration) {
     for (let index = 0; index < 3; index++) {
         let workingTime = [workingHoursInMinute[0] + index * minutesInDay,
             workingHoursInMinute[1] + index * minutesInDay];
-        let preRes = getGoodSector(freeSectors, workingTime, duration);
-        if (typeof preRes !== 'undefined' && preRes.length !== 0) {
-            result.push(preRes);
-        }
+        result = getGoodSector(freeSectors, workingTime, duration, result);
     }
 
     return result;
 }
 
-/* function invalid(element, workingTime, sector) {
-    if (element[0] > workingTime[0] + minutesInDay || element[1] > workingTime[1] + minutesInDay) {
-        return sector;
-    }
-
-    return 1;
-}*/
-
 function firstCheck(element, workingTime) {
     let sector;
-
-    /* let preRes = invalid(element, workingTime, sector);
-    if (typeof preRes === 'undefined') {
-        return sector;
-    }*/
     if (workingTime[0] <= element[0] && element[1] <= workingTime[1]) {
         sector = [element[0], element[1]];
     }
@@ -184,17 +167,14 @@ function secondCheck(element, workingTime) {
     return sector;
 }
 
-function getGoodSector(freeSectors, workingTime, duration) {
-    let result = [];
+function getGoodSector(freeSectors, workingTime, duration, result) {
     let sector;
     for (let element of freeSectors) {
         sector = firstCheck(element, workingTime);
         if (typeof sector === 'undefined') {
             sector = secondCheck(element, workingTime);
         }
-        console.info(sector);
-        if (typeof sector !== 'undefined' && sector.length !== 0 &&
-        sector[1] - sector[0] >= duration) {
+        if (typeof sector !== 'undefined' && sector[1] - sector[0] >= duration) {
             result.push(sector);
         }
     }
@@ -211,21 +191,6 @@ function getGoodSector(freeSectors, workingTime, duration) {
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-
-    /* duration = 151;
-    workingHours.from = '00:00+5';
-    workingHours.to = '08:00+5';
-    schedule = {
-        Danny: [
-            { from: 'ПН 00:00+5', to: 'СР 00:00+5' }
-        ],
-        Rusty: [
-            { from: 'ПН 11:30+5', to: 'ПН 16:30+5' }
-        ],
-        Linus: [
-            { from: 'СР 09:30+3', to: 'СР 15:00+3' }
-        ]
-    };*/
     let busyDates = []; // Когда заняты
     for (let key of Object.keys(schedule)) {
         schedule[key].forEach(element => {
@@ -248,7 +213,14 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         console.info(element);
     });
     let freeSectors = getFreeSectors(combinedDates, duration);
-    console.info(freeSectors);
+    let goodSectors = getGoodSectors(freeSectors, workingHoursInMinute, duration);
+    let allGoodSectors = {
+        allGoodSectorsInDay: []
+    };
+    // находим отрезки через полчаса относительно подходящих
+    for (let element of goodSectors) {
+        allGoodSectors = addAllTrue(element, duration, allGoodSectors);
+    }
 
     return {
 
@@ -257,9 +229,6 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            goodSectors = getGoodSectors(freeSectors, workingHoursInMinute, duration);
-            console.info('kek');
-            console.info(goodSectors);
             if (goodSectors.length !== 0) {
                 return true;
             }
@@ -274,11 +243,11 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            if (goodSectors.length === 0) {
+            if (allGoodSectors.allGoodSectorsInDay.length === 0) {
                 return '';
             }
-            let day = getAnswer(goodSectors[0][0][0], minutesInDay);
-            let timeWithoutDays = goodSectors[0][0][0] - day * minutesInDay;
+            let day = getAnswer(allGoodSectors.allGoodSectorsInDay[0][0], minutesInDay);
+            let timeWithoutDays = allGoodSectors.allGoodSectorsInDay[0][0] - day * minutesInDay;
             let hour = getAnswer(timeWithoutDays, minutesInHour);
             let timeWithoutHours = timeWithoutDays - hour * minutesInHour;
             let minute = timeWithoutHours;
@@ -294,9 +263,33 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
+            if (allGoodSectors.allGoodSectorsInDay.length > 1) {
+                allGoodSectors.allGoodSectorsInDay.shift();
+
+                return true;
+            }
+
             return false;
         }
     };
+}
+
+function addAllTrue(element, duration, allGoodSectors) {
+    let newElement = [element[0], element[1]];
+    while (newElement[0] + duration <= element[1]) {
+        let flag;
+        let sector = [newElement[0], newElement[0] + duration];
+        flag = firstCheck(sector, newElement);
+        if (typeof flag === 'undefined') {
+            flag = secondCheck(sector, newElement);
+        }
+        if (typeof flag !== 'undefined') {
+            allGoodSectors.allGoodSectorsInDay.push(flag);
+        }
+        newElement[0] += 30;
+    }
+
+    return allGoodSectors;
 }
 
 function getAnswer(time, divider) {
