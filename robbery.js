@@ -132,7 +132,9 @@ function getGoodSectors(freeSectors, workingHoursInMinute, duration) {
     if (workingHoursInMinute[1] - workingHoursInMinute[0] < duration) {
         return [];
     }
-    let result = [];
+    let result = {
+        goodSectorsInDay: []
+    };
     for (let index = 0; index < 3; index++) {
         let workingTime = [workingHoursInMinute[0] + index * minutesInDay,
             workingHoursInMinute[1] + index * minutesInDay];
@@ -186,7 +188,10 @@ function getGoodSector(freeSectors, workingTime, duration, result) {
             sector = secondCheck(element, workingTime);
         }
         if (typeof sector !== 'undefined' && sector[1] - sector[0] >= duration) {
-            result.push(sector);
+            let preRes = {
+                sector: sector
+            };
+            result.goodSectorsInDay.push(preRes);
         }
     }
 
@@ -219,17 +224,17 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             combinedDates.push(element);
         }
     });
-    // находим свободные отрезки относительно занятых
-    let freeSectors = getFreeSectors(combinedDates, duration);
-    // находим свободны отрезки относительно времени работы банка
-    let goodSectors = getGoodSectors(freeSectors, workingHoursInMinute, duration);
+    let goodSectors = getSectors(combinedDates, duration, workingHoursInMinute);
     let allGoodSectors = {
-        allGoodSectorsInDay: []
+        goodSectors: goodSectors.goodSectorsInDay
     };
     // находим отрезки через полчаса относительно подходящих
-    for (let element of goodSectors) {
-        allGoodSectors = addAllTrue(element, duration, allGoodSectors);
+    let index = 0;
+    for (let element of allGoodSectors.goodSectors) {
+        allGoodSectors = addAllTrue(element, duration, allGoodSectors, index);
+        index++;
     }
+    console.info(allGoodSectors.goodSectors);
 
     return {
 
@@ -238,7 +243,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            if (goodSectors.length !== 0) {
+            if (allGoodSectors.goodSectors.length !== 0) {
                 return true;
             }
 
@@ -252,11 +257,12 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            if (allGoodSectors.allGoodSectorsInDay.length === 0) {
+            if (allGoodSectors.goodSectors.length === 0) {
                 return '';
             }
-            let day = getAnswer(allGoodSectors.allGoodSectorsInDay[0][0], minutesInDay);
-            let timeWithoutDays = allGoodSectors.allGoodSectorsInDay[0][0] - day * minutesInDay;
+            let day = getAnswer(allGoodSectors.goodSectors[0].allSectorDay[0][0], minutesInDay);
+            let timeWithoutDays = allGoodSectors.goodSectors[0].allSectorDay[0][0] -
+            day * minutesInDay;
             let hour = getAnswer(timeWithoutDays, minutesInHour);
             let timeWithoutHours = timeWithoutDays - hour * minutesInHour;
             let minute = timeWithoutHours;
@@ -272,10 +278,18 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            if (allGoodSectors.allGoodSectorsInDay.length > 1) {
-                allGoodSectors.allGoodSectorsInDay.shift();
+            if (typeof allGoodSectors.goodSectors[0].allSectorDay !== 'undefined') {
+                console.info(allGoodSectors.goodSectors[0]);
+                if (allGoodSectors.goodSectors[0].allSectorDay.length > 1) {
+                    allGoodSectors.goodSectors[0].allSectorDay.shift();
 
-                return true;
+                    return true;
+                }
+                if (allGoodSectors.goodSectors.length > 1) {
+                    allGoodSectors.goodSectors.shift();
+
+                    return true;
+                }
             }
 
             return false;
@@ -283,9 +297,18 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     };
 }
 
-function addAllTrue(element, duration, allGoodSectors) {
-    let newElement = [element[0], element[1]];
-    while (newElement[0] + duration <= element[1]) {
+function getSectors(combinedDates, duration, workingHoursInMinute) {
+    // находим свободные отрезки относительно занятых
+    let freeSectors = getFreeSectors(combinedDates, duration);
+    // возвращаем свободные отрезки относительно времени работы банка
+
+    return getGoodSectors(freeSectors, workingHoursInMinute, duration);
+}
+
+function addAllTrue(element, duration, allGoodSectors, index) {
+    let newElement = [element.sector[0], element.sector[1]];
+    allGoodSectors.goodSectors[index].allSectorDay = [];
+    while (newElement[0] + duration <= newElement[1]) {
         let flag;
         let sector = [newElement[0], newElement[0] + duration];
         flag = firstCheck(sector, newElement);
@@ -293,7 +316,8 @@ function addAllTrue(element, duration, allGoodSectors) {
             flag = secondCheck(sector, newElement);
         }
         if (typeof flag !== 'undefined') {
-            allGoodSectors.allGoodSectorsInDay.push(flag);
+
+            allGoodSectors.goodSectors[index].allSectorDay.push(flag);
         }
         newElement[0] += 30;
     }
