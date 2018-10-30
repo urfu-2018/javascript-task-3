@@ -62,7 +62,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         .concat([startTime, endTime, -endWeek]);
     let answer = Object.keys(schedule)
         .map((friend)=>[...schedule[friend]])
-        .reduce((a, b)=>a.concat(b))
+        .reduce((a, b)=>a.concat(b), [])
         .map((record)=>
             [
                 dayTimeStrToMinutes(...record.from.split(/ |\+/), bankTimeZone),
