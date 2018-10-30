@@ -286,11 +286,11 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
                 return '';
             }
-            if(h.toString().length === 1) {
-                h = '0' + h.toString()
+            if (h.toString().length === 1) {
+                h = '0' + h.toString();
             }
-            if(m.toString().length === 1) {
-                m = '0' + m.toString()
+            if (m.toString().length === 1) {
+                m = '0' + m.toString();
             }
             const newTemplate = template.replace('%DD', day).replace('%HH', h)
                 .replace('%MM', m);
