@@ -6,7 +6,7 @@
  */
 const isStar = true;
 
-let timeLine = [];
+
 
 function convertDayToMinuts(day) {
     if (day === 'ПН') {
@@ -57,21 +57,21 @@ function convertToMinuts(timeString) {
     return minuts;
 }
 
-function addWorkingHoursToTimeLine(workingHours) {
-    timeLine.push({ first: convertToMinuts('ПН ' + workingHours.from), second: 1 });
-    timeLine.push({ first: convertToMinuts('ПН ' + workingHours.to), second: -1 });
-    timeLine.push({ first: convertToMinuts('ВТ ' + workingHours.from), second: 1 });
-    timeLine.push({ first: convertToMinuts('ВТ ' + workingHours.to), second: -1 });
-    timeLine.push({ first: convertToMinuts('СР ' + workingHours.from), second: 1 });
-    timeLine.push({ first: convertToMinuts('СР ' + workingHours.to), second: -1 });
+function addWorkingHoursToTimeLine(timeLine, workingHours) {
+    timeLine.push({ first: convertToMinuts('ПН ' + workingHours.from), second: 3 });
+    timeLine.push({ first: convertToMinuts('ПН ' + workingHours.to), second: -3 });
+    timeLine.push({ first: convertToMinuts('ВТ ' + workingHours.from), second: 3 });
+    timeLine.push({ first: convertToMinuts('ВТ ' + workingHours.to), second: -3 });
+    timeLine.push({ first: convertToMinuts('СР ' + workingHours.from), second: 3 });
+    timeLine.push({ first: convertToMinuts('СР ' + workingHours.to), second: -3 });
 }
 
-function scanLine(duration, lastAppropriateMoment) {
-    let notBusy = 0;
+function scanLine(timeLine, duration, lastAppropriateMoment) {
+    let busy = 0;
     for (let i = 0; i < timeLine.length - 1; i++) {
-        notBusy += timeLine[i].second;
-        if (notBusy === 4 &&
-            timeLine[i + 1].first - timeLine[i].first > duration &&
+        busy += timeLine[i].second;
+        if (busy === 3 &&
+            (timeLine[i + 1].first - timeLine[i].first) >= duration &&
             timeLine[i].first > lastAppropriateMoment) {
 
             return timeLine[i].first;
@@ -92,20 +92,23 @@ function scanLine(duration, lastAppropriateMoment) {
  */
 
 function getAppropriateMoment(schedule, duration, workingHours) {
+    let timeLine = [];
     console.info(schedule, duration, workingHours);
     let bankTimeZone = parseInt(workingHours.from.match('\\+(\\d)')[1]);
     let keys = Object.keys(schedule);
     for (let i = 0; i < keys.length; i++) {
         let roberSchedule = schedule[keys[i]];
         for (let j = 0; j < roberSchedule.length; j++) {
-            timeLine.push({ first: convertToMinuts(roberSchedule[j].from), second: 1 });
-            timeLine.push({ first: convertToMinuts(roberSchedule[j].to), second: -1 });
+            timeLine.push({ first: convertToMinuts(roberSchedule[j].from), second: -1 });
+            timeLine.push({ first: convertToMinuts(roberSchedule[j].to), second: 1 });
         }
     }
-    addWorkingHoursToTimeLine(workingHours);
-    timeLine.sort((a, b) => a.first - b.first);
-    let approproateMoment = scanLine(duration, -1);
-
+    addWorkingHoursToTimeLine(timeLine, workingHours);
+    timeLine.sort((a, b) => a !== b ? a.first - b.first : b.second - a.second);
+    let approproateMoment = scanLine(timeLine, duration, -1);
+    timeLine: timeLine;
+    approproateMoment: approproateMoment;
+    
     return {
 
         /**
@@ -125,8 +128,21 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         format: function (template) {
             if (approproateMoment !== -1) {
                 let time = сonvertminutsToFormat(approproateMoment, bankTimeZone);
-                let answer = template.replace(/%HH/, time.hours.toString())
-                    .replace(/%MM/gi, time.minuts.toString())
+                let hours;
+                let minuts;
+                if (time.hours < 10) {
+                    hours = '0' + time.hours.toString();
+                } else {
+                    hours = time.hours.toString();
+                }
+                if (time.minuts < 10) {
+                    minuts = '0' + time.minuts.toString();
+                } else {
+                    minuts = time.minuts.toString();
+                }
+                
+                let answer = template.replace(/%HH/, hours)
+                    .replace(/%MM/gi, minuts)
                     .replace(/%DD/gi, time.day);
 
                 return answer;
@@ -141,7 +157,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            let newApproproateMoment = scanLine(duration, approproateMoment);
+            timeLine.push({ first: approproateMoment + 30, second: 0 });
+            timeLine.sort((a, b) => a !== b ? a.first - b.first : b.second - a.second);
+            let newApproproateMoment = scanLine(timeLine, duration, approproateMoment);
             if (newApproproateMoment !== -1) {
                 approproateMoment = newApproproateMoment;
 
