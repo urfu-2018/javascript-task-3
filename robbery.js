@@ -18,13 +18,17 @@ const days = ['ПН', 'ВТ', 'СР'];
 function getAppropriateMoment(schedule, duration, workingHours) {
     const bankTimeZone = parseInt(workingHours.from.substring(6));
     // console.info(schedule, duration, workingHours);
-    let newSchedule = getNewScheduleFormat(schedule, bankTimeZone);
     let bankSchedule = getNewScheduleBank(workingHours, bankTimeZone);
+    const emptyDays = possibleWeHaveEmptyDay(schedule, bankSchedule);
+    let newSchedule = getNewScheduleFormat(schedule, bankTimeZone);
     let mergedSchedule = [];
-    Object.keys(newSchedule).forEach(function (key) {
+    Object.keys(newSchedule).forEach(key => {
         mergedSchedule = merge(newSchedule[key], mergedSchedule);
     });
     let possibleTimes = findDifference(mergedSchedule, bankSchedule);
+    if (emptyDays.length > 0) {
+        possibleTimes.push(...emptyDays);
+    }
     const rightTimes = (possibleTimes
         .filter(t => t.to - t.from >= duration))
         .map(t => minutesToDateObject(t.from));
@@ -58,6 +62,30 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             return true;
         }
     };
+}
+
+function possibleWeHaveEmptyDay(schedule, bankSchedule) {
+    const emptyDays = [];
+    const countDayInSschedule = { 'ПН': 0, 'ВТ': 0, 'СР': 0 };
+    Object.keys(schedule).forEach(key => {
+        schedule[key].forEach(r => {
+            if ((r.from + r.to).indexOf('ПН') !== -1) {
+                countDayInSschedule['ПН']++
+            }
+            if ((r.from + r.to).indexOf('ВТ') !== -1) {
+                countDayInSschedule['ВТ']++
+            }
+            if ((r.from + r.to).indexOf('СР') !== -1) {
+                countDayInSschedule['СР']++
+            }
+        });
+    });
+    Object.keys(countDayInSschedule).forEach(k => {
+        if (countDayInSschedule[k] === 0) {
+            emptyDays.push({ from: dayToMinutes(k)+bankSchedule[0].from, to: (bankSchedule[0].to + dayToMinutes(k) + 24 * 60) });
+        }
+    })
+    return emptyDays;
 }
 
 function dayToMinutes(day) {
@@ -103,7 +131,7 @@ function getUnion(timeRange1, timeRange2) {
 
 function getNewScheduleBank(workingHours, bankTimeZone) {
     const newWorkSchedule = [];
-    days.forEach(function (day) {
+    days.forEach(day => {
         const daySchedule = {
             from: dayToMinutes(day) + parseTimeToMinutes(workingHours.from, bankTimeZone),
             to: dayToMinutes(day) + parseTimeToMinutes(workingHours.to, bankTimeZone)
@@ -166,7 +194,7 @@ function merge(scheduleFirstBoy, scheduleSecondBoy) {
 
 function getNewScheduleFormat(schedule, bankTimeZone) {
     const newSchedule = {};
-    Object.keys(schedule).forEach(function (key) {
+    Object.keys(schedule).forEach(key => {
         newSchedule[key] = schedule[key].map(r => getNewScheduleRowFormat(r, bankTimeZone));
     });
 
