@@ -7,65 +7,6 @@
 const isStar = true;
 
 const weekdays = ['ПН', 'ВТ', 'СР'];
-let i = 0;
-let scheduleFull = [];
-let bankTimeZone;
-let startIndex;
-let checkBank = false;
-let checkDanny = true;
-let checkRusty = true;
-let checkLinus = true;
-let actualMinutes;
-
-function createItemSchedule(minutes, name, status) {
-    return { minutes, name, status };
-}
-
-function createMinutesOfDay(hour, minute, timezone, weekday = 0) {
-    return weekdays.indexOf(weekday) * 24 * 60 + (parseInt(hour) -
-        parseInt(timezone)) * 60 + parseInt(minute);
-}
-
-function createSchedulesCompanions(schedule) {
-    const keys = Object.keys(schedule);
-    let scheduleItem;
-    keys.forEach(name => {
-        schedule[name].forEach(participant => {
-            scheduleItem = participant.from.split(/ |:|\+/);
-            scheduleFull[i] = createItemSchedule(
-                createMinutesOfDay(scheduleItem[1], scheduleItem[2],
-                    scheduleItem[3], scheduleItem[0]), name, 'from');
-            i++;
-            scheduleItem = participant.to.split(/ |:|\+/);
-            scheduleFull[i] = createItemSchedule(
-                createMinutesOfDay(scheduleItem[1], scheduleItem[2],
-                    scheduleItem[3], scheduleItem[0]), name, 'to');
-            i++;
-        });
-    });
-}
-
-function createSchedulesBank(workingHours) {
-    let scheduleItemFrom;
-    let scheduleItemTo;
-    scheduleItemFrom = workingHours.from.split(/ |:|\+/);
-    scheduleItemTo = workingHours.to.split(/ |:|\+/);
-    bankTimeZone = scheduleItemFrom[2];
-    weekdays.forEach(weekday => {
-        scheduleFull[i] = createItemSchedule(
-            createMinutesOfDay(scheduleItemFrom[0], scheduleItemFrom[1],
-                scheduleItemFrom[2], weekday), 'Bank', 'from');
-        i++;
-        scheduleFull[i] = createItemSchedule(
-            createMinutesOfDay(scheduleItemTo[0], scheduleItemTo[1],
-                scheduleItemTo[2], weekday), 'Bank', 'to');
-        i++;
-    });
-}
-
-function compare(a, b) {
-    return a.minutes - b.minutes;
-}
 
 /**
  * @param {Object} schedule – Расписание Банды
@@ -76,13 +17,16 @@ function compare(a, b) {
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    startIndex = 0;
-    if (scheduleFull.length === 0) {
-        createSchedulesCompanions(schedule);
-        createSchedulesBank(workingHours);
-        scheduleFull.sort(compare);
-    }
-    let templateMinute = findFreeSchedule(duration);
+    let bankTime = parseInt(workingHours.from.slice(6));
+    let dannyFreeTime = invertIntervals(scheduleToIntervals(schedule.Danny, bankTime));
+    let linusFreeTime = invertIntervals(scheduleToIntervals(schedule.Linus, bankTime));
+    let rustyFreeTime = invertIntervals(scheduleToIntervals(schedule.Rusty, bankTime));
+
+    let bankSchedule = scheduleToIntervals(workingHoursToSchedule(workingHours), bankTime);
+    let timesWhenAllFree = intersectSchedules(dannyFreeTime, linusFreeTime);
+    timesWhenAllFree = intersectSchedules(timesWhenAllFree, rustyFreeTime);
+    timesWhenAllFree = intersectSchedules(timesWhenAllFree, bankSchedule);
+    let goodTimes = timesWhenAllFree.filter(x => x[1] - x[0] >= duration);
 
     return {
 
@@ -91,11 +35,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            if (templateMinute !== 0) {
-                return true;
-            }
-
-            return false;
+            return goodTimes.length > 0;
         },
 
         /**
@@ -105,23 +45,23 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            if (templateMinute !== 0) {
-                const weekdayIndex = Math.floor(templateMinute / (24 * 60));
-                const weekday = weekdays[weekdayIndex];
-                const hour = (Math.floor((templateMinute - 24 * 60 * weekdayIndex) /
-                    60)).toString();
-                let paddedHour = hour.length === 1 ? '0' + hour : hour;
-                const minute = (templateMinute % 60).toString();
-                let paddedMinute = minute.length === 1 ? '0' + minute : minute;
-                const replacementDict = {
-                    '%HH': paddedHour, '%DD': weekday,
-                    '%MM': paddedMinute
-                };
-
-                return template.replace(/%HH|%MM|%DD/gi, m => replacementDict[m]);
+            if (goodTimes.length === 0) {
+                return '';
             }
+            let startTime = goodTimes[0][0];
+            const weekdayIndex = Math.floor(startTime / (24 * 60));
+            const weekday = weekdays[weekdayIndex];
+            const hour = (Math.floor((startTime - 24 * 60 * weekdayIndex) /
+                60)).toString();
+            let paddedHour = hour.length === 1 ? '0' + hour : hour;
+            const minute = (startTime % 60).toString();
+            let paddedMinute = minute.length === 1 ? '0' + minute : minute;
+            const replacementDict = {
+                '%HH': paddedHour, '%DD': weekday,
+                '%MM': paddedMinute
+            };
 
-            return '';
+            return template.replace(/%HH|%MM|%DD/gi, m => replacementDict[m]);
         },
 
         /**
@@ -130,14 +70,17 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            let oldTemplate = templateMinute;
-            templateMinute = findFreeSchedule(duration, templateMinute);
-            if (templateMinute === 0 && oldTemplate !== 0) {
-                templateMinute = oldTemplate;
-
+            if (goodTimes.length === 0) {
                 return false;
             }
-            if (templateMinute !== 0) {
+            if (goodTimes[0][1] - goodTimes[0][0] >= duration + 30) {
+                goodTimes[0][0] += 30;
+
+                return true;
+            }
+            if (goodTimes.length > 1) {
+                goodTimes.shift();
+
                 return true;
             }
 
@@ -146,90 +89,57 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     };
 }
 
-function findFreeSchedule(duration, lastTime = 0) {
-    actualMinutes = 0;
-    let result;
-    for (let j = startIndex; j < scheduleFull.length; j++) {
-        let scheduleItem = scheduleFull[j];
-        if (scheduleItem.status === 'from') {
-            choiseFrom(scheduleItem);
-        } else if (scheduleItem.status === 'to') {
-            choiseTo(scheduleItem);
-        }
-        result = handler(lastTime, duration, scheduleItem, j);
-        if (result !== 0) {
-            return result;
-        }
-    }
+function convertToMinutesInBankTime(timestring, bankTime) {
+    let day = timestring.slice(0, 2);
+    let hours = parseInt(timestring.slice(3, 5)) - parseInt(timestring.slice(9)) + bankTime;
+    let minutes = parseInt(timestring.slice(6, 8));
 
-    return 0;
+    return (weekdays.indexOf(day)*24 + hours) * 60 + minutes;
 }
 
-function handler(lastTime, duration, scheduleItem, j) {
-    if (checkBank && checkDanny && checkRusty && checkLinus) {
-        actualMinutes = scheduleItem.minutes + duration;
-        if (actualMinutes <= scheduleFull[j + 1].minutes) {
-            return checkLastTime(lastTime, duration, scheduleItem, j);
-        }
-    }
-
-    return 0;
+function scheduleToIntervals(schedule, bankTime) {
+    return schedule.map(x =>
+        [convertToMinutesInBankTime(x.from, bankTime),
+            convertToMinutesInBankTime(x.to, bankTime)]
+    );
 }
 
-function checkLastTime(lastTime, duration, scheduleItem, j) {
-    if (lastTime === 0) {
-        startIndex = j;
+function intersectSchedules(firstSchedule, secondSchedule) {
+    firstSchedule.sort((a, b) => a[0] - b[0]);
+    secondSchedule.sort((a, b) => a[0] - b[0]);
+    const intersection = [];
+    firstSchedule.forEach(first => {
+        secondSchedule.forEach(second => {
+            if (first[1] > second[0] && first[0] < second[1]) {
+                intersection.push([Math.max(first[0], second[0]), Math.min(first[1], second[1])]);
+            }
+        });
+    });
 
-        return actualMinutes - duration + bankTimeZone * 60;
-    } else if ((lastTime + 30 + duration - bankTimeZone * 60) <= scheduleFull[j + 1].minutes &&
-        (actualMinutes - duration + bankTimeZone * 60) >= lastTime) {
-        startIndex = j;
-        if ((actualMinutes - duration + bankTimeZone * 60) !== lastTime) {
-            return actualMinutes - duration + bankTimeZone * 60;
-        }
+    return intersection;
+}
+function workingHoursToSchedule(workingHours) {
+    let prefixes = ['ПН ', 'ВТ ', 'СР '];
 
-        return actualMinutes + 30 - duration + bankTimeZone * 60;
-    }
+    return prefixes.map(x => {
+        return { from: x + workingHours.from, to: x + workingHours.to };
+    });
 
-    return 0;
 }
 
-function choiseFrom(scheduleItem) {
-    switch (scheduleItem.name) {
-        case 'Bank':
-            checkBank = true;
-            break;
-        case 'Danny':
-            checkDanny = false;
-            break;
-        case 'Rusty':
-            checkRusty = false;
-            break;
-        case 'Linus':
-            checkLinus = false;
-            break;
-        default:
-            break;
-    }
-}
 
-function choiseTo(scheduleItem) {
-    switch (scheduleItem.name) {
-        case 'Bank':
-            checkBank = false;
-            break;
-        case 'Danny':
-            checkDanny = true;
-            break;
-        case 'Rusty':
-            checkRusty = true;
-            break;
-        case 'Linus':
-            checkLinus = true;
-            break;
-        default:
-            break;
-    }
+function invertIntervals(intervals) {
+    intervals.sort((a, b)=>a[0] - b[0]);
+    const max = 72 * 60 - 1;
+    let rightBorder = 0;
+    const newIntervals = [];
+    intervals.forEach(x => {
+        newIntervals.push([rightBorder, x[0]]);
+        rightBorder = x[1];
+    });
+    newIntervals.push([rightBorder, max]);
+
+    return newIntervals;
 }
 
 module.exports = {
