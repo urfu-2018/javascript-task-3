@@ -56,7 +56,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     let index = 0;
 
     let allIntervals = getRobberyFreeIntervals(workingHours, schedule)
-        .filter(i => i.length() >= duration);
+        .filter(i => i.length() >= duration)
+        .sort((a, b) => a.from > b.from);
 
     return {
 
@@ -127,9 +128,9 @@ function getRobberyFreeIntervals(workingHours, schedule) {
     var linusIntervals = getRobberyIntervals(schedule.Linus);
 
     let freeIntervals = getIntersectingIntervals(dannyIntervals, rustyIntervals);
-    let freeRobberyIntervals = getIntersectingIntervals(freeIntervals, linusIntervals);
+    freeIntervals = getIntersectingIntervals(freeIntervals, linusIntervals);
 
-    return getIntersectingIntervals(bankTimeIntervals, freeRobberyIntervals);
+    return getIntersectingIntervals(bankTimeIntervals, freeIntervals);
 }
 
 function getRobberyIntervals(schedule) {
