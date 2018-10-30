@@ -20,10 +20,11 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     // console.info(schedule, duration, workingHours);
     let newSchedule = getNewScheduleFormat(schedule, bankTimeZone);
     let bankSchedule = getNewScheduleBank(workingHours, bankTimeZone);
-    let merge1 = merge(newSchedule.Danny, newSchedule.Rusty);
-    let merge2 = merge(merge1, newSchedule.Linus);
-    let merge3 = merge2; // merge(newSchedule.Linus, merge2)
-    let possibleTimes = findDifference(merge3, bankSchedule);
+    let mergedSchedule = [];
+    Object.keys(newSchedule).forEach(function (key) {
+        mergedSchedule = merge(newSchedule[key], mergedSchedule);
+    });
+    let possibleTimes = findDifference(mergedSchedule, bankSchedule);
     const rightTimes = (possibleTimes
         .filter(t => t.to - t.from >= duration))
         .map(t => minutesToDateObject(t.from));
@@ -164,10 +165,10 @@ function merge(scheduleFirstBoy, scheduleSecondBoy) {
 }
 
 function getNewScheduleFormat(schedule, bankTimeZone) {
-    const newSchedule = { Danny: [], Rusty: [], Linus: [] };
-    newSchedule.Danny = schedule.Danny.map(r => getNewScheduleRowFormat(r, bankTimeZone));
-    newSchedule.Rusty = schedule.Rusty.map(r => getNewScheduleRowFormat(r, bankTimeZone));
-    newSchedule.Linus = schedule.Linus.map(r => getNewScheduleRowFormat(r, bankTimeZone));
+    const newSchedule = {};
+    Object.keys(schedule).forEach(function (key) {
+        newSchedule[key] = schedule[key].map(r => getNewScheduleRowFormat(r, bankTimeZone));
+    });
 
     return newSchedule;
 }
