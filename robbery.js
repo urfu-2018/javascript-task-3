@@ -58,11 +58,6 @@ function checkBank(start, scheduleBank, duration) {
 function findTimeToRobbery(scheduleBand, scheduleBank, duration) {
     const endTime = 24 * 60 * robbery.length;
 
-    // const checkRobbers = (current, { from, to }) => {
-    //     return (current < from && current + duration <= from) ||
-    //         (current >= to && current + duration >= to);
-    // };
-
     for (let startRobbery = 0; startRobbery < endTime; startRobbery++) {
         const hasFreeTime =
             checkRobbers(startRobbery, scheduleBand, duration).length === scheduleBand.length;
