@@ -55,10 +55,14 @@ function checkBank(start, scheduleBank, duration) {
     return res;
 }
 
-function findTimeToRobbery(scheduleBand, scheduleBank, duration) {
+function findTimeToRobbery(scheduleBand, scheduleBank, duration, needMoment) {
+    if (typeof needMoment === 'undefined') {
+        needMoment = 0;
+    }
+
     const endTime = 24 * 60 * robbery.length;
 
-    for (let startRobbery = 0; startRobbery < endTime; startRobbery++) {
+    for (let startRobbery = needMoment; startRobbery < endTime; startRobbery++) {
         const hasFreeTime =
             checkRobbers(startRobbery, scheduleBand, duration).length === scheduleBand.length;
         const isBankWork = checkBank(startRobbery, scheduleBank, duration).length > 0;
@@ -99,7 +103,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             to: getAllTime(`${robbery[i]} ${workingHours.to}`).time });
     }
 
-    const moment = findTimeToRobbery(scheduleBandMinutes, scheduleBankMinutes, duration);
+    let moment = findTimeToRobbery(scheduleBandMinutes, scheduleBankMinutes, duration);
 
     return {
 
@@ -137,7 +141,18 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            return false;
+            if (!moment.find) {
+                return false;
+            }
+
+            const fewMomentsLater = findTimeToRobbery(scheduleBandMinutes, scheduleBankMinutes,
+                duration, moment.time + 30);
+
+            if (fewMomentsLater.find) {
+                moment = fewMomentsLater;
+            }
+
+            return fewMomentsLater.find;
         }
     };
 }
