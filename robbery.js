@@ -1,4 +1,5 @@
 'use strict';
+const utils = require('./utils');
 
 /**
  * Сделано задание на звездочку
@@ -15,7 +16,19 @@ const isStar = true;
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    console.info(schedule, duration, workingHours);
+    const bankOpenedIntervals = getBankOpenedIntervals(workingHours);
+    const bankTimeZone = Number(workingHours.from.split('+')[1]);
+    const timeZoneShift = bankTimeZone * 60;
+    const gangstersBusyIntervals = Object.values(schedule).map(man =>
+        man.map(utils.convertScheduleEntryToInterval));
+
+
+    let momentFound = findNext(
+        [-timeZoneShift, 70 * 60 - timeZoneShift],
+        bankOpenedIntervals,
+        gangstersBusyIntervals,
+        duration
+    );
 
     return {
 
@@ -24,7 +37,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            return false;
+            return momentFound !== null;
         },
 
         /**
@@ -34,7 +47,11 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            return template;
+            if (momentFound === null) {
+                return '';
+            }
+
+            return utils.formatDate(template, momentFound, bankTimeZone);
         },
 
         /**
@@ -43,13 +60,65 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
+            const next = findNext(
+                [momentFound + 30, 70 * 60 - timeZoneShift],
+                bankOpenedIntervals,
+                gangstersBusyIntervals,
+                duration
+            );
+
+            if (next !== null) {
+                momentFound = next;
+
+                return true;
+            }
+
             return false;
         }
     };
 }
 
+function findNext(domain, bankOpenedIntervals, gangstersBusyIntervals, duration) {
+    const [start, end] = domain;
+
+    let streak = 0;
+
+    for (let i = start; i < end; i++) {
+        if (streak >= duration) {
+            return i - duration;
+        }
+        if (isMomentAvailableToGang(bankOpenedIntervals, gangstersBusyIntervals, i)) {
+            streak ++;
+
+        } else {
+            streak = 0;
+        }
+    }
+
+    return null;
+}
+
+function isMomentAvailableToGang(bankSchedule, gangstersSchedule, moment) {
+    const bankOpened = bankSchedule.some((dayInterval) =>
+        utils.isValueInInterval(dayInterval, moment));
+    const gangstersFree = !gangstersSchedule.some((gangster) =>
+        gangster.some((interval) => utils.isValueInInterval(interval, moment)));
+
+    return bankOpened && gangstersFree;
+}
+
+function getBankOpenedIntervals(bankWorkingHours) {
+    return ['ПН', 'ВТ', 'СР'].map(
+        day => [
+            utils.parseDateWithTimezone(`${day} ${bankWorkingHours.from}`),
+            utils.parseDateWithTimezone(`${day} ${bankWorkingHours.to}`)
+        ]
+    );
+}
+
 module.exports = {
     getAppropriateMoment,
-
+    getBankOpenedIntervals,
+    isMomentAvailableToGang,
     isStar
 };
