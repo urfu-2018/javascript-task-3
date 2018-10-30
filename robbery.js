@@ -144,7 +144,7 @@ function getFreeTimeIntervals(busyIntervals, timeFrame) {
 
     const freeIntervals = [];
 
-    if (sortedIntervals[0] > timeFrame.from) {
+    if (sortedIntervals[0].from > timeFrame.from) {
         freeIntervals.push({
             from: timeFrame.from,
             to: sortedIntervals[0].from
