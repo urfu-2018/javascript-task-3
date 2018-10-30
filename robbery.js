@@ -4,7 +4,8 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = true;
+const isStar = false;
+const days = ['ПН', 'ВТ', 'СР'];
 
 /**
  * @param {Object} schedule – Расписание Банды
@@ -15,67 +16,200 @@ const isStar = true;
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    console.info(schedule, duration, workingHours);
-    getNewScheduleFormat(schedule)
-    console.info(days);
-    return {
+    const bankTimeZone = parseInt(workingHours.from.substring(6));
+    // console.info(schedule, duration, workingHours);
+    let newSchedule = getNewScheduleFormat(schedule, bankTimeZone);
+    let bankSchedule = getNewScheduleBank(workingHours, bankTimeZone);
+    let merge1 = merge(newSchedule.Danny, newSchedule.Rusty);
+    let merge2 = merge(merge1, newSchedule.Linus);
+    let merge3 = merge2; // merge(newSchedule.Linus, merge2)
+    let possibleTimes = findDifference(merge3, bankSchedule);
+    const rightTimes = (possibleTimes
+        .filter(t => t.to - t.from >= duration))
+        .map(t => minutesToDateObject(t.from));
 
-        /**
-         * Найдено ли время
-         * @returns {Boolean}
-         */
+    return {
+        moments: rightTimes,
+        index: 0,
+
         exists: function () {
-            return false;
+            return this.moments.length > 0;
         },
 
-        /**
-         * Возвращает отформатированную строку с часами для ограбления
-         * Например, "Начинаем в %HH:%MM (%DD)" -> "Начинаем в 14:59 (СР)"
-         * @param {String} template
-         * @returns {String}
-         */
         format: function (template) {
+            if (!this.exists()) {
+                return '';
+            }
+            const moment = this.moments[this.index];
+            template = template.replace(/%DD/, moment.day);
+            template = template.replace(/%HH/, moment.hours);
+            template = template.replace(/%MM/, moment.minutes);
+
             return template;
         },
 
-        /**
-         * Попробовать найти часы для ограбления позже [*]
-         * @star
-         * @returns {Boolean}
-         */
         tryLater: function () {
-            return false;
+            if (this.moments[this.index + 1] === undefined) {
+                return false;
+            }
+            this.index += 1;
+
+            return true;
         }
     };
 }
 
-function DayToMinutes(day) {
+function dayToMinutes(day) {
     if (day === 'ПН') {
         return 0;
     } else if (day === 'ВТ') {
         return 24 * 60;
     } else if (day === 'СР') {
         return 24 * 2 * 60;
-    } else
-        return -1;
-}
-
-function getNewScheduleFormat(schedule) {
-    const newSchedule = { Danny: [], Rusty: [], Linus: [] }
-    schedule.Danny.map(r => getNewScheduleRowFormat(r))
-}
-
-function getNewScheduleRowFormat(r) {
-    const newFrom = DayToMinutes(r.from.substring(0, 2)) + parseTimeToMinutes(r.from.substring(3));
-    const newTo = DayToMinutes(r.to.substring(0, 2)) + parseTimeToMinutes(r.to.substring(3));
-    if (newTo - newFrom < duration) {
-        return null;
     }
-    else {
-        return { from: newFrom, to: newTo }
-    }
+
+    return -1;
 }
 
+function firstConditionIsTheUnion(timeRange1, timeRange2) {
+    return timeRange1.from <= timeRange2.from && timeRange2.from <= timeRange1.to;
+}
+
+function secondConditionIsTheUnion(timeRange1, timeRange2) {
+    return timeRange2.from <= timeRange1.from && timeRange1.from <= timeRange2.to;
+}
+
+function getUnion(timeRange1, timeRange2) {
+    let union = {};
+    if (firstConditionIsTheUnion(timeRange1, timeRange2)) {
+        if (timeRange2.to >= timeRange1.to) {
+            union = { 'from': timeRange1.from, 'to': timeRange2.to };
+        } else {
+            union = { 'from': timeRange1.from, 'to': timeRange1.to };
+        }
+    } else if (secondConditionIsTheUnion(timeRange1, timeRange2)) {
+        if (timeRange1.to >= timeRange2.to) {
+            union = { 'from': timeRange2.from, 'to': timeRange1.to };
+        } else {
+            union = { 'from': timeRange2.from, 'to': timeRange2.to };
+        }
+    } else {
+        return false;
+    }
+
+    return union;
+}
+
+function getNewScheduleBank(workingHours, bankTimeZone) {
+    const newWorkSchedule = [];
+    days.forEach(function (day) {
+        const daySchedule = {
+            from: dayToMinutes(day) + parseTimeToMinutes(workingHours.from, bankTimeZone),
+            to: dayToMinutes(day) + parseTimeToMinutes(workingHours.to, bankTimeZone)
+        };
+        newWorkSchedule.push(daySchedule);
+    });
+
+    return newWorkSchedule;
+}
+
+function minutesToDateObject(minutes) {
+    const minutesInDay = 24 * 60;
+    const daysCount = Math.floor(minutes / minutesInDay);
+    const d = days[daysCount];
+    minutes -= daysCount * minutesInDay;
+    const hoursCount = Math.floor(minutes / 60);
+    const h = numberToTwoDigitableString(hoursCount);
+    minutes -= hoursCount * 60;
+    const m = numberToTwoDigitableString(minutes);
+
+    return { 'day': d, 'hours': h, 'minutes': m };
+
+}
+
+
+function numberToTwoDigitableString(number) {
+    if (number < 10) {
+        return '0' + number;
+    }
+
+    return number.toString();
+}
+
+function merge(scheduleFirstBoy, scheduleSecondBoy) {
+    const mergedSchedule = [];
+    const countUseScheduleSecondBoy = [];
+    scheduleSecondBoy.forEach(() => countUseScheduleSecondBoy.push(0));
+    scheduleFirstBoy.forEach(timeZonaFirst => {
+        let notMerged = true;
+        scheduleSecondBoy.forEach((timeZonaSecond, i) => {
+            let union = getUnion(timeZonaFirst, timeZonaSecond);
+            if (union) {
+                countUseScheduleSecondBoy[i]++;
+                mergedSchedule.push(union);
+                notMerged = false;
+            }
+        });
+        if (notMerged) {
+            mergedSchedule.push(timeZonaFirst);
+        }
+    });
+    countUseScheduleSecondBoy.forEach((x, i) => {
+        if (x === 0) {
+            mergedSchedule.push(scheduleSecondBoy[i]);
+        }
+    });
+
+    return mergedSchedule;
+}
+
+function getNewScheduleFormat(schedule, bankTimeZone) {
+    const newSchedule = { Danny: [], Rusty: [], Linus: [] };
+    newSchedule.Danny = schedule.Danny.map(r => getNewScheduleRowFormat(r, bankTimeZone));
+    newSchedule.Rusty = schedule.Rusty.map(r => getNewScheduleRowFormat(r, bankTimeZone));
+    newSchedule.Linus = schedule.Linus.map(r => getNewScheduleRowFormat(r, bankTimeZone));
+
+    return newSchedule;
+}
+
+function getNewScheduleRowFormat(r, bankTimeZone) {
+    const newFrom = dayToMinutes(r.from.substring(0, 2)) +
+        parseTimeToMinutes(r.from.substring(3), bankTimeZone);
+    const newTo = dayToMinutes(r.to.substring(0, 2)) +
+        parseTimeToMinutes(r.to.substring(3), bankTimeZone);
+
+    return { from: newFrom, to: newTo };
+}
+
+function findDifference(scheduleBoys, scheduleBank) {
+    const possibleTimes = [];
+    scheduleBoys.forEach(boysTime => {
+        scheduleBank.forEach(bankTime => {
+            if (boysTime.from >= bankTime.from && boysTime.from <= bankTime.to) {
+                let from = bankTime.from;
+                scheduleBoys.forEach(s => {
+                    if (s.to < boysTime.from && s.to > bankTime.from) {
+                        from = s.to;
+                    }
+                });
+                possibleTimes.push({ 'from': from, 'to': boysTime.from });
+            }
+            if (boysTime.to <= bankTime.to && boysTime.to >= bankTime.from) {
+                let to = bankTime.to;
+                scheduleBoys.forEach(s => {
+                    if (s.from > boysTime.to && s.to < bankTime.to) {
+                        to = s.from;
+                    }
+                });
+                possibleTimes.push({ 'from': boysTime.to, 'to': to });
+            }
+        });
+    });
+
+    return possibleTimes;
+}
+
+/*
 const days = ['ПН', 'ВТ', 'СР'];
 function mmayb1eDays(scheduleBoy) {
     days.forEach(e => {
@@ -94,14 +228,15 @@ function maybeDay(schedule, day) {
     });
     return haveTimeIsCurrentDay;
 }
-
-function parseTimeToMinutes(time) {
-    return parseInt(time.substring(0, 2)) * 60 + parseInt(time.substring(3, 5)) + parseInt(time.substring(6, 7)) * 60;
+*/
+function parseTimeToMinutes(time, bankTimeZone) {
+    return parseInt(time.substring(0, 2)) * 60 +
+        parseInt(time.substring(3, 5)) +
+        (bankTimeZone - parseInt(time.substring(6))) * 60;
 }
 
 module.exports = {
     getAppropriateMoment,
 
-    parseTimeToMinutes,
     isStar
 };

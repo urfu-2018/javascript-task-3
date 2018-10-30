@@ -23,12 +23,6 @@ const bankWorkingHours = {
     to: '18:00+5'
 };
 
-const items = ['item1', 'item2', 'item3'];
-const copy = [];
-
-items.forEach(function(item){
-  copy.push(item)
-});
 // Время не существует
 const longMoment = robbery.getAppropriateMoment(gangSchedule, 121, bankWorkingHours);
 
