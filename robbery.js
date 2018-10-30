@@ -10,221 +10,127 @@ const DAYS = new Map([
     ['СР', 2], ['ЧТ', 3],
     ['ПТ', 4], ['СБ', 5],
     ['ВС', 6]]);
-const DAYSTODEAL = new Map([[0, 'ПН'], [1, 'ВТ'], [2, 'СР']]);
-const TIME_PATTERN_BANDITS = /^(\W\W) (\d\d):(\d\d)\+(\d+)$/;
 const TIME_PATTERN_BANK = /^(\d\d):(\d\d)\+(\d+)$/;
-
-function parseBanditoTime(rawTime) {
-    const [, day, hours, minutes, timeZone] = rawTime.match(TIME_PATTERN_BANDITS);
-    const dInt = DAYS.get(day);
-
-    return [dInt, hours, minutes, timeZone].map(val => parseInt(val));
+const DEAD_LINE = 24 * 60 * 3;
+function toMinutes(days, hours, minutes, timeZone = 0) {
+    return (days * 24 + hours + timeZone) * 60 + minutes;
 }
 
-function parseBankTime(rawTime) {
-    const [, hours, minutes, timeZone] = rawTime.match(TIME_PATTERN_BANK);
+function parseTime(time) {
+    const [, hours, minutes, timeZone] = time.match(TIME_PATTERN_BANK);
 
     return [hours, minutes, timeZone].map(val => parseInt(val));
 }
 
-function parseSchedule(banditsTimes) {
-    let parsedG = [];
-    for (var name in banditsTimes) {
-        if (banditsTimes.hasOwnProperty(name)) {
-            banditsTimes[name].map(function (x) {
-                const from = parseBanditoTime(x.from);
-                const to = parseBanditoTime(x.to);
+function parseWokringHours(workingHours) {
+    const [hoursFrom, minutesFrom, timeZone] = parseTime(workingHours.from);
+    const [hoursTo, minutesTo] = parseTime(workingHours.to);
 
-                return { from: from, to: to };
-            }).forEach(element => parsedG.push(element));
+    const workingHoursToMinutes = day => (
+        {
+            from: toMinutes(day, hoursFrom, minutesFrom),
+            to: toMinutes(day, hoursTo, minutesTo)
         }
-    }
-    // [day, h, m, timespan]
+    );
 
-    return parsedG.filter(x => x.from[0] < 3);
-}
-
-/**
- * @param {Number} h
- * @param {Number} m
- * @returns {Array}
- */
-function toMinutes(h, m) {
-    return h * 60 + m;
-}
-
-function getSetTimesInDay() {
-    var setTimes = new Set();
-    var h = 0;
-    var m = 0;
-    for (var i = 0; i < 48; i++) {
-        setTimes.add([h, m].toString());
-        m += 30;
-        if (m === 60) {
-            h += 1;
-            m = 0;
-        }
-    }
-
-    return setTimes;
-}
-
-function getDayTimesWorkingBank(splitedBankTime) {
-    let tempo = new Set();
-    splitedBankTime.forEach(function (bankTime) {
-        getSetTimesInDay().forEach(function (dayTime) {
-            if (bankTime.toString() === dayTime.toString()) {
-                tempo.add(bankTime);
-            }
-        });
-    });
-
-    return tempo;
-}
-
-function findFreeSpace(BT, workingTimeBank) {
-    let splitedBankTime = splitTimeZone([
-        [workingTimeBank.from[0], workingTimeBank.from[1]],
-        [workingTimeBank.to[0], workingTimeBank.to[1]]
-    ]);
-    let result = [
-        getDayTimesWorkingBank(splitedBankTime),
-        getDayTimesWorkingBank(splitedBankTime),
-        getDayTimesWorkingBank(splitedBankTime)
+    return [
+        Array.from(DAYS.values())
+            .slice(0, 3)
+            .map(workingHoursToMinutes),
+        timeZone
     ];
-    BT.forEach(function (item) {
-        let banditoSetTimes = [];
-        if (item.to[2] === 30) {
-            banditoSetTimes = splitTimeZone([
-                [item.from[1], item.from[2]],
-                [item.to[1], item.to[2] - 30]]);
-        } else {
-            banditoSetTimes = splitTimeZone([
-                [item.from[1], item.from[2]],
-                [item.to[1] - 1, item.to[2] + 30]]);
+}
+
+function flatSchedule(schedule) {
+    return Object.values(schedule)
+        .reduce((acc, val) => acc.concat(val), []);
+}
+
+function intervalsToMinutes(intervals, bankTimeZone) {
+    const busyTimeToMinutes = scheduleString => {
+        const [day, rawTime] = scheduleString.split(' ');
+        const days = DAYS.get(day);
+        const [hours, minutes, timeZone] = parseTime(rawTime);
+        const diff = bankTimeZone - timeZone;
+
+        return toMinutes(days, hours, minutes, diff);
+    };
+
+    const intervalToMinutes = (interval) => ({
+        from: busyTimeToMinutes(interval.from),
+        to: busyTimeToMinutes(interval.to)
+    });
+
+    return intervals.map(intervalToMinutes)
+        .sort((a, b) => a.from - b.from);
+}
+
+function isIntersected(a, b) {
+    return a.from < b.to && a.to > b.from;
+}
+
+function unionBusyIntervals(intervals) {
+    return intervals.reduce((acc, val) => {
+        const lastInterval = acc[acc.length - 1];
+        if (!isIntersected(lastInterval, val)) {
+            return acc.concat(val);
         }
-        const currentDay = item.from[0];
-        banditoSetTimes.forEach(function (delta) {
-            result.forEach(function (day, i) {
-                if (currentDay === i && result[i].has(delta.toString())) {
-                    result[i].delete(delta.toString());
-                }
+        lastInterval.to = Math.max(lastInterval.to, val.to);
+
+        return acc;
+    }, [intervals[0]]);
+}
+
+function invertintervals(intervals) {
+    const goodIntervals = intervals.filter(interval => interval.from <= DEAD_LINE);
+    const invertInterval = (interval, i) => ({
+        from: interval.to,
+        to: (goodIntervals[i + 1]) ? goodIntervals[i + 1].from : DEAD_LINE
+    });
+
+    return (goodIntervals.length)
+        ? [{ from: 0, to: goodIntervals[0].from }]
+            .concat(goodIntervals.map(invertInterval))
+        : [{ from: 0, to: DEAD_LINE }];
+}
+
+function getTimeToDo(intervals, duration, bankTime) {
+    const robberyIntervals = [];
+    const addShifted = interval => {
+        const shiftedInterval = {
+            from: interval.from + 30,
+            to: interval.to
+        };
+
+        if (shiftedInterval.from < shiftedInterval.to) {
+            robberyIntervals.push(shiftedInterval);
+            addShifted(shiftedInterval);
+        }
+
+        return;
+    };
+    bankTime.forEach(workingHours => intervals.forEach(interval => {
+        if (isIntersected(workingHours, interval)) {
+            robberyIntervals.push({
+                from: Math.max(workingHours.from, interval.from),
+                to: Math.min(workingHours.to, interval.to)
             });
-        });
-    });
-
-    return result;
-}
-
-function splitTimeZone(tZ) {
-    let result = new Set();
-    var h = 0;
-    var m = 0;
-    for (var i = 0; i < 49; i++) {
-        if (toMinutes(h, m) >= toMinutes(tZ[0][0], tZ[0][1]) &&
-        toMinutes(h, m) <= toMinutes(tZ[1][0], tZ[1][1])) {
-            result.add([h, m].toString());
         }
-        m += 30;
-        if (m === 60) {
-            h += 1;
-            m = 0;
-        }
-    }
+    }));
+    // robberyIntervals.forEach(addShifted);
 
-    return result;
+    return robberyIntervals
+        .filter(interval => interval.to - interval.from >= duration)
+        .sort((a, b) => a.from - b.from);
 }
 
-function checkHour(timeZone) {
-    if (timeZone.from[1] < 0) {
-        timeZone.from[1] = 24 + timeZone.from[1];
-        timeZone.from[0] -= 1;
-    }
+function fromMinutes(minutes) {
+    const days = Math.floor(minutes / (60 * 24));
+    const dd = Array.from(DAYS.keys())[days];
+    const hh = Math.floor((minutes - days * 60 * 24) / 60);
+    const mm = minutes - days * 60 * 24 - hh * 60;
 
-    return timeZone;
-}
-
-function normalizeTimeZone(elem, timeZone, normalTimeZone) {
-    let result = {};
-    for (const i in elem) {
-        if (elem.hasOwnProperty(i)) {
-            const minutes = elem[i][2];
-            const hours = elem[i][1] + timeZone;
-            const day = elem[i][0];
-            result[i] = [day, hours, minutes, normalTimeZone];
-        }
-    }
-
-    return result;
-}
-
-function normalizeTimeSpan(banditsTimes, normalTimeSpan) {
-    let temp = banditsTimes.map(function (elem) {
-        const dTime = normalTimeSpan - elem.from[3];
-        if (dTime !== 0) {
-
-            return checkHour(normalizeTimeZone(elem, dTime, normalizeTimeSpan));
-        }
-
-        return elem;
-    });
-    let result = [];
-    temp.forEach(function (elem) {
-        let res = checkDays(elem);
-        res.forEach(e => result.push(e));
-    });
-
-    return result;
-}
-
-function checkDays(timeZone) {
-    if (timeZone.from[0] !== timeZone.to[0]) {
-        let result = [
-            {
-                from: timeZone.from,
-                to: [timeZone.from[0], 24, 0, timeZone.from[3]]
-            },
-            {
-                from: [timeZone.to[0], 0, 0, timeZone.to[3]],
-                to: timeZone.to
-            }
-        ];
-
-        return result;
-    }
-
-    return [timeZone];
-}
-
-function findDurationInOneDay(freeTime, duration) {
-    let currentDuration = 0;
-    let prev = freeTime[0];
-    let startTime = freeTime[0];
-    freeTime.forEach(function (elem) {
-        if (currentDuration >= duration) {
-            return;
-        }
-        if (toMinutes(elem[0], elem[1]) - toMinutes(prev[0], prev[1]) <= 30) {
-            currentDuration += 30;
-        } else {
-            currentDuration = 0;
-            startTime = elem;
-        }
-        prev = elem;
-    });
-    if (currentDuration >= duration) {
-
-        return startTime;
-    }
-
-    return null;
-}
-
-function findTimeToBad(freeSpaces, duration) {
-    let result = [];
-    freeSpaces.forEach(x => result.push(findDurationInOneDay(x, duration)));
-
-    return result;
+    return [dd].concat([hh, mm].map(val => val.toString().padStart(2, '0')));
 }
 
 /**
@@ -236,29 +142,10 @@ function findTimeToBad(freeSpaces, duration) {
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    let parsedWorkingBank = {
-        from: parseBankTime(workingHours.from),
-        to: parseBankTime(workingHours.to)
-    };
-    let parsedShedule = parseSchedule(schedule);
-    let normalized = normalizeTimeSpan(parsedShedule, parsedWorkingBank.from[2]);
-    let freeSpace = findFreeSpace(normalized, parsedWorkingBank)
-        .map(set => Array.from(set)
-            .map(elem => elem.split(',')
-                .map(x => parseInt(x))
-            )
-        );
-    let result = findTimeToBad(freeSpace, duration);
-    let day = '';
-    let h = 0;
-    let m = 0;
-    result.forEach(function (x, i) {
-        if (x !== null && day === '') {
-            day = DAYSTODEAL.get(i);
-            h = x[0];
-            m = x[1];
-        }
-    });
+    const [bankSchedule, bankTimeZone] = parseWokringHours(workingHours);
+    const intervalsInMinutes = intervalsToMinutes(flatSchedule(schedule), bankTimeZone);
+    const freeSpaces = invertintervals(unionBusyIntervals(intervalsInMinutes));
+    const result = getTimeToDo(freeSpaces, duration, bankSchedule);
 
     return {
 
@@ -267,12 +154,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            if (day === '') {
-
-                return false;
-            }
-
-            return true;
+            return result.length > 0;
         },
 
         /**
@@ -282,20 +164,16 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            if (day === '') {
-
+            if (result.length === 0) {
                 return '';
             }
-            if (h.toString().length === 1) {
-                h = '0' + h.toString();
-            }
-            if (m.toString().length === 1) {
-                m = '0' + m.toString();
-            }
-            const newTemplate = template.replace('%DD', day).replace('%HH', h)
-                .replace('%MM', m);
+            const robberyStart = result[0].from;
+            const [dd, hh, mm] = fromMinutes(robberyStart);
 
-            return newTemplate;
+            return template
+                .replace('%DD', dd)
+                .replace('%HH', hh)
+                .replace('%MM', mm);
         },
 
         /**
