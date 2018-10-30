@@ -82,7 +82,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     };
 }
 
-function getRobberyTimeFrame(timeZoneOffset) {
+function getRobberyTimeFrame() {
     return {
         from: 0,
         to: daysOfTheWeek.length * MINUTES_IN_DAY
