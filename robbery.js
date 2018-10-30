@@ -206,6 +206,9 @@ function findDifference(scheduleBoys, scheduleBank) {
             }
         });
     });
+    if (scheduleBoys.length === 0) {
+        return scheduleBank;
+    }
 
     return possibleTimes;
 }
