@@ -118,10 +118,10 @@ function getRobberiesTime(freeTime, duration) {
     const robberyTime = [];
 
     freeTime.forEach(element => {
-        const fTime = element.to - element.from;
+        let fTime = element.to.time - element.from.time;
 
         while (fTime > duration) {
-            robberyTime.push(element.to - fTime);
+            robberyTime.push(element.to.time - fTime);
             fTime -= duration + 30;
         }
     });
@@ -141,8 +141,15 @@ function getFreeTime(schedule, workingHours) {
         });
     }
 
-    for (let i = 0; i < schedule.length; i++) {
-        unsuitableTime.concat(getUnsuitableTime(schedule[i]), freeTime[0].timeZone);
+    for (let key in schedule) {
+        if (!schedule.hasOwnProperty(key)) {
+            continue;
+        }
+
+        const a = getUnsuitableTime(schedule[key], freeTime[0].from.timeZone);
+        for (let i = 0; i < a.length; i++) {
+            unsuitableTime.push(a[i]);
+        }
     }
 
     return differenceIntervals(freeTime, unionIntervals(unsuitableTime));
@@ -151,9 +158,13 @@ function getFreeTime(schedule, workingHours) {
 function unionIntervals(unsuitableTime) {
     return unsuitableTime
         .sort((a, b) => {
+            if (a.from.time === b.from.time) {
+                return a.to.time > b.to.time ? 1 : -1;
+            }
+
             return a.from.time > b.from.time ? 1 : -1;
         })
-        .filter(element => element.from.time > MAX_ROBBERY_TIME)
+        .filter(element => element.from.time <= MAX_ROBBERY_TIME)
         .map(element => {
             if (element.to.time > MAX_ROBBERY_TIME) {
                 element.to.time = MAX_ROBBERY_TIME;
@@ -171,7 +182,7 @@ function differenceIntervals(freeTime, unsuitableTime) {
             for (let i = 0; i < intervals.length; i++) {
                 const fromIncludedInTheInterval = intervals[i].from.time < value.from.time &&
                 intervals[i].to.time > value.from.time;
-                const toIncludedInTheInterval = intervals[i].frome.time < value.to.time &&
+                const toIncludedInTheInterval = intervals[i].from.time < value.to.time &&
                 intervals[i].to.time > value.to.time;
                 if (fromIncludedInTheInterval) {
                     intervals[i].to.time = value.from.time;
@@ -183,7 +194,9 @@ function differenceIntervals(freeTime, unsuitableTime) {
             return intervals;
         }, [element]);
 
-        arrayFreeTime.concat(array);
+        array.forEach(a => {
+            arrayFreeTime.push(a);
+        });
     });
 
     return arrayFreeTime;
