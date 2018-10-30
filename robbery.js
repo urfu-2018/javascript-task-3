@@ -30,10 +30,12 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             const tmp = daySchedule.from.replace(/[+:]/g, ' ').split(' ');
             const memberTimezone = tmp[3];
             const timezoneDiff = (bankTimezone - memberTimezone) * 60;
-            daySchedule.from = calculateInMinutes(daySchedule.from, timezoneDiff);
-            daySchedule.to = calculateInMinutes(daySchedule.to, timezoneDiff);
+            const workingDay = {
+                from: calculateInMinutes(daySchedule.from, timezoneDiff),
+                to: calculateInMinutes(daySchedule.to, timezoneDiff)
+            };
 
-            findIntersections(daySchedule);
+            findIntersections(workingDay);
         }
     }
 
