@@ -101,7 +101,7 @@ function dayToMinutes(day) {
         return 24 * 2 * 60;
     }
 
-    return -1;
+    return 10000;
 }
 
 function firstConditionIsTheUnion(timeRange1, timeRange2) {
