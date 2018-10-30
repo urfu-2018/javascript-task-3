@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = true;
+const isStar = false;
 const numToWeek = { 1: 'ПН', 2: 'ВТ', 3: 'СР', 4: 'ЧТ', 5: 'ПТ', 6: 'СБ', 7: 'ВС' };
 const weekToNum = { ПН: 1, ВТ: 2, СР: 3, ЧТ: 4, ПТ: 5, СБ: 6, ВС: 7 };
 
@@ -147,8 +147,8 @@ function findGoodIntervals(schedule, workingHours) {
         { from: 'ВТ ' + workingHours.from, to: 'ВТ ' + workingHours.to },
         { from: 'СР ' + workingHours.from, to: 'СР ' + workingHours.to }
     ];
-    const robbersBusy = unionOfIntervals(
-        scheduleToTimeIntervals(schedule.Danny.concat(schedule.Rusty).concat(schedule.Linus))
+    const robbersBusy = scheduleToTimeIntervals(
+        schedule.Danny.concat(schedule.Rusty).concat(schedule.Linus)
     );
     const bankNotWorking = invertIntervals(scheduleToTimeIntervals(bankSchedule));
 
