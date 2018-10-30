@@ -96,19 +96,6 @@ function invertintervals(intervals) {
 
 function getTimeToDo(intervals, duration, bankTime) {
     const robberyIntervals = [];
-    const addShifted = interval => {
-        const shiftedInterval = {
-            from: interval.from + 30,
-            to: interval.to
-        };
-
-        if (shiftedInterval.from < shiftedInterval.to) {
-            robberyIntervals.push(shiftedInterval);
-            addShifted(shiftedInterval);
-        }
-
-        return;
-    };
     bankTime.forEach(workingHours => intervals.forEach(interval => {
         if (isIntersected(workingHours, interval)) {
             robberyIntervals.push({
@@ -117,7 +104,6 @@ function getTimeToDo(intervals, duration, bankTime) {
             });
         }
     }));
-    // robberyIntervals.forEach(addShifted);
 
     return robberyIntervals
         .filter(interval => interval.to - interval.from >= duration)
