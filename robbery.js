@@ -83,12 +83,10 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 }
 
 function getRobberyTimeFrame(timeZoneOffset) {
-    const timeFrame = {
-        from: `ПН 00:00+${timeZoneOffset}`,
-        to: `СР 23:59+${timeZoneOffset}`
+    return {
+        from: 0,
+        to: daysOfTheWeek.length * MINUTES_IN_DAY
     };
-
-    return getTimestampInterval(timeFrame);
 }
 
 function getDayOfWeekNumber(dayOfTheWeek) {
