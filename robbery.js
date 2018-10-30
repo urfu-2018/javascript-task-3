@@ -146,42 +146,44 @@ function getDateFromTimestamp(timestamp) {
     return { day, hours, minutes };
 }
 
-function getTwoDigitString(number) {
+function addLeadingZero(number) {
     const string = number.toString();
 
     return string.length === 2 ? string : '0' + string;
 }
 
 function getFreeTimeIntervals(busyIntervals, timeFrame) {
-    const sortedIntervals = busyIntervals.sort(compareIntervals);
+    if (busyIntervals.length === 0) {
+        return [timeFrame];
+    }
 
-    const firstInterval = sortedIntervals[0];
-    const lastInterval = sortedIntervals[sortedIntervals.length - 1];
+    const sortedIntervals = busyIntervals.sort(compareIntervals);
 
     const freeIntervals = [];
 
-    if (firstInterval.from > timeFrame.from) {
+    if (sortedIntervals[0] > timeFrame.from) {
         freeIntervals.push({
             from: timeFrame.from,
-            to: firstInterval.from
+            to: sortedIntervals[0].from
         });
     }
 
-    for (let i = 0; i < sortedIntervals.length - 1; i++) {
-        const currentEnd = sortedIntervals[i].to;
-        const nextStart = sortedIntervals[i + 1].from;
+    let currentEnd = sortedIntervals[0].to;
+    for (let i = 1; i < sortedIntervals.length; i++) {
+        const next = sortedIntervals[i];
 
-        if (currentEnd < nextStart) {
+        if (currentEnd <= next.from) {
             freeIntervals.push({
                 from: currentEnd,
-                to: nextStart
+                to: next.from
             });
         }
+        currentEnd = Math.max(currentEnd, next.to);
     }
 
-    if (lastInterval.to < timeFrame.to) {
+    if (currentEnd < timeFrame.to) {
         freeIntervals.push({
-            from: lastInterval.to,
+            from: currentEnd,
             to: timeFrame.to
         });
     }
@@ -273,9 +275,9 @@ function formatDateString(date, template) {
             case '%DD':
                 return daysOfTheWeek[date.day];
             case '%HH':
-                return getTwoDigitString(date.hours);
+                return addLeadingZero(date.hours);
             case '%MM':
-                return getTwoDigitString(date.minutes);
+                return addLeadingZero(date.minutes);
             default :
                 break;
         }
