@@ -96,7 +96,7 @@ function compareRanges(supposedRange, dayRange) {
 function findTimeRange(daysRanges, duration, formattedWorkingHours) {
     const variants = { ПН: [], ВТ: [], СР: [] };
 
-    for (let i = formattedWorkingHours.from; i < formattedWorkingHours.to - duration + 1; i++) {
+    for (let i = formattedWorkingHours.from; i <= formattedWorkingHours.to - duration; i++) {
         Object.keys(daysRanges).forEach(day => {
             let counter = 0;
 
