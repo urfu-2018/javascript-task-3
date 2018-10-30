@@ -5,6 +5,8 @@
  * Реализовано оба метода и tryLater
  */
 const isStar = true;
+const THREE_DAYS_IN_MIN = 72 * 60;
+const MIN_IN_HOUR = 60;
 
 /**
  * @param {Object} schedule – Расписание Банды
@@ -18,13 +20,13 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
     const bankTimes = getBankWorkingIntervals(workingHours);
     const bankTimeZone = Number(workingHours.to.split('+')[1]);
-    const bankTimeShift = -bankTimeZone * 60;
+    const bankTimeShift = -bankTimeZone * MIN_IN_HOUR;
     const gangTimes = Object.values(schedule)
         .map(friend =>
-            getFriendFreeIntervals(friend, [bankTimeShift, 72 * 60 + bankTimeShift]));
+            getFriendFreeIntervals(friend, [bankTimeShift, getShiftedEnd(bankTimeShift)]));
 
     let timeFound = findNextTime(
-        [bankTimeShift, 72 * 60 + bankTimeShift],
+        [bankTimeShift, getShiftedEnd(bankTimeShift)],
         duration,
         bankTimes,
         gangTimes
@@ -48,11 +50,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            if (timeFound === null) {
-                return '';
-            }
-
-            return formatDate(timeFound - bankTimeShift, template);
+            return timeFound
+                ? formatDate(timeFound - bankTimeShift, template)
+                : '';
         },
 
         /**
@@ -62,7 +62,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          */
         tryLater: function () {
             const nextTime = findNextTime(
-                [timeFound + 30, 72 * 60 + bankTimeShift],
+                [timeFound + 30, getShiftedEnd(bankTimeShift)],
                 duration,
                 bankTimes,
                 gangTimes
@@ -106,8 +106,8 @@ function getFriendFreeIntervals(friendShedule, domain) {
 function getBankWorkingIntervals(workingHours) {
     return [0, 24, 48].map(offset =>
         [
-            getUTCTimeInMinutesForBank(workingHours.from) + offset * 60,
-            getUTCTimeInMinutesForBank(workingHours.to) + offset * 60
+            getUTCTimeInMinutesForBank(workingHours.from) + offset * MIN_IN_HOUR,
+            getUTCTimeInMinutesForBank(workingHours.to) + offset * MIN_IN_HOUR
         ]
     );
 }
@@ -123,9 +123,8 @@ function getUTCTimeInMinutes(timeString) {
         СБ: 120 * 60,
         ВС: 144 * 60
     };
-    const timeInMinutes =
-        Number(days[parts[1]]) + Number(parts[2]) * 60 +
-            Number(parts[3]) - Number(parts[4]) * 60;
+    const timeInMinutes = Number(days[parts[1]]) + Number(parts[2]) * MIN_IN_HOUR +
+        Number(parts[3]) - Number(parts[4]) * MIN_IN_HOUR;
 
     return timeInMinutes;
 }
@@ -133,32 +132,41 @@ function getUTCTimeInMinutes(timeString) {
 function getUTCTimeInMinutesForBank(timeString) {
     const parts = /(\d{1,2}):(\d+)\+(\d+)/.exec(timeString);
 
-    return Number(parts[1]) * 60 + Number(parts[2]) - Number(parts[3]) * 60;
+    return Number(parts[1]) * MIN_IN_HOUR + Number(parts[2]) -
+        Number(parts[3]) * MIN_IN_HOUR;
 }
 
 function invertIntervals(intervals, domain) {
-    intervals = intervals.sort((interval1, interval2) => interval1[0] > interval2[0]);
+    intervals = intervals.sort((a, b) => a[0] > b[0]);
     if (intervals.length === 0) {
         return [domain];
     }
 
     const inverted = [];
 
-    const isFirst = i => i === 0 && intervals[i][0] > domain[0];
-    const isLast = i => i === intervals.length && intervals[i - 1][1] < domain[1];
-    const isMiddle = i => i > 0 && i < intervals.length;
-
     for (let i = 0; i <= intervals.length; i++) {
-        if (isLast(i)) {
+        if (isLast(i, intervals, domain)) {
             inverted.push([intervals[i - 1][1], domain[1]]);
-        } else if (isFirst(i)) {
+        } else if (isFirst(i, intervals, domain)) {
             inverted.push([domain[0], intervals[i][0]]);
-        } else if (isMiddle(i)) {
+        } else if (isMiddle(i, intervals)) {
             inverted.push([intervals[i - 1][1], intervals[i][0]]);
         }
     }
 
     return inverted;
+}
+
+function isFirst(i, intervals, domain) {
+    return i === 0 && intervals[i][0] > domain[0];
+}
+
+function isMiddle(i, intervals) {
+    return i > 0 && i < intervals.length;
+}
+
+function isLast(i, intervals, domain) {
+    return i === intervals.length && intervals[i - 1][1] < domain[1];
 }
 
 function mergeIntersectedIntervals(intervals) {
@@ -191,15 +199,10 @@ function isValueInInterval(interval, value) {
 }
 
 function formatDate(timeInMinutes, format) {
-    const days = {
-        0: 'ПН',
-        1: 'ВТ',
-        2: 'СР',
-        3: 'ЧТ'
-    };
-    const minutes = timeInMinutes % 60;
-    const hours = ((timeInMinutes - minutes) / 60) % 24;
-    const day = (timeInMinutes - minutes - hours * 60) / 60 / 24;
+    const days = ['ПН', 'ВТ', 'СР', 'ЧТ'];
+    const minutes = timeInMinutes % MIN_IN_HOUR;
+    const hours = ((timeInMinutes - minutes) / MIN_IN_HOUR) % 24;
+    const day = (timeInMinutes - minutes - hours * MIN_IN_HOUR) / MIN_IN_HOUR / 24;
 
     return format
         .replace(/%DD/, days[day])
@@ -214,6 +217,10 @@ function canGang(gangTimes, bankTimes, value) {
     const isBankOpened = bankTimes.find(interval => isValueInInterval(interval, value));
 
     return areFriendsFree && isBankOpened;
+}
+
+function getShiftedEnd(bankTimeShift) {
+    return THREE_DAYS_IN_MIN + bankTimeShift;
 }
 
 module.exports = {
