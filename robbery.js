@@ -15,10 +15,11 @@ const isStar = true;
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    console.info(schedule, duration, workingHours);
+    // console.info(schedule, duration, workingHours);
 
     function timeInMunutes(time) {
-        const [hours, minutes] = time.split(':');
+        let [hours, minutes] = time.split(':');
+
         hours = parseInt(hours);
         minutes = parseInt(minutes);
 
@@ -30,21 +31,20 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     }
 
     function hoursToMinutes(timeAndTimeZone, bankTimeZone) {
-        const [time, timeZone] = timeAndTimeZone.split('+');
+        let [time, timeZone] = timeAndTimeZone.split('+');
         timeZone = parseInt(timeZone);
         let formattedToMinutesTime =
-            timeInMunutes(time) + bankTimeZone
-                ? calculateDifferenceInTimeZones(timeZone, bankTimeZone)
-                : 0;
+            timeInMunutes(time) +
+            (bankTimeZone ? calculateDifferenceInTimeZones(timeZone, bankTimeZone) : 0);
 
         return formattedToMinutesTime;
     }
 
     function formatSchedule(bankTimeZone) {
         Object.keys(schedule).forEach(person => {
-            schedule[person].forEach(({ from, to }) => {
-                const [dayFrom, timeFrom] = from.split(' ');
-                const [dayTo, timeTo] = to.split(' ');
+            schedule[person] = schedule[person].map(busyHours => {
+                const [dayFrom, timeFrom] = busyHours.from.split(' ');
+                const [dayTo, timeTo] = busyHours.to.split(' ');
 
                 return {
                     from: [dayFrom, hoursToMinutes(timeFrom, bankTimeZone)],
@@ -55,7 +55,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     }
 
     function getBankTimeZone() {
-        return workingHours.from.split('+')[1];
+        return parseInt(workingHours.from.split('+')[1]);
     }
 
     function formatBankTime() {
@@ -73,8 +73,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 if (from[0] === to[0]) {
                     ob[from[0]].push([from[1], to[1]]);
                 } else {
-                    ob[from[0]].push([from[1], workingHours[to]]);
-                    ob[to[0]].push(workingHours[from], to[0]);
+                    ob[from[0]].push([from[1], workingHours.to]);
+                    ob[to[0]].push([workingHours.from, to[1]]);
                 }
             });
         });
@@ -84,28 +84,60 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
     function compareRanges(supposedRange, dayRange) {
         return (
-            (supposedRange[0] < dayRange[0] && supposedRange[1] < dayRange[1]) ||
-            (supposedRange[0] > dayRange[0] && supposedRange[1] > dayRange[1])
+            (supposedRange[0] <= dayRange[0] && supposedRange[1] <= dayRange[0]) ||
+            (supposedRange[0] >= dayRange[1] && supposedRange[1] >= dayRange[1])
         );
     }
 
-    function findTimeRange(duration) {
+    function findTimeRange() {
         const bankTimeZone = getBankTimeZone();
+        const possibleVariants = { ПН: [], ВТ: [], СР: [] };
 
         formatBankTime();
         formatSchedule(bankTimeZone);
 
         const invalidTimeRanges = createDaysTimeRange();
-
-        for (let i = workingHours.from; i < workingHours.to - duration; i++) {
+        for (let i = workingHours.from; i < workingHours.to - duration + 1; i++) {
             Object.keys(invalidTimeRanges).forEach(day => {
+                let counter = 0;
+
                 invalidTimeRanges[day].forEach(range => {
-                    if (!compareRanges([i, i + duration], range)) {
-                        return false;
+                    if (compareRanges([i, i + duration], range)) {
+                        counter += 1;
                     }
                 });
+
+                if (counter === invalidTimeRanges[day].length) {
+                    possibleVariants[day].push(i);
+                    i += 29;
+                }
             });
         }
+
+        return possibleVariants;
+    }
+
+    const possibleTimes = findTimeRange();
+
+    function findNearByTime() {
+        const days = Object.keys(possibleTimes);
+        for (const day of days) {
+            if (possibleTimes[day].length) {
+                return [day, possibleTimes[day][0]];
+            }
+        }
+    }
+
+    let closestTime = findNearByTime();
+
+    function formatNumber(number) {
+        const formatted = number.toString();
+
+        if (formatted.length === 2) {
+            return formatted;
+        }
+
+        return '0' + formatted;
     }
 
     return {
@@ -115,6 +147,13 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
+            const days = Object.keys(possibleTimes);
+            for (const day of days) {
+                if (possibleTimes[day].length) {
+                    return true;
+                }
+            }
+
             return false;
         },
 
@@ -125,7 +164,14 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            return template;
+            if (closestTime) {
+                return template
+                    .replace('%HH', formatNumber(parseInt(closestTime[1] / 60)))
+                    .replace('%MM', formatNumber(closestTime[1] % 60))
+                    .replace('%DD', closestTime[0]);
+            }
+
+            return '';
         },
 
         /**
@@ -133,7 +179,29 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @star
          * @returns {Boolean}
          */
-        tryLater: function () {
+        // eslint-disable-next-line
+        tryLater: function() {
+            const days = Object.keys(possibleTimes);
+            const currentTime = closestTime[1];
+
+            for (const day of days) {
+                const filtered = possibleTimes[day].filter(
+                    possibleTime => possibleTime > currentTime
+                );
+                if (day === closestTime[0] && filtered.length) {
+                    closestTime[1] = filtered[0];
+
+                    return true;
+                } else if ((
+                    day === 'ВТ' && closestTime[0] === 'ПН' ||
+                    day === 'СР' && closestTime[0] === 'ВТ'
+                ) && possibleTimes[day].length) {
+                    closestTime = [day, possibleTimes[day][0]];
+
+                    return true;
+                }
+            }
+
             return false;
         }
     };
