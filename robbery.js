@@ -85,11 +85,13 @@ function getTimeInMinutes(time) {
 
 function getRobberScheduleInMinutes(schedule, bankTimeZone) {
     let scheduleInMinutes = [];
-    let differenceTimeZone = bankTimeZone - getTimeZone(schedule[0]);
-    schedule.forEach(time => scheduleInMinutes.push({
-        from: convertDayTimeToMinutes(time.from) + differenceTimeZone * minutesInHour,
-        to: convertDayTimeToMinutes(time.to) + differenceTimeZone * minutesInHour
-    }));
+    if (schedule.length !== 0) {
+        let differenceTimeZone = bankTimeZone - getTimeZone(schedule[0]);
+        schedule.forEach(time => scheduleInMinutes.push({
+            from: convertDayTimeToMinutes(time.from) + differenceTimeZone * minutesInHour,
+            to: convertDayTimeToMinutes(time.to) + differenceTimeZone * minutesInHour
+        }));
+    }
 
     return scheduleInMinutes;
 }
