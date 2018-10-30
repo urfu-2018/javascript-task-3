@@ -26,7 +26,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     const bankTimezone = workingHours.from.split('+')[1];
 
     for (let member of Object.keys(schedule)) {
-        for (let daySchedule of Object.keys(schedule[member])) {
+        for (let daySchedule of schedule[member]) {
             const tmp = daySchedule.from.replace(/[+:]/g, ' ').split(' ');
             const memberTimezone = tmp[3];
             const timezoneDiff = (bankTimezone - memberTimezone) * 60;
@@ -69,9 +69,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 }
                 const day = dayOfTheWeek[Math.trunc(startMinute / 1440)];
 
-                return template.replace('%HH', hours)
-                    .replace('%MM', minutes)
-                    .replace('%DD', day);
+                return template.replace(/%DD/, day)
+                    .replace(/%HH/, hours)
+                    .replace(/%MM/, minutes);
             }
 
             return '';
