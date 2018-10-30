@@ -31,6 +31,7 @@ function invertSchedule(schedule) {
         startOfInterval = time[1];
     });
     freeTime.push([startOfInterval, MAXMINUTEINDAYS]);
+    freeTime.sort((a, b) => a[0] - b[0]);
 
     return freeTime;
 }
@@ -115,7 +116,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            return resultTime !== null && resultTime.length > 0;
+            return resultTime.length > 0;
         },
 
         /**
@@ -153,7 +154,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            if (!this.exists()) {
+            if (resultTime.length === 0) {
                 return false;
             }
             let interval = resultTime[0];
