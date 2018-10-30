@@ -34,6 +34,24 @@ function minutesToDayTime(minutes, bankTimeZone) {
         tz: bankTimeZone };
 }
 
+function getBankSchedule(workingHours, bankTimeZone) {
+    let startTime = 0;
+    let endTime = dayTimeStrToMinutes(...`СР 23:59+${bankTimeZone}`.split(/ |\+/), bankTimeZone);
+    let endWeek = dayTimeStrToMinutes(...`ВС 23:59+${bankTimeZone}`.split(/ |\+/), bankTimeZone);
+
+    return weekDays
+        .slice(0, 3)
+        .map((day)=>
+            -dayTimeStrToMinutes(...`${day} ${workingHours.from}`.split(/ |\+/), bankTimeZone))
+        .concat(
+            weekDays
+                .slice(0, 3)
+                .map((day)=>
+                    dayTimeStrToMinutes(
+                        ...`${day} ${workingHours.to}`.split(/ |\+/), bankTimeZone)))
+        .concat([startTime, endTime, -endWeek]);
+}
+
 /**
  * @param {Object} schedule – Расписание Банды
  * @param {Number} duration - Время на ограбление в минутах
@@ -46,20 +64,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     console.info(schedule, duration, workingHours);
     let bankTimeZone = Number(workingHours.from.split('+')[1]);
     bankTimeZone = isNaN(bankTimeZone) ? 0 : bankTimeZone;
-    let startTime = 0;
-    let endTime = dayTimeStrToMinutes(...`СР 23:59+${bankTimeZone}`.split(/ |\+/), bankTimeZone);
-    let endWeek = dayTimeStrToMinutes(...`ВС 23:59+${bankTimeZone}`.split(/ |\+/), bankTimeZone);
-    workingHours = weekDays
-        .slice(0, 3)
-        .map((day)=>
-            -dayTimeStrToMinutes(...`${day} ${workingHours.from}`.split(/ |\+/), bankTimeZone))
-        .concat(
-            weekDays
-                .slice(0, 3)
-                .map((day)=>
-                    dayTimeStrToMinutes(
-                        ...`${day} ${workingHours.to}`.split(/ |\+/), bankTimeZone)))
-        .concat([startTime, endTime, -endWeek]);
+    workingHours = getBankSchedule(workingHours, bankTimeZone);
     let answer = Object.keys(schedule)
         .map((friend)=>[...schedule[friend]])
         .reduce((a, b)=>a.concat(b), [])
@@ -83,7 +88,6 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             return result;
         }, { count: 0, intervals: [] })
         .intervals
-        .slice(1)
         .filter((record)=>Math.abs(record.to - record.from) >= duration)
         .map((record)=> {
             return {
@@ -91,6 +95,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 to: minutesToDayTime(record.to, bankTimeZone) };
         });
 
+    console.log(answer);
     return {
 
         /**
