@@ -25,8 +25,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     intersections = formatBankWorkingHours(workingHours);
     const bankTimezone = workingHours.from.split('+')[1];
 
-    Object.keys(schedule).forEach(member =>
-        schedule[member].forEach(daySchedule => {
+    for (let member of Object.keys(schedule)) {
+        for (let daySchedule of Object.keys(schedule[member])) {
             const tmp = daySchedule.from.replace(/[+:]/g, ' ').split(' ');
             const memberTimezone = tmp[3];
             const timezoneDiff = (bankTimezone - memberTimezone) * 60;
@@ -34,8 +34,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             daySchedule.to = calculateInMinutes(daySchedule.to, timezoneDiff);
 
             findIntersections(daySchedule);
-
-        }));
+        }
+    }
 
     filterIntersictions(duration);
 
