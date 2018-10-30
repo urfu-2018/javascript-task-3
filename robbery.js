@@ -140,17 +140,11 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
             let hours = Math.trunc(startTime / 60) - DAYS[days] / 60;
             let minutes = (startTime / 60 - Math.floor(startTime / 60)) * 60;
-            if (minutes < 10) {
-                minutes = `0${minutes}`;
-            }
-            if (hours < 10) {
-                hours = `0${hours}`;
-            }
 
             return template
-                .replace(/%HH/, hours)
+                .replace(/%HH/, hours.toString().padStart(2, '0'))
                 .replace(/%DD/, days)
-                .replace(/%MM/, minutes);
+                .replace(/%MM/, minutes.toString().padStart(2, '0'));
         },
 
         /**
