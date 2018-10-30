@@ -90,7 +90,7 @@ function findIntersections(first, second) {
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = false;
+const isStar = true;
 
 /**
  * @param {Object} schedule – Расписание Банды
@@ -191,7 +191,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             }
 
             var newLimit = {
-                from: appropriate.from + 30,
+                from: approp riate.from + 30,
                 to: 3 * MINUTES_IN_DAY
             };
             var newAppropriate = findAppropriate(newLimit);
