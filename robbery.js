@@ -19,42 +19,16 @@ function getTime(stringTime, bankTimeZone) {
 }
 
 function getTimeSections(sections, bankTimeZone) {
-    let borders = [];
-    borders.push(0);
-    borders.push(-4 * 24 * 60 + 1);
-    for (let s of sections) {
-        let from = getTime(s.from, bankTimeZone) * -1;
-        let to = getTime(s.to, bankTimeZone);
-        if (borders.indexOf(from) === -1) {
-            borders.push(from);
-        }
-        if (borders.indexOf(to) === -1) {
-            borders.push(to);
-        }
-    }
-    borders.sort(sortByModule);
-
-    return processBorders(borders);
-}
-
-function processBorders(borders) {
     let newSections = [];
-    let section = { from: borders[0], to: -1 };
-    let i = 1;
-    while (i < borders.length) {
-        if (section.from !== -1 && borders[i] > 0) {
-            i++;
+    let lastBorder = 0;
+    for (let s = 0; s < sections.length; s++) {
+        let from = getTime(sections[s].from, bankTimeZone);
+        let to = getTime(sections[s].to, bankTimeZone);
+        newSections.push({ from: lastBorder, to: from });
+        lastBorder = to;
+        if (s === sections.length - 1) {
+            newSections.push({ from: lastBorder, to: 4 * 24 * 60 - 1 });
         }
-        if (section.from === -1 && borders[i] > 0) {
-            section.from = borders[i];
-            i++;
-        }
-        if (section.to === -1 && borders[i] < 0) {
-            section.to = -borders[i];
-            newSections.push({ from: section.from, to: section.to });
-            section = { from: -1, to: -1 };
-        }
-        i++;
     }
 
     return newSections;
