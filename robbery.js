@@ -95,7 +95,6 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 return '';
             }
             let moment = appropriateMomemts[this.index];
-            console.log(moment);
             let day = Math.floor(moment / MINUTES_IN_DAY);
             moment %= MINUTES_IN_DAY;
             let hour = Math.floor(moment / MINUTES_IN_HOUR);
