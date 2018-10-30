@@ -92,9 +92,6 @@ function totalFreeTime(firstTimes, secondTimes) {
     return schedule;
 }
 
-function checkBankTime(bankTime, duration) {
-    return bankTime[0][1] - bankTime[0][0] > duration;
-}
 
 function getAppropriateMoment(schedule, duration, workingHours) {
     console.info(schedule, duration, workingHours);
@@ -108,7 +105,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     const freeTimeForLinus = invertSchedule(scheduleLinus);
     const freeTimeDannyAndRusty = totalFreeTime(freeTimeForDanny, freeTimeForRusty);
     const guysFreeTimes = totalFreeTime(freeTimeDannyAndRusty, freeTimeForLinus);
-    const resultTime = totalFreeTime(bankTime, guysFreeTimes)
+    const resultTime = totalFreeTime(guysFreeTimes, bankTime)
         .filter(interval => interval[1] - interval[0] >= duration);
 
     return {
@@ -118,8 +115,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            return resultTime !== null && resultTime.length > 0 &&
-                checkBankTime(bankTime, duration);
+            return resultTime !== null && resultTime.length > 0;
         },
 
         /**
