@@ -93,9 +93,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 return '';
             }
 
-            template = template.replace(/%HH/, robberyTime[0].getHours());
-            template = template.replace(/%MM/, robberyTime[0].getMinutes());
-            template = template.replace(/%DD/, robberyTime[0].getDay());
+            template = template.replace(/%HH/, robberyTime[0].from.getHours());
+            template = template.replace(/%MM/, robberyTime[0].from.getMinutes());
+            template = template.replace(/%DD/, robberyTime[0].from.getDay());
 
             return template;
         },
