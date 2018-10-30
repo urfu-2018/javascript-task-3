@@ -197,7 +197,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                     return true;
                 } else if (
                     ((day === 'ВТ' && closestTime[0] === 'ПН') ||
-                        (day === 'СР' && closestTime[0] === 'ВТ')) &&
+                        (day === 'СР' && closestTime[0] === 'ВТ') ||
+                        (day === 'СР' && closestTime[0] === 'ПН')) &&
                     possibleTimes[day].length
                 ) {
                     closestTime = [day, possibleTimes[day][0]];
