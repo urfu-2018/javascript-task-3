@@ -17,8 +17,9 @@ const isStar = true;
 function getAppropriateMoment(schedule, duration, workingHours) {
     console.info(schedule, duration, workingHours);
 
+    let isSuitable = buildSchedule(schedule, workingHours);
+    
     return {
-
         /**
          * Найдено ли время
          * @returns {Boolean}
@@ -46,6 +47,58 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             return false;
         }
     };
+}
+
+function getTimeAfter(isSuitable, minute) {
+    for () 
+}
+
+function buildSchedule(rawSchedule, workingHours) {
+    const busyTimes = enumerateTimes(rawSchedule)
+        .map(x => ({
+            from: convertStringWithDayToMinutes(x.from),
+            to: convertStringWithDayToMinutes(x.to)
+        }));
+
+    let openTime = convertStringToMinutes(workingHours.from);
+    let closeTime = convertStringToMinutes(workingHours.to);
+
+    return (time) => {
+        let timeOfDay = time % (24 * 60);
+        if (openTime > timeOfDay || closeTime < timeOfDay) {
+            return false;
+        }
+
+        return busyTimes.eachTest(x => !(x.from <= time && time <= x.to));
+    };
+}
+
+function *enumerateTimes(schedule) {
+    for (let prop in schedule) {
+        if (schedule.hasOwnProperty(prop)) {
+            yield* schedule[prop];
+        }
+    }
+}
+
+function convertStringWithDayToMinutes(s) {
+    let parts = s.split(' ');
+
+    return getDayNumber(s[0]) * 24 * 60 + convertStringToMinutes(s[1]);
+}
+
+function convertStringToMinutes(s) {
+    const match = s.match(/^(\d+):(\d+)\+(\d+)$/);
+
+    const hour = Number(match[1]);
+    const minute = Number(match[2]);
+    const offset = Number(match[3]);
+
+    return (hour + offset) * 60 + minute;
+}
+
+function getDayNumber(day) {
+    return ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'].indexOf(day);
 }
 
 module.exports = {
