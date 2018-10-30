@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = true;
+const isStar = false;
 
 const daysOfTheWeek = ['ПН', 'ВТ', 'СР'];
 const MINUTES_IN_DAY = 1440;
@@ -82,11 +82,13 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     };
 }
 
-function getRobberyTimeFrame() {
-    return {
-        from: 0,
-        to: daysOfTheWeek.length * MINUTES_IN_DAY
+function getRobberyTimeFrame(timeZoneOffset) {
+    const timeFrame = {
+        from: `ПН 00:00+${timeZoneOffset}`,
+        to: `СР 23:59+${timeZoneOffset}`
     };
+
+    return getTimestampInterval(timeFrame);
 }
 
 function getDayOfWeekNumber(dayOfTheWeek) {
