@@ -7,7 +7,6 @@
 const isStar = true;
 
 
-
 function convertDayToMinuts(day) {
     if (day === 'ПН') {
 
@@ -106,9 +105,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     addWorkingHoursToTimeLine(timeLine, workingHours);
     timeLine.sort((a, b) => a !== b ? a.first - b.first : b.second - a.second);
     let approproateMoment = scanLine(timeLine, duration, -1);
-    timeLine: timeLine;
-    approproateMoment: approproateMoment;
-    
+
     return {
 
         /**
@@ -140,7 +137,6 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 } else {
                     minuts = time.minuts.toString();
                 }
-                
                 let answer = template.replace(/%HH/, hours)
                     .replace(/%MM/gi, minuts)
                     .replace(/%DD/gi, time.day);
