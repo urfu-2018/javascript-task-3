@@ -35,7 +35,6 @@ function minutesToDayTime(minutes, bankTimeZone) {
 }
 
 function getBankSchedule(workingHours, bankTimeZone) {
-    let startTime = 0;
     let endTime = dayTimeStrToMinutes(...`СР 23:59+${bankTimeZone}`.split(/ |\+/), bankTimeZone);
     let endWeek = dayTimeStrToMinutes(...`ВС 23:59+${bankTimeZone}`.split(/ |\+/), bankTimeZone);
 
@@ -49,7 +48,18 @@ function getBankSchedule(workingHours, bankTimeZone) {
                 .map((day)=>
                     dayTimeStrToMinutes(
                         ...`${day} ${workingHours.to}`.split(/ |\+/), bankTimeZone)))
-        .concat([startTime, endTime, -endWeek]);
+        .concat([endTime, -endWeek]);
+}
+
+function getSign(number) {
+    let sign = isNaN(Math.sign(number)) ? 1 : Math.sign(number);
+    if (isNaN(sign)) {
+        sign = 1;
+    } else if (sign === 0) {
+        sign = -1;
+    }
+
+    return sign;
 }
 
 /**
@@ -65,7 +75,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     let bankTimeZone = Number(workingHours.from.split('+')[1]);
     bankTimeZone = isNaN(bankTimeZone) ? 0 : bankTimeZone;
     workingHours = getBankSchedule(workingHours, bankTimeZone);
-    let answer = Object.keys(schedule)
+    let answer = [NaN].concat(Object.keys(schedule)
         .map((friend)=>[...schedule[friend]])
         .reduce((a, b)=>a.concat(b), [])
         .map((record)=>
@@ -73,12 +83,11 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 dayTimeStrToMinutes(...record.from.split(/ |\+/), bankTimeZone),
                 -dayTimeStrToMinutes(...record.to.split(/ |\+/), bankTimeZone)])
         .reduce((a, b)=>a.concat(b), [])
-        .concat(workingHours)
+        .concat(workingHours))
         .sort((a, b) => Math.abs(a) - Math.abs(b))
         .reduce(function (result, time) {
             let lastInterval = result.intervals[result.intervals.length - 1];
-            let sign = Math.sign(time);
-            sign = !sign ? 1 : sign;
+            let sign = getSign(time);
             if (!(result.count += sign)) {
                 result.intervals.push({ from: -time, to: 0 });
             } else if (result.count === 1 && (lastInterval !== undefined) && !(lastInterval.to)) {
