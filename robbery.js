@@ -144,7 +144,7 @@ function numberToTwoDigitableString(number) {
 function merge(scheduleFirstBoy, scheduleSecondBoy) {
     const mergedSchedule = [];
     scheduleFirstBoy.forEach(timeZonaFirst => {
-        scheduleSecondBoy.forEach((timeZonaSecond, i) => {
+        scheduleSecondBoy.forEach((timeZonaSecond) => {
             let union = getUnion(timeZonaFirst, timeZonaSecond);
             if (union) {
                 mergedSchedule.push(union);
@@ -193,28 +193,28 @@ function getNewScheduleFormat(schedule, bankTimeZone) {
     return revertSchedule(newSchedule);
 }
 
-function revertSchedule(schedule){
+function revertSchedule(schedule) {
     const freeTimeSchedule = [];
     Object.keys(schedule).forEach(key => {
         freeTimeSchedule[key] = getFreeTimeSchedule(schedule[key]);
     });
+
     return freeTimeSchedule;
 }
 
 function getFreeTimeSchedule(schedule) {
     const freeTimeSchedule = [];
-    let leftBorder = -1;
+    let left = -1;
     schedule.forEach(function (timeRange) {
-        if (leftBorder < timeRange.from) {
-            const freeTimeRange = { from: leftBorder, to: timeRange.from };
+        if (left < timeRange.from) {
+            const freeTimeRange = { from: left, to: timeRange.from };
             freeTimeSchedule.push(freeTimeRange);
         }
-        leftBorder = timeRange.to;
+        left = timeRange.to;
     });
     const end = days.length * 60 * 24;
-    if (leftBorder < end) {
-        const freeTimeRange = { 'from': leftBorder, 'to': end };
-        freeTimeSchedule.push(freeTimeRange);
+    if (left < end) {
+        freeTimeSchedule.push({ 'from': left, 'to': end });
     }
 
     return freeTimeSchedule;
@@ -227,43 +227,6 @@ function getNewScheduleRowFormat(r, bankTimeZone) {
         parseTimeToMinutes(r.to.substring(3), bankTimeZone);
 
     return { from: newFrom, to: newTo };
-}
-
-function findDifference(scheduleBoys, scheduleBank) {
-    const possibleTimes = [];
-    scheduleBank.forEach(bankTime => {
-        let flagNichego = true;
-        scheduleBoys.forEach(boysTime => {
-            if (boysTime.from >= bankTime.from && boysTime.from <= bankTime.to) {
-                flagNichego = false;
-                let from = bankTime.from;
-                scheduleBoys.forEach(s => {
-                    if (s.to < boysTime.from && s.to > bankTime.from) {
-                        from = s.to;
-                    }
-                });
-                possibleTimes.push({ 'from': from, 'to': boysTime.from });
-            }
-            if (boysTime.to <= bankTime.to && boysTime.to >= bankTime.from) {
-                flagNichego = false;
-                let to = bankTime.to;
-                scheduleBoys.forEach(s => {
-                    if (s.from > boysTime.to && s.to < bankTime.to) {
-                        to = s.from;
-                    }
-                });
-                possibleTimes.push({ 'from': boysTime.to, 'to': to });
-            }
-        });
-        if (flagNichego) {
-            possibleTimes.push(bankTime);
-        }
-    });
-    if (scheduleBoys.length === 0) {
-        return scheduleBank;
-    }
-
-    return possibleTimes;
 }
 
 /*
