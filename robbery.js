@@ -22,11 +22,15 @@ const HOURS_IN_DAY = 24;
 function getAppropriateMoment(schedule, duration, workingHours) {
     const bankTimeZone = parseInt(workingHours.from.match(/\+(\d)/));
 
-    const timeFrame = getRobberyTimeFrame(bankTimeZone);
+    const timeFrame = {
+        from: 0,
+        to: (daysOfTheWeek.length * MINUTES_IN_DAY) - 1
+    };
 
     const busyIntervals = getBusyIntervalsInTimestamp(schedule, bankTimeZone);
     const freeIntervals = getFreeTimeIntervals(busyIntervals, timeFrame);
-    const robberyIntervals = getIntersectionsOfFreeAndBank(freeIntervals, workingHours);
+    const bankWorkingIntervals = getAllBankWorkingIntervals(workingHours, bankTimeZone);
+    const robberyIntervals = getIntersections(freeIntervals, bankWorkingIntervals);
 
     const moments = getAllMoments(robberyIntervals, duration);
 
@@ -67,29 +71,18 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     };
 }
 
-function getRobberyTimeFrame() {
-    return {
-        from: 0,
-        to: (daysOfTheWeek.length * MINUTES_IN_DAY) - 1
-    };
-}
-
-function getDayOfWeekNumber(dayOfTheWeek) {
-    return daysOfTheWeek.indexOf(dayOfTheWeek);
-}
-
 function getBusyIntervalsInTimestamp(schedule, bankTimeZone) {
-    const intervals = Object.values(schedule)
-        .reduce((acc, intervalsArray) => {
-            intervalsArray.forEach(scheduleInterval => {
+    const busyIntervals = Object.values(schedule)
+        .reduce((intervals, robberSchedule) => {
+            robberSchedule.forEach(scheduleInterval => {
                 const timestampInterval = getTimestampInterval(scheduleInterval, bankTimeZone);
-                acc.push(timestampInterval);
+                intervals.push(timestampInterval);
             });
 
-            return acc;
+            return intervals;
         }, []);
 
-    return intervals;
+    return busyIntervals;
 }
 
 function getTimestampInterval(scheduleInterval, bankTimeZone) {
@@ -103,7 +96,7 @@ function getTimestamp(scheduleTimeString, bankTimezone) {
     const date = getDateFromString(scheduleTimeString);
 
     const fullDays = date.dayNumber * MINUTES_IN_DAY;
-    const fullHours = (date.hours - date.timeZoneOffset + bankTimezone) * MINUTES_IN_HOUR;
+    const fullHours = (date.hours - date.timeZone + bankTimezone) * MINUTES_IN_HOUR;
 
     return fullDays + fullHours + date.minutes;
 }
@@ -116,9 +109,13 @@ function getDateFromString(dateString) {
     const dayNumber = getDayOfWeekNumber(timeStringComponents[1]);
     const hours = parseInt(timeStringComponents[2]);
     const minutes = parseInt(timeStringComponents[3]);
-    const timeZoneOffset = parseInt(timeStringComponents[4]);
+    const timeZone = parseInt(timeStringComponents[4]);
 
-    return { dayNumber, hours, minutes, timeZoneOffset };
+    return { dayNumber, hours, minutes, timeZone };
+}
+
+function getDayOfWeekNumber(dayOfTheWeek) {
+    return daysOfTheWeek.indexOf(dayOfTheWeek);
 }
 
 function getDateFromTimestamp(timestamp) {
@@ -129,27 +126,18 @@ function getDateFromTimestamp(timestamp) {
     return { day, hours, minutes };
 }
 
-function addLeadingZero(number) {
-    const string = number.toString();
-
-    return string.length === 2 ? string : '0' + string;
-}
-
 function getFreeTimeIntervals(busyIntervals, timeFrame) {
     if (busyIntervals.length === 0) {
         return [timeFrame];
     }
 
+    // добавляем временные рамки ограбления ко всем интервалам
+    busyIntervals.push({ from: timeFrame.from, to: timeFrame.from });
+    busyIntervals.push({ from: timeFrame.to, to: timeFrame.to });
+
     const sortedIntervals = busyIntervals.sort(compareIntervals);
 
     const freeIntervals = [];
-
-    if (sortedIntervals[0].from > timeFrame.from) {
-        freeIntervals.push({
-            from: timeFrame.from,
-            to: sortedIntervals[0].from
-        });
-    }
 
     let currentEnd = sortedIntervals[0].to;
     for (let i = 1; i < sortedIntervals.length; i++) {
@@ -164,13 +152,6 @@ function getFreeTimeIntervals(busyIntervals, timeFrame) {
         currentEnd = Math.max(currentEnd, next.to);
     }
 
-    if (currentEnd < timeFrame.to) {
-        freeIntervals.push({
-            from: currentEnd,
-            to: timeFrame.to
-        });
-    }
-
     return freeIntervals;
 }
 
@@ -181,44 +162,46 @@ function compareIntervals(firstInterval, secondInterval) {
     return fromDiff === 0 ? toDiff : fromDiff;
 }
 
-function getIntersectionsOfFreeAndBank(freeIntervals, bankWorkingHours) {
-    const intersections = daysOfTheWeek.reduce((acc, day) => {
-        const intersectionsToday = getAllTodaysIntersections(freeIntervals, bankWorkingHours, day);
-        acc = acc.concat(intersectionsToday);
+function getAllBankWorkingIntervals(workingHours, bankTimezone) {
+    const intervals = [];
 
-        return acc;
-    }, []);
+    for (const day of daysOfTheWeek) {
+        intervals.push({
+            from: getTimestamp(`${day} ${workingHours.from}`, bankTimezone),
+            to: getTimestamp(`${day} ${workingHours.to}`, bankTimezone)
+        });
+    }
+
+    return intervals;
+}
+
+function getIntersections(freeIntervals, bankWorkingIntervals) {
+    let intersections = [];
+
+    for (const workingInterval of bankWorkingIntervals) {
+        const intersectionsToday = getIntersectionsForDay(freeIntervals, workingInterval);
+        intersections = intersections.concat(intersectionsToday);
+    }
 
     return intersections;
 }
 
-function getAllTodaysIntersections(freeIntervals, bankWorkingHours, day) {
-    const bankWorkingInterval = getBankWorkingIntervalForDay(bankWorkingHours, day);
-
-    return freeIntervals.reduce((acc, interval) => {
-        const intervalStartsAfterBankClosing = interval.from >= bankWorkingInterval.to;
-        const intervalEndsBeforeBankOpening = interval.to <= bankWorkingInterval.from;
+function getIntersectionsForDay(freeIntervals, workingInterval) {
+    return freeIntervals.reduce((free, interval) => {
+        const intervalStartsAfterBankClosing = interval.from >= workingInterval.to;
+        const intervalEndsBeforeBankOpening = interval.to <= workingInterval.from;
 
         if (intervalEndsBeforeBankOpening || intervalStartsAfterBankClosing) {
-            return acc;
+            return free;
         }
 
-        acc.push({
-            from: Math.max(interval.from, bankWorkingInterval.from),
-            to: Math.min(interval.to, bankWorkingInterval.to)
+        free.push({
+            from: Math.max(interval.from, workingInterval.from),
+            to: Math.min(interval.to, workingInterval.to)
         });
 
-        return acc;
+        return free;
     }, []);
-}
-
-function getBankWorkingIntervalForDay(bankWorkingHours, day) {
-    const bankTimeZone = parseInt(bankWorkingHours.from.match(/\+(\d)/));
-
-    return {
-        from: getTimestamp(`${day} ${bankWorkingHours.from}`, bankTimeZone),
-        to: getTimestamp(`${day} ${bankWorkingHours.to}`, bankTimeZone)
-    };
 }
 
 function getAllMoments(robberyIntervals, duration) {
@@ -282,10 +265,14 @@ function formatDateString(date, template) {
     });
 }
 
+function addLeadingZero(number) {
+    const string = number.toString();
+
+    return string.length === 2 ? string : '0' + string;
+}
+
 module.exports = {
     getAppropriateMoment,
-    getBusyIntervalsInTimestamp,
-    getFreeTimeIntervals,
 
     isStar
 };
