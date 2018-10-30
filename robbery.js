@@ -46,7 +46,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     console.info(schedule, duration, workingHours);
     let bankTimeZone = Number(workingHours.from.split('+')[1]);
     bankTimeZone = isNaN(bankTimeZone) ? 0 : bankTimeZone;
-    let startTime = 1;
+    let startTime = 0;
     let endTime = dayTimeStrToMinutes(...`СР 23:59+${bankTimeZone}`.split(/ |\+/), bankTimeZone);
     let endWeek = dayTimeStrToMinutes(...`ВС 23:59+${bankTimeZone}`.split(/ |\+/), bankTimeZone);
     workingHours = weekDays
@@ -73,7 +73,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             .sort((a, b) => Math.abs(a) - Math.abs(b)))
         .reduce(function (result, time) {
             let lastInterval = result.intervals[result.intervals.length - 1];
-            if (!(result.count += Math.sign(time))) {
+            let sign = Math.sign(time);
+            sign = !sign ? 1 : sign;
+            if (!(result.count += sign)) {
                 result.intervals.push({ from: -time, to: 0 });
             } else if (result.count === 1 && (lastInterval !== undefined) && !(lastInterval.to)) {
                 result.intervals[result.intervals.length - 1].to = time;
