@@ -8,8 +8,8 @@ const isStar = true;
 const MINUTEINDAY = 24 * 60;
 const DAYS = {
     'ПН': 0,
-    'ВТ': MINUTEINDAY,
-    'СР': MINUTEINDAY * 2
+    'ВТ': 24 * 60,
+    'СР': 48 * 60
 };
 const MAXMINUTEINDAYS = MINUTEINDAY * 3 - 1;
 
@@ -24,7 +24,7 @@ const MAXMINUTEINDAYS = MINUTEINDAY * 3 - 1;
 
 
 function invertSchedule(schedule) {
-    schedule.sort((a, b)=> a[0] - b[0]);
+    schedule.sort((a, b) => a[0] - b[0]);
     let startOfInterval = 0;
     const freeTime = [];
     schedule.forEach(time => {
@@ -49,33 +49,23 @@ function parseInMinutes(hours, minutes) {
     return hours * 60 + minutes;
 }
 
-function correctTime(time, timeZone, bank) {
-    const hours = parseInt(time.slice(0, 2)) + parseInt(bank) - parseInt(timeZone);
+function correctTime(time, timeZone, bankZone, day) {
+    const hours = parseInt(time.slice(0, 2)) + parseInt(bankZone) - parseInt(timeZone);
     const minutes = parseInt(time.slice(3, 5));
 
-    return parseInMinutes(hours, minutes);
+    return hours * 60 + DAYS[day] + minutes;
 }
 
 function rightFormat(time, bankZone) {
-    const day = time[0];
-    let beginInMinutes = correctTime(time[1], time[3], bankZone);
-    let endInMinutes = correctTime(time[2], time[3], bankZone);
-    if (beginInMinutes > endInMinutes) {
-        beginInMinutes += DAYS[day];
-        endInMinutes += DAYS[day] + MINUTEINDAY;
-    } else {
-        beginInMinutes += DAYS[day];
-        endInMinutes += DAYS[day];
-    }
+    const day = time.slice(0, 2);
+    let minutes = correctTime(time.slice(3, 8), time.slice(9), bankZone, day);
 
-    return [beginInMinutes, endInMinutes];
+    return minutes;
 }
 
 function parseBusyTime(schedule, bankZone) {
     return schedule
-        .map(time => [time.from.slice(0, 2), time.from.slice(3, 8),
-            time.to.slice(3, 8), parseInt(time.from.slice(9))])
-        .map(times => rightFormat(times, bankZone));
+        .map(times => [rightFormat(times.from, bankZone), rightFormat(times.to, bankZone)]);
 }
 
 
