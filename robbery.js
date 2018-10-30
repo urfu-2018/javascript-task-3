@@ -6,14 +6,12 @@
  */
 const isStar = true;
 
-const swapNumberAndStringDays = {
-    'ПН': 1, 'ВТ': 2, 'СР': 3,
-    1: 'ПН', 2: 'ВТ', 3: 'СР'
-};
+const robDays = ['ПН', 'ВТ', 'СР']; /* через индекс я буду получать дни недели, а через indexOf()
+                                        - номера дней, для этого начал порядок с 0*/
 
 const minutesInHour = 60;
 const hoursInDay = 24;
-const dayEndInMinutes = 1440 - 1;
+const dayEndInMinutes = 1439; // количество минут в одном дне на момент времени 23:59
 
 
 /**
@@ -36,12 +34,10 @@ function createDate(day, hours, minutes) {
     if (minutes >= minutesInHour) {
         hours += Math.floor(minutes / minutesInHour);
         minutes = minutes % minutesInHour;
-
     }
     if (hours >= hoursInDay) {
         day += Math.floor(hours / hoursInDay);
         hours = hours % hoursInDay;
-
     }
 
     const myDate = {
@@ -56,31 +52,28 @@ function createDate(day, hours, minutes) {
 /**
  * Превращает строку с расписанием в объект даты
  * @param {String} timeTable
- * @param {Number} bankTimeZone
- * @param {Number} robberTimeZone
+ * @param {Number?} bankTimeZone
  * @param {Number?} day
  * @returns {Object}
  */
-function formatSchedule(timeTable, bankTimeZone, robberTimeZone, day) {
+function formatSchedule(timeTable, bankTimeZone, day) {
     const hours = parseInt(timeTable.match(/\d{2}/)[0]);
     const minutes = parseInt(timeTable.match(/:\d{2}/)[0].replace(':', ''));
-    const difference = robberTimeZone - bankTimeZone;
+    let difference = 0;
+
+    /* если была подана зона банка, значит это грабитель, и надо посчитать разницу, если нет,
+    то это банк и у него разница с собой 0*/
+    if (bankTimeZone) {
+        const timeZone = parseInt(timeTable.match(/\+\d+/)[0].replace(/\+/, ''));
+        difference = timeZone - bankTimeZone;
+    }
 
     if (!day) {
         day = timeTable.substr(0, 2);
-        day = swapNumberAndStringDays[day];
+        day = robDays.indexOf(day);
     }
 
     return createDate(day, hours - difference, minutes);
-}
-
-/**
- * Парсит расписание и возвращает его часовой пояс
- * @param {String} time
- * @returns {Number}
- */
-function getTimeZone(time) {
-    return parseInt(time.match(/\+\d+/)[0].replace(/\+/, ''));
 }
 
 /**
@@ -92,14 +85,16 @@ function getTimeZone(time) {
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    console.info(schedule, duration, workingHours);
-    let noRobTime = { // массив занятости
-        1: [],
-        2: [],
-        3: []
-    };
 
-    const bankZone = getTimeZone(workingHours.from);
+    /* единственное, что эта строка повторяется дважды, но тут как раз идет отказ от функции
+    getTimeZone и уход от лишнего парсинга*/
+    const bankZone = parseInt(workingHours.from.match(/\+\d+/)[0].replace(/\+/, ''));
+
+    let noRobTime = { // массив занятости
+        0: [], // сделал начало с 0, чтобы было удобнее работать с индексами массива дней
+        1: [],
+        2: []
+    };
 
     /**
      * инициализирует массив занятости началом и концом работы банка
@@ -107,14 +102,17 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     function initializeNoRobTime() {
         const days = Object.keys(noRobTime);
 
+        const minutesOfStartWork = convertToMinutes(formatSchedule(workingHours.from));
+        const minutesOfStopWork = convertToMinutes(formatSchedule(workingHours.to));
+
         days.forEach(day => {
             noRobTime[day].push(
                 {
                     fromInMinutes: 0,
-                    toInMinutes: convertToMinutes(formatSchedule(workingHours.from, 0, 0, day))
+                    toInMinutes: minutesOfStartWork
                 },
                 {
-                    fromInMinutes: convertToMinutes(formatSchedule(workingHours.to, 0, 0, day)),
+                    fromInMinutes: minutesOfStopWork,
                     toInMinutes: dayEndInMinutes
                 });
         });
@@ -126,12 +124,11 @@ function getAppropriateMoment(schedule, duration, workingHours) {
      */
     function addNewRobTime(robber) {
         if (schedule[robber].length > 0) {
-            const robberZone = getTimeZone(schedule[robber][0].from);
             const robberBusyness = schedule[robber];
 
             robberBusyness.forEach(gap => {
-                const busyFrom = formatSchedule(gap.from, bankZone, robberZone);
-                const busyTo = formatSchedule(gap.to, bankZone, robberZone);
+                const busyFrom = formatSchedule(gap.from, bankZone);
+                const busyTo = formatSchedule(gap.to, bankZone);
 
                 updateRobTime(busyFrom, busyTo);
             });
@@ -144,7 +141,6 @@ function getAppropriateMoment(schedule, duration, workingHours) {
      * @param {Number} to
      */
     function updateRobTime(from, to) {
-
         const dayFrom = from.day;
         const dayTo = to.day;
         const pushTo = convertToMinutes(to);
@@ -234,18 +230,24 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 return '';
             }
 
-            const day = swapNumberAndStringDays[parseInt(timeToRob[0].day)];
+            const day = robDays[timeToRob[0].day];
             let hours = timeToRob[0].hours;
             let minutes = timeToRob[0].minutes;
 
-            if (minutes < 10) {
-                minutes = `0${minutes}`;
-            }
-            if (hours < 10) {
-                hours = `0${hours}`;
+            /**
+             * переводит время в кооректный формат вывода
+             * @param {Number} time
+             * @returns {String}
+             */
+            function formatOutputTime(time) {
+                return (time < 10) ? `0${time}` : time.toString();
             }
 
-            return template.replace(/%DD/, day)
+            hours = formatOutputTime(hours);
+            minutes = formatOutputTime(minutes);
+
+            return template
+                .replace(/%DD/, day)
                 .replace(/%HH/, hours)
                 .replace(/%MM/, minutes);
         },
