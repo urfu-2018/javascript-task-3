@@ -9,6 +9,7 @@ const isStar = false;
 const daysOfTheWeek = ['ПН', 'ВТ', 'СР'];
 const MINUTES_IN_DAY = 1440;
 const MINUTES_IN_HOUR = 60;
+const HOURS_IN_DAY = 24;
 
 /**
  * @param {Object} schedule – Расписание Банды
@@ -28,7 +29,6 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     const robberyIntervals = getIntersectionsOfFreeAndBank(freeIntervals, workingHours);
 
     const moment = getMoment(robberyIntervals, duration);
-    // const momentBankTimezone = shiftTime(moment, bankTimeZone);
 
     return {
 
@@ -122,9 +122,9 @@ function getDateFromString(dateString) {
 }
 
 function getDateFromTimestamp(timestamp) {
-    const day = Math.floor(timestamp / MINUTES_IN_DAY);
-    const hours = Math.floor((timestamp - day * MINUTES_IN_DAY) / MINUTES_IN_HOUR);
-    const minutes = timestamp - day * MINUTES_IN_DAY - hours * MINUTES_IN_HOUR;
+    const day = Math.trunc(timestamp / MINUTES_IN_DAY);
+    const hours = Math.trunc(timestamp / MINUTES_IN_HOUR) % HOURS_IN_DAY;
+    const minutes = timestamp % MINUTES_IN_HOUR;
 
     return { day, hours, minutes };
 }
