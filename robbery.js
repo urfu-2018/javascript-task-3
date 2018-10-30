@@ -89,7 +89,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          */
         format: function (template) {
             if (!this.exists()) {
-                return template;
+                return '';
             }
 
             template = template.replace(/%HH/, robberyTime[0].getHours());
@@ -184,10 +184,20 @@ function differenceIntervals(freeTime, unsuitableTime) {
                 intervals[i].to.time > value.from.time;
                 const toIncludedInTheInterval = intervals[i].from.time < value.to.time &&
                 intervals[i].to.time > value.to.time;
-                if (fromIncludedInTheInterval) {
-                    intervals[i].to.time = value.from.time;
-                } else if (toIncludedInTheInterval) {
-                    intervals[i].from.time = value.to.time;
+                if (fromIncludedInTheInterval && toIncludedInTheInterval) {
+                    intervals.splice(i, 1, {
+                        from: intervals[i].from,
+                        to: value.from
+                    },
+                    {
+                        from: value.to,
+                        to: intervals[i].to
+                    });
+                } else {
+                    if (fromIncludedInTheInterval) {
+                        intervals[i].to.time = value.from.time;
+                    } else if (toIncludedInTheInterval) {
+                        intervals[i].from.time = value.to.time;
                 }
             }
 
