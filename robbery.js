@@ -24,6 +24,7 @@ const MAXMINUTEINDAYS = MINUTEINDAY * 3 - 1;
 
 
 function invertSchedule(schedule) {
+    schedule.sort((a, b)=> a[0] - b[0]);
     let startOfInterval = 0;
     const freeTime = [];
     schedule.forEach(time => {
