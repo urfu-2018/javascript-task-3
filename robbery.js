@@ -68,31 +68,33 @@ function formatBankTime(workingHours) {
 }
 
 function createDaysTimeRange(formattedSchedule, formattedWorkingHours) {
-    const ob = { ПН: [], ВТ: [], СР: [] };
+    const rangesByDay = { ПН: [], ВТ: [], СР: [], ЧТ: [], ПТ: [], СБ: [], ВС: [] };
 
     Object.keys(formattedSchedule).forEach(person => {
         formattedSchedule[person].forEach(({ from, to }) => {
             if (from[0] === to[0]) {
-                ob[from[0]].push([from[1], to[1]]);
+                rangesByDay[from[0]].push([from[1], to[1]]);
             } else {
-                ob[from[0]].push([from[1], formattedWorkingHours.to]);
-                ob[to[0]].push([formattedWorkingHours.from, to[1]]);
+                rangesByDay[from[0]].push([from[1], formattedWorkingHours.to]);
+                rangesByDay[to[0]].push([formattedWorkingHours.from, to[1]]);
             }
         });
     });
 
-    return ob;
+    const currentVariants = { ПН: rangesByDay['ПН'], ВТ: rangesByDay['ВТ'], СР: rangesByDay['СР'] };
+
+    return currentVariants;
 }
 
 function compareRanges(supposedRange, dayRange) {
     return (
-        (supposedRange[0] <= dayRange[0] && supposedRange[1] <= dayRange[0]) ||
-        (supposedRange[0] >= dayRange[1] && supposedRange[1] >= dayRange[1])
+        (supposedRange[0] < dayRange[0] && supposedRange[1] <= dayRange[0]) ||
+        (supposedRange[0] >= dayRange[1] && supposedRange[1] > dayRange[1])
     );
 }
 
 function findTimeRange(daysRanges, duration, formattedWorkingHours) {
-    const possibleVariants = { ПН: [], ВТ: [], СР: [] };
+    const variants = { ПН: [], ВТ: [], СР: [] };
 
     for (let i = formattedWorkingHours.from; i < formattedWorkingHours.to - duration + 1; i++) {
         Object.keys(daysRanges).forEach(day => {
@@ -105,13 +107,13 @@ function findTimeRange(daysRanges, duration, formattedWorkingHours) {
             });
 
             if (counter === daysRanges[day].length) {
-                possibleVariants[day].push(i);
+                variants[day].push(i);
                 i += 29;
             }
         });
     }
 
-    return possibleVariants;
+    return variants;
 }
 
 function findNearByTime(possibleTimes) {
