@@ -6,6 +6,55 @@
  */
 const isStar = true;
 
+const MINUTES_IN_HOURS = 60;
+const HOURS_IN_DAY = 24;
+const DAYS = { 'ПН': 0, 'ВТ': 1, 'СР': 2, 'ЧТ': 3, 'ПТ': 4, 'СБ': 5, 'ВС': 6 };
+const DAYS_BEFORE_CLOSING = 3;
+const MAX_ROBBERY_TIME = DAYS_BEFORE_CLOSING * HOURS_IN_DAY * MINUTES_IN_HOURS - 1;
+
+class Time {
+    constructor(day, hours, minutes, timeZone) {
+        this.timeZone = timeZone;
+        this.time = day * HOURS_IN_DAY * MINUTES_IN_HOURS + hours * MINUTES_IN_HOURS + minutes;
+    }
+
+    getDay() {
+        const day = Math.floor(this.time / (HOURS_IN_DAY * MINUTES_IN_HOURS));
+        const keys = Object.keys(DAYS);
+
+        for (let i = 0; i < keys.length; i++) {
+            if (Number(DAYS[keys[i]]) === day) {
+                return keys[i];
+            }
+        }
+    }
+
+    getHours() {
+        const hours = String(Math.floor(this.time % (HOURS_IN_DAY * MINUTES_IN_HOURS) /
+        MINUTES_IN_HOURS));
+
+        if (hours.length < 2) {
+            return '0' + hours;
+        }
+
+        return hours;
+    }
+
+    getMinutes() {
+        const minutes = String(this.time % MINUTES_IN_HOURS);
+
+        if (minutes.length < 2) {
+            return '0' + minutes;
+        }
+
+        return minutes;
+    }
+
+    changeTimeZone(timeZone) {
+        this.time += (timeZone - this.timeZone) * MINUTES_IN_HOURS;
+    }
+}
+
 /**
  * @param {Object} schedule – Расписание Банды
  * @param {Number} duration - Время на ограбление в минутах
@@ -15,7 +64,8 @@ const isStar = true;
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    console.info(schedule, duration, workingHours);
+    const freeTime = getFreeTime(schedule, workingHours);
+    const robberyTime = getRobberiesTime(freeTime, duration);
 
     return {
 
@@ -24,6 +74,10 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
+            if (robberyTime.length !== 0) {
+                return true;
+            }
+
             return false;
         },
 
@@ -34,6 +88,14 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
+            if (!this.exists()) {
+                return template;
+            }
+
+            template = template.replace(/%HH/, robberyTime[0].getHours());
+            template = template.replace(/%MM/, robberyTime[0].getMinutes());
+            template = template.replace(/%DD/, robberyTime[0].getDay());
+
             return template;
         },
 
@@ -43,9 +105,116 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
+            if (robberyTime.length > 1) {
+                return true;
+            }
+
             return false;
         }
     };
+}
+
+function getRobberiesTime(freeTime, duration) {
+    const robberyTime = [];
+
+    freeTime.forEach(element => {
+        const fTime = element.to - element.from;
+
+        while (fTime > duration) {
+            robberyTime.push(element.to - fTime);
+            fTime -= duration + 30;
+        }
+    });
+
+    return robberyTime;
+}
+
+function getFreeTime(schedule, workingHours) {
+    const freeTime = [];
+    const unsuitableTime = [];
+    const keys = Object.keys(DAYS);
+
+    for (let i = 0; i < DAYS_BEFORE_CLOSING; i++) {
+        freeTime.push({
+            from: convertStringToTime(keys[i] + ' ' + workingHours.from),
+            to: convertStringToTime(keys[i] + ' ' + workingHours.to)
+        });
+    }
+
+    for (let i = 0; i < schedule.length; i++) {
+        unsuitableTime.concat(getUnsuitableTime(schedule[i]), freeTime[0].timeZone);
+    }
+
+    return differenceIntervals(freeTime, unionIntervals(unsuitableTime));
+}
+
+function unionIntervals(unsuitableTime) {
+    return unsuitableTime
+        .sort((a, b) => {
+            return a.from.time > b.from.time ? 1 : -1;
+        })
+        .filter(element => element.from.time > MAX_ROBBERY_TIME)
+        .map(element => {
+            if (element.to.time > MAX_ROBBERY_TIME) {
+                element.to.time = MAX_ROBBERY_TIME;
+            }
+
+            return element;
+        });
+}
+
+function differenceIntervals(freeTime, unsuitableTime) {
+    const arrayFreeTime = [];
+
+    freeTime.forEach(element => {
+        const array = unsuitableTime.reduce((intervals, value) => {
+            for (let i = 0; i < intervals.length; i++) {
+                const fromIncludedInTheInterval = intervals[i].from.time < value.from.time &&
+                intervals[i].to.time > value.from.time;
+                const toIncludedInTheInterval = intervals[i].frome.time < value.to.time &&
+                intervals[i].to.time > value.to.time;
+                if (fromIncludedInTheInterval) {
+                    intervals[i].to.time = value.from.time;
+                } else if (toIncludedInTheInterval) {
+                    intervals[i].from.time = value.to.time;
+                }
+            }
+
+            return intervals;
+        }, [element]);
+
+        arrayFreeTime.concat(array);
+    });
+
+    return arrayFreeTime;
+}
+
+function getUnsuitableTime(intervals, timeZone) {
+    const arrayIntervals = [];
+
+    intervals.forEach(element => {
+        const busyFrom = convertStringToTime(element.from);
+        const busyTo = convertStringToTime(element.to);
+
+        busyFrom.changeTimeZone(timeZone);
+        busyTo.changeTimeZone(timeZone);
+
+        arrayIntervals.push({
+            from: busyFrom,
+            to: busyTo
+        });
+    });
+
+    return arrayIntervals;
+}
+
+function convertStringToTime(stringRepresentationDate) {
+    const dayAndTime = stringRepresentationDate.split(' ');
+    const timeAndGTM = dayAndTime[1].split('+');
+    const hoursAndMinutes = timeAndGTM[0].split(':');
+
+    return new Time(DAYS[dayAndTime[0]], Number(hoursAndMinutes[0]), Number(hoursAndMinutes[1]),
+        Number(timeAndGTM[1]));
 }
 
 module.exports = {
