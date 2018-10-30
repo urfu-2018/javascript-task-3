@@ -20,7 +20,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     // console.info(schedule, duration, workingHours);
     let bankSchedule = getNewScheduleBank(workingHours, bankTimeZone);
     let newSchedule = getNewScheduleFormat(schedule, bankTimeZone);
-    const emptyDays = possibleWeHaveEmptyDay(schedule, newSchedule, bankSchedule);
+    // const emptyDays = possibleWeHaveEmptyDay(schedule, newSchedule, bankSchedule);
     let mergedSchedule = [];
     Object.keys(newSchedule).forEach(key => {
         mergedSchedule = merge(newSchedule[key], mergedSchedule);
@@ -64,7 +64,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     };
 }
 
-function possibleWeHaveEmptyDay(schedule, newSchedule, bankSchedule) {
+/* function possibleWeHaveEmptyDay(schedule, newSchedule, bankSchedule) {
     const emptyDays = [];
     const countDayInSschedule = { 'ПН': 0, 'ВТ': 0, 'СР': 0 };
     Object.keys(schedule).forEach(key => {
@@ -88,10 +88,10 @@ function possibleWeHaveEmptyDay(schedule, newSchedule, bankSchedule) {
         });
         //  }
     });
-    //const svobVremay = findDifference(emptyDays, newSchedule)
+    // const svobVremay = findDifference(emptyDays, newSchedule)
 
     return emptyDays;
-}
+} */
 
 function dayToMinutes(day) {
     if (day === 'ПН') {
