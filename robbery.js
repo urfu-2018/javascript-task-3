@@ -30,7 +30,12 @@ function getFreeIntervals(points) {
 
     points.forEach(p => {
         if (!busy) {
-            intervals.push({ from: start, to: p.time });
+            if (p.time % (24 * 60) < start % (24 * 60)) {
+                intervals.push({ from: start, to: p.time - p.time % (24 * 60) - 1 });
+                intervals.push({ from: p.time - p.time % (24 * 60), to: p.time });
+            } else {
+                intervals.push({ from: start, to: p.time });
+            }
         }
         busy += p.type === 'from' ? 1 : -1;
         start = p.time;
@@ -101,7 +106,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            return !isNaN(this.currentTime);
+            return robIntervals[0] !== undefined;
         },
 
         /**
@@ -111,7 +116,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            return template
+            return !this.exists() ? '' : template
                 .replace('%HH', twoDigit(getHour(this.currentTime)))
                 .replace('%MM', twoDigit(getMinute(this.currentTime)))
                 .replace('%DD', days[getDay(this.currentTime)]);
@@ -123,8 +128,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            let interval = this.intervals[this.currentIndex];
-            if (this.currentTime + 30 + duration <= interval.to) {
+            if (this.currentTime + 30 + duration <= this.intervals[this.currentIndex].to) {
                 this.currentTime += 30;
 
                 return true;
