@@ -95,16 +95,33 @@ function getBankTime(workingHours) {
     return sections;
 }
 
-function correctSchedule(schedule) {
-    if (typeof schedule !== 'object') {
+function allIsUndefined(schedule) {
+
+    return typeof schedule.Danny === undefined ||
+    typeof schedule.Rusty === undefined ||
+    typeof schedule.Linus === undefined;
+}
+
+function correctSchedule(schedule, bankTimezone) {
+    if (allIsUndefined(schedule)) {
 
         return false;
     }
-    if (typeof schedule.Danny === undefined ||
-        typeof schedule.Rusty === undefined ||
-        typeof schedule.Linus === undefined) {
-
+    if (!correctSections(schedule.Danny, bankTimezone) ||
+    !correctSections(schedule.Rusty, bankTimezone) ||
+    !correctSections(schedule.Linus, bankTimezone)) {
         return false;
+    }
+
+    return true;
+}
+
+function correctSections(sections, bankTimeZone) {
+    for (let s of sections) {
+        if (isNaN(getTime(s.from, bankTimeZone)) || isNaN(getTime(s.to, bankTimeZone))) {
+
+            return false;
+        }
     }
 
     return true;
@@ -128,11 +145,11 @@ function correctWorkingHours(workingHours) {
 }
 
 function fillFreeTime(schedule, workingHours) {
-    if (!correctWorkingHours(workingHours) || !correctSchedule(schedule)) {
+    const bankTimezone = parseInt(workingHours.from.split('+')[1]);
+    if (!correctWorkingHours(workingHours) || !correctSchedule(schedule, bankTimezone)) {
 
         return [];
     }
-    const bankTimezone = parseInt(workingHours.from.split('+')[1]);
     let dannyFreeTime = getTimeSections(schedule.Danny, bankTimezone);
     let rustyFreeTime = getTimeSections(schedule.Rusty, bankTimezone);
     let linusFreeTime = getTimeSections(schedule.Linus, bankTimezone);
@@ -158,7 +175,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     let times = fillFreeTime(schedule, workingHours);
     let time = -1;
     for (let s of times) {
-        if (s.to - s.from >= duration) {
+        if (typeof duration === 'number' && s.to - s.from >= duration) {
             time = s.from;
             break;
         }
