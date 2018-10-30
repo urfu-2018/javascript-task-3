@@ -23,12 +23,12 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
     const timeFrame = getRobberyTimeFrame(bankTimeZone);
 
-    const busyIntervals = getBusyIntervalsInTimestamp(schedule);
+    const busyIntervals = getBusyIntervalsInTimestamp(schedule, bankTimeZone);
     const freeIntervals = getFreeTimeIntervals(busyIntervals, timeFrame);
     const robberyIntervals = getIntersectionsOfFreeAndBank(freeIntervals, workingHours);
 
     const moment = getMoment(robberyIntervals, duration);
-    const momentBankTimezone = shiftTime(moment, bankTimeZone);
+    // const momentBankTimezone = shiftTime(moment, bankTimeZone);
 
     return {
 
@@ -47,7 +47,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            const robberyDate = getDateFromTimestamp(momentBankTimezone);
+            const robberyDate = getDateFromTimestamp(moment);
 
             if (this.exists()) {
                 return formatDateString(robberyDate, template);
@@ -67,24 +67,22 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     };
 }
 
-function getRobberyTimeFrame(timeZoneOffset) {
-    const timeFrame = {
-        from: `ПН 00:00+${timeZoneOffset}`,
-        to: `СР 23:59+${timeZoneOffset}`
+function getRobberyTimeFrame(timeZone) {
+    return {
+        from: 0,
+        to: (daysOfTheWeek.length * MINUTES_IN_DAY) - 1
     };
-
-    return getTimestampInterval(timeFrame);
 }
 
 function getDayOfWeekNumber(dayOfTheWeek) {
     return daysOfTheWeek.indexOf(dayOfTheWeek);
 }
 
-function getBusyIntervalsInTimestamp(schedule) {
+function getBusyIntervalsInTimestamp(schedule, bankTimeZone) {
     const intervals = Object.values(schedule)
         .reduce((acc, intervalsArray) => {
             intervalsArray.forEach(scheduleInterval => {
-                const timestampInterval = getTimestampInterval(scheduleInterval);
+                const timestampInterval = getTimestampInterval(scheduleInterval, bankTimeZone);
                 acc.push(timestampInterval);
             });
 
@@ -94,18 +92,18 @@ function getBusyIntervalsInTimestamp(schedule) {
     return intervals;
 }
 
-function getTimestampInterval(scheduleInterval) {
+function getTimestampInterval(scheduleInterval, bankTimeZone) {
     return {
-        from: getTimestamp(scheduleInterval.from),
-        to: getTimestamp(scheduleInterval.to)
+        from: getTimestamp(scheduleInterval.from, bankTimeZone),
+        to: getTimestamp(scheduleInterval.to, bankTimeZone)
     };
 }
 
-function getTimestamp(scheduleTimeString) {
+function getTimestamp(scheduleTimeString, bankTimezone) {
     const date = getDateFromString(scheduleTimeString);
 
     const fullDays = date.dayNumber * MINUTES_IN_DAY;
-    const fullHours = (date.hours - date.timeZoneOffset) * MINUTES_IN_HOUR;
+    const fullHours = (date.hours - date.timeZoneOffset + bankTimezone) * MINUTES_IN_HOUR;
 
     return fullDays + fullHours + date.minutes;
 }
@@ -215,9 +213,10 @@ function getAllTodaysIntersections(freeIntervals, bankWorkingHours, day) {
 }
 
 function getBankWorkingIntervalForDay(bankWorkingHours, day) {
+    const bankTimeZone = parseInt(bankWorkingHours.from.match(/\+(\d)/));
     return {
-        from: getTimestamp(`${day} ${bankWorkingHours.from}`),
-        to: getTimestamp(`${day} ${bankWorkingHours.to}`)
+        from: getTimestamp(`${day} ${bankWorkingHours.from}`, bankTimeZone),
+        to: getTimestamp(`${day} ${bankWorkingHours.to}`, bankTimeZone)
     };
 }
 
@@ -253,6 +252,8 @@ function formatDateString(date, template) {
 
 module.exports = {
     getAppropriateMoment,
+    getBusyIntervalsInTimestamp,
+    getFreeTimeIntervals,
 
     isStar
 };
