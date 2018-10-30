@@ -147,24 +147,25 @@ function getGoodSectors(freeSectors, workingHoursInMinute, duration) {
     return result;
 }
 
-function invalid(element, workingTime, sector) {
+/* function invalid(element, workingTime, sector) {
     if (element[0] > workingTime[0] + minutesInDay || element[1] > workingTime[1] + minutesInDay) {
         return sector;
     }
 
     return 1;
-}
+}*/
 
 function firstCheck(element, workingTime) {
     let sector;
-    let preRes = invalid(element, workingTime, sector);
+
+    /* let preRes = invalid(element, workingTime, sector);
     if (typeof preRes === 'undefined') {
         return sector;
-    }
+    }*/
     if (workingTime[0] <= element[0] && element[1] <= workingTime[1]) {
         sector = [element[0], element[1]];
     }
-    if (workingTime[0] > element[0] && workingTime[1] < element[1]) {
+    if (workingTime[0] >= element[0] && workingTime[1] <= element[1]) {
         sector = [workingTime[0], workingTime[1]];
     }
 
@@ -173,10 +174,10 @@ function firstCheck(element, workingTime) {
 
 function secondCheck(element, workingTime) {
     let sector;
-    if (workingTime[0] < element[0] && workingTime[1] < element[1]) {
+    if (workingTime[0] <= element[0] && workingTime[1] >= element[0]) {
         sector = [element[0], workingTime[1]];
     }
-    if (workingTime[0] > element[0] && workingTime[1] > element[1]) {
+    if (workingTime[0] >= element[0] && workingTime[1] >= element[1]) {
         sector = [workingTime[0], element[1]];
     }
 
@@ -191,6 +192,7 @@ function getGoodSector(freeSectors, workingTime, duration) {
         if (typeof sector === 'undefined') {
             sector = secondCheck(element, workingTime);
         }
+        console.info(sector);
         if (typeof sector !== 'undefined' && sector.length !== 0 &&
         sector[1] - sector[0] >= duration) {
             result.push(sector);
@@ -209,6 +211,21 @@ function getGoodSector(freeSectors, workingTime, duration) {
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
+
+    /* duration = 151;
+    workingHours.from = '00:00+5';
+    workingHours.to = '08:00+5';
+    schedule = {
+        Danny: [
+            { from: 'ПН 00:00+5', to: 'СР 00:00+5' }
+        ],
+        Rusty: [
+            { from: 'ПН 11:30+5', to: 'ПН 16:30+5' }
+        ],
+        Linus: [
+            { from: 'СР 09:30+3', to: 'СР 15:00+3' }
+        ]
+    };*/
     let busyDates = []; // Когда заняты
     for (let key of Object.keys(schedule)) {
         schedule[key].forEach(element => {
@@ -241,6 +258,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          */
         exists: function () {
             goodSectors = getGoodSectors(freeSectors, workingHoursInMinute, duration);
+            console.info('kek');
+            console.info(goodSectors);
             if (goodSectors.length !== 0) {
                 return true;
             }
