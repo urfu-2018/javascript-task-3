@@ -99,16 +99,18 @@ function findTimeRange(daysRanges, duration, formattedWorkingHours) {
     for (let i = formattedWorkingHours.from; i <= formattedWorkingHours.to - duration; i++) {
         Object.keys(daysRanges).forEach(day => {
             let counter = 0;
-
             if (daysRanges[day].length) {
                 daysRanges[day].forEach(range => {
                     if (compareRanges([i, i + duration], range)) {
                         counter += 1;
                     }
                 });
-            }
 
-            if (counter === daysRanges[day].length) {
+                if (counter === daysRanges[day].length) {
+                    variants[day].push(i);
+                    i += 29;
+                }
+            } else {
                 variants[day].push(i);
                 i += 29;
             }
