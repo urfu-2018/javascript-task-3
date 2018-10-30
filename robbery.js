@@ -16,8 +16,8 @@ const isStar = true;
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
     console.info(schedule, duration, workingHours);
-    let offset = parseInt(workingHours.from.slice(6));
-    const bankTimes = getWorkingTimes(workingHours, offset);
+    var offset = parseInt(workingHours.from.slice(6));
+    const bankTimes = getBankWorkingTimes(workingHours, offset);
     const gangBusyTimes = {
         Danny: schedule.Danny.map(x => createPeriod(x, offset)),
         Linus: schedule.Linus.map(x => createPeriod(x, offset)),
@@ -47,9 +47,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (robberyTimes.length === 0) {
                 return '';
             }
-            const start = createCustomDateObject(robberyTimes[0].from);
 
-            return formatDate(start, template);
+            return formatDate(createCustomDateObject(robberyTimes[0].from), template);
         },
 
         /**
@@ -79,22 +78,22 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     };
 }
 
-function getRobberyTimes(gangBusyTimes, workingTimes, offset) {
+function getRobberyTimes(gangBusyTimes, bankTimes, offset) {
     const dannyPossibleTimes = invertPeriods(gangBusyTimes.Danny, offset);
     const linusPossibleTimes = invertPeriods(gangBusyTimes.Linus, offset);
     const rustyPossibleTimes = invertPeriods(gangBusyTimes.Rusty, offset);
 
-    var possibleTimes = getTimeIntersections(dannyPossibleTimes, linusPossibleTimes);
+    let possibleTimes = getTimeIntersections(dannyPossibleTimes, linusPossibleTimes);
     possibleTimes = getTimeIntersections(possibleTimes, rustyPossibleTimes);
-    possibleTimes = getTimeIntersections(possibleTimes, workingTimes);
+    possibleTimes = getTimeIntersections(possibleTimes, bankTimes);
 
     return possibleTimes;
 }
 
-function getTimeIntersections(firstSchedule, secondSchedule) {
+function getTimeIntersections(firstTime, secondTime) {
     var commonTimes = [];
-    firstSchedule.forEach(first => {
-        secondSchedule.forEach(second => {
+    firstTime.forEach(first => {
+        secondTime.forEach(second => {
             commonTimes.push(getPeriodsIntersection(first, second));
         });
     });
@@ -103,7 +102,7 @@ function getTimeIntersections(firstSchedule, secondSchedule) {
 }
 
 function formatDate(customDate, template) {
-    const addLeadingZero = number => number.toString().length === 1 ? `0${number}` : number;
+    const addLeadingZero = (number) => number.toString().length === 1 ? `0${number}` : number;
 
     return template
         .replace('%HH', addLeadingZero(customDate.hours))
@@ -121,11 +120,13 @@ function createCustomDateObject(minutes) {
     };
 }
 
-function invertPeriods(periods, bankTimeZone) {
-    periods.sort((a, b)=>a.from - b.to);
-    const rightBorder = getMinutes(`СР 23:59+${bankTimeZone}`, bankTimeZone);
-    let leftBorder = getMinutes(`ПН 00:00+${bankTimeZone}`, bankTimeZone);
-    const newPeriods = [];
+function invertPeriods(periods, offset) {
+    periods.sort((a, b) => a.from - b.to);
+
+    const rightBorder = getMinutes(`СР 23:59+${offset}`, offset);
+    let leftBorder = getMinutes(`ПН 00:00+${offset}`, offset);
+
+    let newPeriods = [];
     periods.forEach(period => {
         newPeriods.push({ from: leftBorder, to: period.from });
         leftBorder = period.to;
@@ -135,32 +136,28 @@ function invertPeriods(periods, bankTimeZone) {
     return newPeriods;
 }
 
-function getPeriodsIntersection(firstPeriod, secondPeriod) {
-    if (isPeriodsNested(firstPeriod, secondPeriod)) {
+function getPeriodsIntersection(first, second) {
+    const isPeriodsNested = (a, b) =>
+        a.from < b.from && a.to > b.to || b.from < a.from && b.to > a.to;
+
+    const isPeriodsIntersect = (a, b) => a.to >= b.from && b.to >= a.from;
+
+    if (isPeriodsNested(first, second)) {
         return {
-            from: Math.max(firstPeriod.from, secondPeriod.from),
-            to: Math.min(firstPeriod.to, secondPeriod.to)
+            from: Math.max(first.from, second.from),
+            to: Math.min(first.to, second.to)
         };
     }
 
-    if (isPeriodsIntersect(firstPeriod, secondPeriod)) {
+    if (isPeriodsIntersect(first, second)) {
         return {
-            from: Math.max(firstPeriod.from, secondPeriod.from),
-            to: Math.min(firstPeriod.to, secondPeriod.to)
+            from: Math.max(first.from, second.from),
+            to: Math.min(first.to, second.to)
         };
     }
 }
 
-function isPeriodsNested(period1, period2) {
-    return period1.from < period2.from && period1.to > period2.to ||
-    period2.from < period1.from && period2.to > period1.to;
-}
-
-function isPeriodsIntersect(period1, period2) {
-    return period1.to >= period2.from && period2.to >= period1.from;
-}
-
-function getWorkingTimes(bankWorkingHours, offset) {
+function getBankWorkingTimes(bankWorkingHours, offset) {
     return [
         {
             from: getMinutes(`ПН ${bankWorkingHours.from}`, offset),
