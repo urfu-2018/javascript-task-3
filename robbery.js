@@ -1,5 +1,95 @@
 'use strict';
 
+var week = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
+var BANK_TIME_ZONE = 5;
+var MINUTES_IN_DAY = 60 * 24;
+
+function pad(num) {
+    var str = String(num);
+
+    return str.length === 2 ? str : `0${str}`;
+}
+
+function timeStrToMinutes(d) {
+    var arr = d.split(' ');
+    var weekDay = week.indexOf(arr[0]);
+    var timeArr = arr[1].split('+');
+    var hoursMinutes = timeArr[0].split(':');
+
+    return weekDay * MINUTES_IN_DAY + Number(hoursMinutes[0]) * 60 +
+        Number(hoursMinutes[1]) + (BANK_TIME_ZONE - Number(timeArr[1])) * 60;
+}
+
+function timeObjToMinutes(obj) {
+    return {
+        from: timeStrToMinutes(obj.from),
+        to: timeStrToMinutes(obj.to)
+    };
+}
+
+function cut(obj, limit) {
+    return {
+        from: obj.from < limit.from ? limit.from : obj.from,
+        to: obj.to > limit.to ? limit.to : obj.to
+    };
+}
+
+function invertTimesArray(arr, limit) {
+    var result = [{
+        from: limit.from,
+        to: arr[0].from
+    }];
+
+    for (var key = 0; key < arr.length - 1; key++) {
+        result.push({
+            from: arr[key].to,
+            to: arr[key + 1].from
+        });
+    }
+
+    result.push({
+        from: arr[arr.length - 1].to,
+        to: limit.to
+    });
+
+    return result.map(function (obj) {
+        return cut(obj, limit);
+    });
+}
+
+function findIntersection(firstInterval, secondInterval) {
+    var leftInterval = firstInterval.from < secondInterval.from
+        ? firstInterval
+        : secondInterval;
+    var rightInterval = firstInterval.from < secondInterval.from
+        ? secondInterval
+        : firstInterval;
+    if (leftInterval.to > rightInterval.from) {
+        return {
+            from: rightInterval.from,
+            to: leftInterval.to > rightInterval.to
+                ? rightInterval.to
+                : leftInterval.to
+        };
+    }
+}
+
+function findIntersections(first, second) {
+    var intersections = [];
+
+    first.forEach(function (firstInterval) {
+        second.forEach(function (secondInterval) {
+            var intersection = findIntersection(firstInterval, secondInterval);
+
+            if (intersection !== undefined) {
+                intersections.push(intersection);
+            }
+        });
+    });
+
+    return intersections;
+}
+
 /**
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
@@ -14,8 +104,41 @@ const isStar = true;
  * @param {String} workingHours.to – Время закрытия, например, "18:00+5"
  * @returns {Object}
  */
+
 function getAppropriateMoment(schedule, duration, workingHours) {
-    console.info(schedule, duration, workingHours);
+    function findAppropriate(limit) {
+
+        var daysForRobbery = week.slice(0, 3);
+        var bankWorkingTime = daysForRobbery.map(function (day) {
+            return {
+                from: day + ' ' + workingHours.from,
+                to: day + ' ' + workingHours.to
+            };
+        });
+        var bankWorkingMinutes = bankWorkingTime.map(timeObjToMinutes);
+
+        var busyTimes = Object.entries(schedule).map(function (obj) {
+            return obj[1].map(timeObjToMinutes);
+        });
+
+        var freeTimes = busyTimes.map((interval) => {
+            return invertTimesArray(interval, limit);
+        });
+        freeTimes.push(bankWorkingMinutes);
+
+        var united = freeTimes[0];
+        for (var key = 1; key < freeTimes.length; key++) {
+            united = findIntersections(united, freeTimes[key]);
+        }
+
+        return united.filter((interval) => {
+            return interval.to - interval.from >= duration;
+        })[0];
+    }
+    var appropriate = findAppropriate({
+        from: 0,
+        to: 3 * MINUTES_IN_DAY - 1
+    });
 
     return {
 
@@ -24,7 +147,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            return false;
+            return Boolean(appropriate);
         },
 
         /**
@@ -34,7 +157,23 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            return template;
+            if (!appropriate) {
+                return '';
+            }
+
+            var m = appropriate.from;
+            var day = Math.floor(m / MINUTES_IN_DAY);
+
+            var hour = Math.floor((m - day * MINUTES_IN_DAY) / 60);
+            var minute = m - day * MINUTES_IN_DAY - hour * 60;
+
+            return template
+                .split('%HH')
+                .join(pad(hour))
+                .split('%MM')
+                .join(pad(minute))
+                .split('%DD')
+                .join(week[day]);
         },
 
         /**
@@ -43,6 +182,22 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
+            if (!appropriate) {
+                return false;
+            }
+
+            var newLimit = {
+                from: appropriate.from + 30,
+                to: 3 * MINUTES_IN_DAY - 1
+            };
+            var newAppropriate = findAppropriate(newLimit);
+
+            if (newAppropriate) {
+                appropriate = newAppropriate;
+
+                return true;
+            }
+
             return false;
         }
     };
