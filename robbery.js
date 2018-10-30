@@ -49,16 +49,6 @@ function getTimePoints(schedule) {
     return timePoints;
 }
 
-function isWorkingTime(workingHours, start, end) {
-    const duration = end.minute - start.minute;
-    const from = getMinuteFromTimeStart('ПН', workingHours.from.slice(0, 5),
-        workingHours.from.slice(6));
-    const to = getMinuteFromTimeStart('ПН', workingHours.to.slice(0, 5), workingHours.to.slice(6));
-    const st = start.minute % (24 * 60);
-
-    return st >= from && (st + duration) < to;
-}
-
 function addOpenCloseBankTime(workingHours, timePoints) {
     Object.keys(days)
         .filter(d => days[d] < 3)
@@ -88,14 +78,20 @@ function updateIsFree(isFree, point) {
     }
 }
 
-function find(timePoints, isFree, duration, workingHours) {
+function updateIsWorking(isWorkingTime, point) {
+    return point.priority === 0 || isWorkingTime && !(point.priority === 3);
+}
+
+function find(timePoints, isFree, duration) {
+    let isWorkingTime = false;
     for (let i = 1; i < timePoints.length; ++i) {
         const first = timePoints[i - 1];
         const second = timePoints[i];
+        isWorkingTime = updateIsWorking(isWorkingTime, first);
         updateIsFree(isFree, first);
         if (Object.keys(isFree).every(name => isFree[name]) &&
             (second.minute - first.minute) >= duration &&
-            isWorkingTime(workingHours, first, second)) {
+            isWorkingTime) {
 
             return { 'start': first, 'end': second, 'found': true };
         }
@@ -144,7 +140,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
         return diff !== 0 ? diff : a.priority - b.priority;
     });
-    const foundObj = find(timePoints, isFree, duration, workingHours);
+    const foundObj = find(timePoints, isFree, duration);
     let answer;
     if (foundObj.found) {
         answer = formatAnswer(foundObj, workingHours);
