@@ -93,28 +93,30 @@ function createMoment(momentStart, curTime, bankOpeningTime) {
     return { day, hour, minute, length };
 }
 
-function handleCurrentInterval(collisionsByTimestamp, bankOpeningTime, 
-    duration, momentStart, goodMoments) {
-    let curTime = momentStart;
+function handleCurrentInterval(collisionsByTimestamp, bankOpeningTime, duration, intervalStart) {
+    const moments = [];
+    let curTime = intervalStart;
     while (collisionsByTimestamp[curTime + 1] === 0) {
         curTime++;
     }
-    let length = curTime - momentStart + 1;
+    let length = curTime - intervalStart + 1;
     while (length >= duration) {
-        goodMoments.push(createMoment(momentStart, curTime, bankOpeningTime));
-        momentStart += timeBetweenRobberies;
+        moments.push(createMoment(intervalStart, curTime, bankOpeningTime));
+        intervalStart += timeBetweenRobberies;
         length -= timeBetweenRobberies;
     }
 
-    return curTime;
+    return moments;
 }
 
 function findGoodMoments(collisionsByTimestamp, bankOpeningTime, duration) {
     const goodMoments = [];
     for (let timestamp = 0; timestamp < maxTimestamp; timestamp++) {
-        if (collisionsByTimestamp[timestamp] === 0) {
-            timestamp = handleCurrentInterval(
-                collisionsByTimestamp, bankOpeningTime, duration, timestamp, goodMoments);
+        if (collisionsByTimestamp[timestamp] === 0 &&
+            (timestamp === 0 || collisionsByTimestamp[timestamp - 1] !== 0)) {
+            const newMoments = handleCurrentInterval(
+                collisionsByTimestamp, bankOpeningTime, duration, timestamp);
+            goodMoments.push.apply(goodMoments, newMoments);
         }
     }
 
@@ -159,9 +161,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             }
 
             return template
-            .replace('%DD', ('0' + this.goodMoments[this.ansIndex].day).slice(-2))
-            .replace('%HH', ('0' + this.goodMoments[this.ansIndex].hour).slice(-2))
-            .replace('%MM', ('0' + this.goodMoments[this.ansIndex].minute).slice(-2));
+                .replace('%DD', ('0' + this.goodMoments[this.ansIndex].day).slice(-2))
+                .replace('%HH', ('0' + this.goodMoments[this.ansIndex].hour).slice(-2))
+                .replace('%MM', ('0' + this.goodMoments[this.ansIndex].minute).slice(-2));
         },
 
         /**
