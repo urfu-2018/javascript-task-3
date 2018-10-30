@@ -102,24 +102,22 @@ function getFreeSectors(combinedDates, duration) {
     let t = 0;
     for (let element of combinedDates) {
         let preRes = hasFreeSectors(element, t, duration);
-        console.info(preRes);
         if (typeof preRes.freeSectors !== 'undefined') {
             result.push(preRes.freeSectors);
         }
         t = preRes.t;
-        if (t > 1440 * 3) {
+        if (t > minutesInDay * 3) {
             return result;
         }
     }
-    if (t < 1440 * 3) {
-        result.push([t, 1440 * 3]);
+    if (t < minutesInDay * 3) {
+        result.push([t, minutesInDay * 3 - 1]);
     }
 
     return result;
 }
 
 function hasFreeSectors(element, t, duration) {
-    console.info('hasFREESECTORS    ' + element + '     ' + t + '   ' + duration);
     let result;
     if (element[0] - t >= duration) {
         result = [t, element[0]];
@@ -133,8 +131,6 @@ function hasFreeSectors(element, t, duration) {
 }
 
 function getGoodSectors(freeSectors, workingHoursInMinute, duration) {
-    // console.info('GetGOOD SECTORS' + freeSectors + '    ' + workingHoursInMinute +
-    // '    ' + duration);
     if (workingHoursInMinute[1] - workingHoursInMinute[0] < duration) {
         return [];
     }
@@ -152,7 +148,7 @@ function getGoodSectors(freeSectors, workingHoursInMinute, duration) {
 }
 
 function invalid(element, workingTime, sector) {
-    if (element[0] > workingTime[0] + 1440 || element[1] > workingTime[1] + 1440) {
+    if (element[0] > workingTime[0] + minutesInDay || element[1] > workingTime[1] + minutesInDay) {
         return sector;
     }
 
@@ -160,7 +156,6 @@ function invalid(element, workingTime, sector) {
 }
 
 function firstCheck(element, workingTime) {
-    // console.info('first' + element + '      ' + workingTime);
     let sector;
     let preRes = invalid(element, workingTime, sector);
     if (typeof preRes === 'undefined') {
@@ -177,7 +172,6 @@ function firstCheck(element, workingTime) {
 }
 
 function secondCheck(element, workingTime) {
-    // console.info('second' + element + '      ' + workingTime);
     let sector;
     if (workingTime[0] < element[0] && workingTime[1] < element[1]) {
         sector = [element[0], workingTime[1]];
@@ -190,7 +184,6 @@ function secondCheck(element, workingTime) {
 }
 
 function getGoodSector(freeSectors, workingTime, duration) {
-    // console.info('getgood SECTOR' + freeSectors + '     ' + workingTime + '     ' + duration);
     let result = [];
     let sector;
     for (let element of freeSectors) {
@@ -200,7 +193,6 @@ function getGoodSector(freeSectors, workingTime, duration) {
         }
         if (typeof sector !== 'undefined' && sector.length !== 0 &&
         sector[1] - sector[0] >= duration) {
-            // console.info(sector + 'sd');
             result.push(sector);
         }
     }
@@ -249,8 +241,6 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          */
         exists: function () {
             goodSectors = getGoodSectors(freeSectors, workingHoursInMinute, duration);
-            console.info('kek');
-            console.info(goodSectors);
             if (goodSectors.length !== 0) {
                 return true;
             }
