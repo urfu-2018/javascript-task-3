@@ -27,12 +27,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     const freeIntervals = getFreeTimeIntervals(busyIntervals, timeFrame);
     const robberyIntervals = getIntersectionsOfFreeAndBank(freeIntervals, workingHours);
 
-    let possibleMoments = getPossibleMoments(robberyIntervals, duration, bankTimeZone);
-    possibleMoments = possibleMoments.map(moment => {
-        return shiftTime(moment, bankTimeZone);
-    });
-
-    let currentMomentIndex = 0;
+    const moment = getMoment(robberyIntervals, duration);
+    const momentBankTimezone = shiftTime(moment, bankTimeZone);
 
     return {
 
@@ -41,11 +37,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            if (possibleMoments[currentMomentIndex]) {
-                return true;
-            }
-
-            return false;
+            return moment !== undefined;
         },
 
         /**
@@ -55,8 +47,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            const currentRobberyTime = possibleMoments[currentMomentIndex];
-            const robberyDate = getDateFromTimestamp(currentRobberyTime);
+            const robberyDate = getDateFromTimestamp(momentBankTimezone);
 
             if (this.exists()) {
                 return formatDateString(robberyDate, template);
@@ -71,12 +62,6 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            if (possibleMoments[currentMomentIndex + 1]) {
-                currentMomentIndex++;
-
-                return true;
-            }
-
             return false;
         }
     };
@@ -236,31 +221,13 @@ function getBankWorkingIntervalForDay(bankWorkingHours, day) {
     };
 }
 
-function getPossibleMoments(robberyIntervals, duration) {
-    const ATTEMPT_OFFSET = 30;
-
-    const moments = robberyIntervals.reduce((acc, interval) => {
-        let currentInterval = interval;
-        let currentIntervalLength = currentInterval.to - currentInterval.from;
-
-        do {
-            if (currentIntervalLength >= duration) {
-                acc.push(currentInterval.from);
-            }
-
-            currentInterval = cutInterval(currentInterval, ATTEMPT_OFFSET);
-            currentIntervalLength = currentInterval.to - currentInterval.from;
-
-        } while (currentIntervalLength > ATTEMPT_OFFSET);
-
-        return acc;
-    }, []);
-
-    return moments;
-}
-
-function cutInterval(interval, startOffset) {
-    return { from: interval.from + startOffset, to: interval.to };
+function getMoment(robberyIntervals, duration) {
+    for (const interval of robberyIntervals) {
+        const intervalLength = interval.to - interval.from;
+        if (intervalLength >= duration) {
+            return interval.from;
+        }
+    }
 }
 
 function shiftTime(time, timeZoneOffset) {
