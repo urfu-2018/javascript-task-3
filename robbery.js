@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = false;
+const isStar = true;
 const daysOfTheWeek = ['ПН', 'ВТ', 'СР'];
 const minutesInHour = 60;
 const minutesInDay = 24 * minutesInHour;
@@ -24,12 +24,12 @@ class TimeInterval {
         let startInMinutes = this.from + timeZone * minutesInHour;
         let day = daysOfTheWeek[parseInt(startInMinutes / minutesInDay)];
         let hours = parseInt((startInMinutes % minutesInDay) / minutesInHour);
-        let minutes = (startInMinutes % minutesInDay) % minutesInHour;
+        let minutes = parseInt((startInMinutes % minutesInDay) % minutesInHour);
 
-        return { day: day, hours: hours, minutes: minutes };
+        return { day, hours, minutes };
     }
 
-    intersection(otherInterval) {
+    intersects(otherInterval) {
         if (this.from > otherInterval.to || otherInterval.from > this.to) {
             return new TimeInterval(0, 0);
         }
@@ -53,7 +53,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     console.info(schedule, duration, workingHours);
 
     const shift = 30;
-    let lastIndex = 0;
+    let index = 0;
 
     let allIntervals = getRobberyFreeIntervals(workingHours, schedule)
         .filter(i => i.length() >= duration);
@@ -65,11 +65,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            if (allIntervals.length > 0) {
-                return true;
-            }
-
-            return false;
+            return allIntervals.length > 0;
         },
 
         /**
@@ -82,7 +78,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             let bankTimeZone = parseInt(workingHours.from.slice(5));
 
             return (allIntervals.length > 0)
-                ? formatTimeInterval(allIntervals[lastIndex], bankTimeZone, template)
+                ? formatTimeInterval(allIntervals[index], bankTimeZone, template)
                 : '';
         },
 
@@ -93,23 +89,23 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            if (!(allIntervals.length > 0)) {
+            if (allIntervals.length === 0) {
                 return false;
             }
 
-            allIntervals[lastIndex].from += shift;
-            if (allIntervals[lastIndex].length() >= duration) {
+            allIntervals[index].from += shift;
+            if (allIntervals[index].length() >= duration) {
                 return true;
             }
 
-            if (lastIndex < allIntervals.length - 1) {
-                lastIndex++;
+            if (index < allIntervals.length - 1) {
+                index++;
 
                 return true;
             }
 
-            if (lastIndex < allIntervals.length) {
-                allIntervals[lastIndex].from -= shift;
+            if (index < allIntervals.length) {
+                allIntervals[index].from -= shift;
             }
 
             return false;
@@ -135,12 +131,13 @@ function getRobberyFreeIntervals(workingHours, schedule) {
 
 function getFreeIntervals(bankIntervals, robberySchedule) {
     let robberyIntervals = invertIntervals(robberySchedule.map(
-        x => new TimeInterval(parseTimeToMinutes(x.from), parseTimeToMinutes(x.to))));
+        x => new TimeInterval(parseTimeToMinutes(x.from), parseTimeToMinutes(x.to)))
+        .sort((a, b) => a.from > b.from));
 
     let intervals = [];
     for (const interval of bankIntervals) {
         for (const otherInterval of robberyIntervals) {
-            intervals.push(interval.intersection(otherInterval));
+            intervals.push(interval.intersects(otherInterval));
         }
     }
 
