@@ -18,17 +18,20 @@ const numericalDayOfTheWeekEnum = {
     'СР': 2
 };
 
-function convertTimeToMinutes(time, timeShift) {
+function convertTimeToMinutes(time, bankTimeShift) {
     time = time.split(' ');
     const dayOfWeek = numericalDayOfTheWeekEnum[time[0]];
     const timeParts = time[1].match(/(\d{2}):(\d{2})\+(\d+)/);
-    if (typeof timeShift === 'undefined') {
-        timeShift = Number(timeParts[3]);
+    const hours = Number(timeParts[1]);
+    const minutes = Number(timeParts[2]);
+    const timeShift = Number(timeParts[3]);
+    if (typeof bankTimeShift === 'undefined') {
+        bankTimeShift = Number(timeParts[3]);
     }
 
     return dayOfWeek * hoursInDay * minutesInHour +
-        Number(timeParts[1]) * minutesInHour + Number(timeParts[2]) +
-        (timeShift - Number(timeParts[3])) * minutesInHour;
+         hours * minutesInHour + minutes +
+        (bankTimeShift - timeShift) * minutesInHour;
 }
 
 function getTimeShift(time) {
@@ -102,7 +105,7 @@ function parseTimeToDateString(time) {
         hours = '0' + hours;
     }
 
-    return [['ПН', 'ВТ', 'СР'][day], hours, minutes];
+    return [Object.keys(numericalDayOfTheWeekEnum)[day], hours, minutes];
 }
 
 function intersectTwoTimetables(oneRobber, anotherRobber) {
