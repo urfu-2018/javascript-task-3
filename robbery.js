@@ -21,14 +21,22 @@ function tryAgain() {
     };
 }
 function getDataAndTimeFromMinute(startTime) {
-    const dayNumber = Math.floor(minutesFromWeekStart / minutesInDay);
-    const day = dayFromNumber[dayNumber];
-    let hours = Math.floor((minutesFromWeekStart % minutesInDay) / minutesInHour);
-    let minutes = minutesFromWeekStart - dayNumber * minutesInDay - hours * minutesInHour;
-    hours = String(hours).length === 1 ? '0' + hours : hours;
-    minutes = String(minutes).length === 1 ? '0' + minutes : minutes;
+    let mod = startTime % MINUTES_IN_DAY;
+    let day = (startTime - mod) / MINUTES_IN_DAY;
+    let minute = mod % MINUTES_IN_HOUR;
+    let hour = (mod - minute) / MINUTES_IN_HOUR;
+    if (minute < 10) {
+        minute = '0' + String(minute);
+    }
+    if (hour < 10) {
+        hour = '0' + String(hour);
+    }
 
-    return { day, hours, minutes };
+    return {
+        day: day,
+        hour: hour,
+        minute: minute
+    };
 }
 function intersectRobberAndBankSheduleInDayPeriod(day, robberSchedule, bankSchedule) {
     let intersections = [];
