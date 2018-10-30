@@ -31,20 +31,19 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     });
 
     appropriateMoments = appropriateMoments
+        .filter(interval => interval.to - interval.from >= duration)
         .reduce((moments, interval) => {
             let from = interval.from;
-            let to = interval.to;
-            while (from + 30 < to) {
+            while (from + duration <= interval.to) {
                 moments.push({
-                    from: from + 30,
-                    to
+                    from,
+                    to: from + duration
                 });
                 from += 30;
             }
 
             return moments;
-        }, appropriateMoments)
-        .filter(interval => interval.to - interval.from >= duration)
+        }, [])
         .sort((a, b) => a.from - b.from)
         .map(interval => {
             return {
