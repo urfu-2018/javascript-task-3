@@ -27,6 +27,10 @@ function cut(obj, limit) {
 }
 
 function invertTimesArray(arr, limit) {
+    if (arr.length === 0) {
+        return [];
+    }
+
     var result = [{
         from: limit.from,
         to: arr[0].from
