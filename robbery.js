@@ -6,59 +6,91 @@
  */
 const isStar = true;
 
+const TWENTY_NINE_MINUTES = 29;
 const DAYS_IN_WEEK = 7;
 const HOURS_IN_DAY = 24;
 const MINUTES_IN_HOUR = 60;
 const MINUTES_IN_DAY = HOURS_IN_DAY * MINUTES_IN_HOUR;
 const MINUTES_IN_WEEK = DAYS_IN_WEEK * HOURS_IN_DAY * MINUTES_IN_HOUR;
 const TIME_REGEX = /(?:(ПН|ВТ|СР|ЧТ|ПТ|СБ|ВС) )?(\d{2}):(\d{2})(?:\+(\d+))?/;
-const DAYS_OF_WEEK = {
-    'ПН': 0, 'ВТ': 1, 'СР': 2, 'ЧТ': 3, 'ПТ': 4, 'СБ': 5, 'ВС': 6,
-    0: 'ПН', 1: 'ВТ', 2: 'СР', 3: 'ЧТ', 4: 'ПТ', 5: 'СБ', 6: 'ВС'
-};
-const TIME_LIMIT = DAYS_OF_WEEK['ЧТ'] * MINUTES_IN_DAY;
+const DAY_TO_NUMBER = { 'ПН': 0, 'ВТ': 1, 'СР': 2, 'ЧТ': 3, 'ПТ': 4, 'СБ': 5, 'ВС': 6 };
+const NUMBER_TO_DAY = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
+const TIME_LIMIT = DAY_TO_NUMBER['ЧТ'] * MINUTES_IN_DAY;
 
-function fillWeek(week, schedule, workingHours) {
-    const bankZone = parseInt(workingHours.from.split('+')[1]);
+class RobberyWeek {
+    constructor() {
+        this.week = new Uint8Array(MINUTES_IN_WEEK);
+    }
 
-    for (const person of Object.keys(schedule)) {
-        for (const interval of schedule[person]) {
-            fillPersonBusynessHours(week, interval, bankZone);
+    addBusynessInterval(start, end) {
+        for (let i = start; i < end; i++) {
+            this.week[i]++;
         }
     }
 
-    fillBankClosedHours(week, workingHours, bankZone);
-}
+    getAllPossibleStartTimes(duration) {
+        const startTimes = [];
 
-function fillPersonBusynessHours(week, interval, bankZone) {
-    const start = transformTime(interval.from, bankZone);
-    const end = transformTime(interval.to, bankZone);
+        for (let i = 0; i < TIME_LIMIT; i++) {
+            const intervalLength = this._getIntervalLength(duration, i);
+            if (intervalLength === duration) {
+                startTimes.push(i);
+                i += TWENTY_NINE_MINUTES;
+            } else {
+                i += intervalLength;
+            }
+        }
 
-    for (let i = start; i < end; i++) {
-        week[i]++;
+        return startTimes;
+    }
+
+    _getIntervalLength(duration, i) {
+        if (this.week[i] !== 0) {
+            return 0;
+        }
+
+        let intervalLength = 1;
+        while (this.week[++i] === 0 && intervalLength !== duration) {
+            intervalLength++;
+        }
+
+        return intervalLength;
     }
 }
 
-function fillBankClosedHours(week, workingHours, bankZone) {
+function getRobbersBusynessIntervals(schedule, bankZone) {
+    const intervals = [];
+
+    for (const person of Object.keys(schedule)) {
+        for (const interval of schedule[person]) {
+            const start = transformTime(interval.from, bankZone);
+            const end = transformTime(interval.to, bankZone);
+            intervals.push({ start, end });
+        }
+    }
+
+    return intervals;
+}
+
+function getBankClosedIntervals(workingHours, bankZone) {
+    const intervals = [];
+
     const start = transformTime(workingHours.from, bankZone);
     const end = transformTime(workingHours.to, bankZone);
     for (let day = 0; day < DAYS_IN_WEEK; day++) {
         const lowerLimit = day * MINUTES_IN_DAY;
         const upperLimit = lowerLimit + MINUTES_IN_DAY;
 
-        for (let i = lowerLimit; i < lowerLimit + start; i++) {
-            week[i]++;
-        }
-
-        for (let i = lowerLimit + end; i < upperLimit; i++) {
-            week[i]++;
-        }
+        intervals.push({ start: lowerLimit, end: lowerLimit + start });
+        intervals.push({ start: lowerLimit + end, end: upperLimit });
     }
+
+    return intervals;
 }
 
 function transformTime(time, bankZone) {
     const match = time.match(TIME_REGEX);
-    const dayOfWeekInMinutes = DAYS_OF_WEEK[match[1]] * MINUTES_IN_DAY;
+    const dayOfWeekInMinutes = DAY_TO_NUMBER[match[1]] * MINUTES_IN_DAY;
     const dayHoursInMinutes = (parseInt(match[2]) +
         bankZone - parseInt(match[4])) * MINUTES_IN_HOUR;
     const minutes = parseInt(match[3]);
@@ -81,35 +113,6 @@ function formatSmallTime(time) {
     return time < 10 ? '0' + time : time;
 }
 
-function getAllPossibleStartTimes(week, duration) {
-    const startTimes = [];
-
-    for (let i = 0; i < TIME_LIMIT; i++) {
-        const intervalLength = getIntervalLength(week, duration, i);
-        if (intervalLength === duration) {
-            startTimes.push(i);
-            i += 29;
-        } else {
-            i += intervalLength;
-        }
-    }
-
-    return startTimes;
-}
-
-function getIntervalLength(week, duration, i) {
-    if (week[i] !== 0) {
-        return 0;
-    }
-
-    let intervalLength = 1;
-    while (week[++i] === 0 && intervalLength !== duration) {
-        intervalLength++;
-    }
-
-    return intervalLength;
-}
-
 /**
  * @param {Object} schedule – Расписание Банды
  * @param {Number} duration - Время на ограбление в минутах
@@ -119,9 +122,14 @@ function getIntervalLength(week, duration, i) {
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    const week = new Uint8Array(MINUTES_IN_WEEK);
-    fillWeek(week, schedule, workingHours);
-    const times = getAllPossibleStartTimes(week, duration);
+    const bankZone = parseInt(workingHours.from.split('+')[1]);
+    const robberyWeek = new RobberyWeek();
+
+    getRobbersBusynessIntervals(schedule, bankZone)
+        .concat(getBankClosedIntervals(workingHours, bankZone))
+        .forEach(({ start, end }) => robberyWeek.addBusynessInterval(start, end));
+
+    const times = robberyWeek.getAllPossibleStartTimes(duration);
     let currentTimeIndex = 0;
 
     return {
@@ -146,7 +154,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             }
 
             const currentStartTime = times[currentTimeIndex];
-            const day = DAYS_OF_WEEK[Math.floor(currentStartTime / MINUTES_IN_DAY)];
+            const day = NUMBER_TO_DAY[Math.floor(currentStartTime / MINUTES_IN_DAY)];
             const hours = Math.floor((currentStartTime % MINUTES_IN_DAY) / MINUTES_IN_HOUR);
             const minutes = currentStartTime % MINUTES_IN_HOUR;
 
@@ -161,11 +169,10 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            if (++currentTimeIndex >= times.length) {
-                currentTimeIndex--;
-
+            if (currentTimeIndex + 1 >= times.length) {
                 return false;
             }
+            currentTimeIndex++;
 
             return true;
         }
