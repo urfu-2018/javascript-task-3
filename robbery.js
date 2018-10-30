@@ -52,6 +52,7 @@ class Time {
 
     changeTimeZone(timeZone) {
         this.time += (timeZone - this.timeZone) * MINUTES_IN_HOURS;
+        this.timeZone = timeZone;
     }
 }
 
@@ -120,7 +121,7 @@ function getRobberiesTime(freeTime, duration) {
     freeTime.forEach(element => {
         let fTime = element.to.time - element.from.time;
 
-        while (fTime > duration) {
+        while (fTime >= duration) {
             robberyTime.push(element.to.time - fTime);
             fTime -= duration + 30;
         }
@@ -216,6 +217,8 @@ function d(fromIncludedInTheInterval, toIncludedInTheInterval, intervals, value)
     } else if (toIncludedInTheInterval) {
         intervals.from.time = value.to.time;
     }
+
+    return intervals;
 }
 
 function getUnsuitableTime(intervals, timeZone) {
