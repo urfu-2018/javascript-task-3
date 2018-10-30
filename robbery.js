@@ -1,4 +1,4 @@
-/*eslint-disable */
+/* eslint-disable complexity*/
 
 'use strict';
 
@@ -8,23 +8,25 @@
  */
 exports.isStar = true;
 
+const MINUTE_PER_HOUR = 60;
+const MINUTE_PER_DAY = 1440;
 const days = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
 
 function convertTime(time, newZone) {
 
-    return toMinutes(time) + (newZone - Number(time.split('+')[1])) * 60;
+    return toMinutes(time) + (newZone - Number(time.split('+')[1])) * MINUTE_PER_HOUR;
 }
 
 function toMinutes(time) {
-    return days.indexOf(time.slice(0, 2)) * 1440 +
-        Number(time.slice(3, 5)) * 60 +
+    return days.indexOf(time.slice(0, 2)) * MINUTE_PER_DAY +
+        Number(time.slice(3, 5)) * MINUTE_PER_HOUR +
         Number(time.slice(6, 8));
 }
 
 function toDate(minutes) {
-    let day = Math.floor(minutes / 1440);
-    let hours = Math.floor((minutes - day * 1440) / 60);
-    minutes -= day * 1440 + hours * 60;
+    let day = Math.floor(minutes / MINUTE_PER_DAY);
+    let hours = Math.floor((minutes - day * MINUTE_PER_DAY) / MINUTE_PER_HOUR);
+    minutes -= day * MINUTE_PER_DAY + hours * MINUTE_PER_HOUR;
     let newMinutes = `0${minutes}`.slice(-2);
     let newHours = `0${hours}`.slice(-2);
 
