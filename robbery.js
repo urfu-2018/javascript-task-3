@@ -56,7 +56,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 }
                 result = newMoment.result;
 
-                return result;
+                return Boolean(result);
             }
 
             return false;
