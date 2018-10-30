@@ -5,6 +5,41 @@
  * Реализовано оба метода и tryLater
  */
 const isStar = true;
+const weekdayNames = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
+const friendsCount = 3; 
+const hoursInDay = 24;
+const minutesInHour = 60;
+const minutesInDay = hoursInDay * minutesInHour;
+const minTimestamp = 0;
+const maxTimestamp = friendsCount * minutesInDay + 5;
+const timeBetweenRobberies = 30;
+
+function parseTime(timeString) {
+    const res = timeString.match(/(([А-Я]{2}) )?(\d{2}):(\d{2})\+(\d+)/);
+
+    let day = res[2];
+    if (day === undefined) {
+        day = 'ПН';
+    }
+
+    return {
+        day,
+        hour: parseInt(res[3]),
+        minute: parseInt(res[4]),
+        timezone: parseInt(res[5])
+    };
+}
+
+function getTimestampFromMondayBankOpening(timeString, bankOpening) {
+    const time = parseTime(timeString);
+    let timestamp = (weekdayNames.indexOf(time.day) * 24 +
+                     time.hour - bankOpening.hour +
+                     bankOpening.timezone - time.timezone) * 60 + time.minute - bankOpening.minute;
+    timestamp = Math.max(timestamp, minTimestamp);
+    timestamp = Math.min(timestamp, maxTimestamp);
+
+    return timestamp;
+}
 
 /**
  * @param {Object} schedule – Расписание Банды
@@ -15,16 +50,69 @@ const isStar = true;
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    console.info(schedule, duration, workingHours);
+    const bankOpeningTime = parseTime(workingHours.from);
+    const workingEndTimestamp = getTimestampFromMondayBankOpening(workingHours.to, bankOpeningTime);
+
+    const collisionsByTimestamp = new Array(maxTimestamp);
+    for (let timestamp = 0; timestamp < collisionsByTimestamp.length; timestamp++) {
+        collisionsByTimestamp[timestamp] = 0;
+    }
+
+    for (const friend in schedule) {
+        for (let i = 0; i < schedule[friend].length; i++) {
+            const fromTimestamp = getTimestampFromMondayBankOpening(schedule[friend][i].from, 
+                                                                    bankOpeningTime);
+            const toTimestamp = getTimestampFromMondayBankOpening(schedule[friend][i].to, 
+                                                                  bankOpeningTime);
+            collisionsByTimestamp[fromTimestamp]++;
+            collisionsByTimestamp[toTimestamp]--;
+        }
+    }
+
+    for (let timestamp = 1; timestamp < maxTimestamp; timestamp++) {
+        collisionsByTimestamp[timestamp] += collisionsByTimestamp[timestamp - 1];
+    }
+
+    for (let timestamp = 0; timestamp < maxTimestamp; timestamp++) {
+        if (timestamp % minutesInDay >= workingEndTimestamp ||
+            Math.trunc(timestamp / minutesInDay) >= friendsCount) {
+            collisionsByTimestamp[timestamp] = 1;
+        }
+    }
+
+    const goodMoments = [];
+    for (let timestamp = 0; timestamp < maxTimestamp; timestamp++) {
+        if (collisionsByTimestamp[timestamp] === 0) {
+            const fromTimestamp = timestamp;
+            while (collisionsByTimestamp[timestamp + 1] === 0) {
+                timestamp++;
+            }
+            let length = timestamp - fromTimestamp + 1;
+            const day = weekdayNames[Math.trunc(fromTimestamp / minutesInDay)];
+            let hour = bankOpeningTime.hour + Math.trunc((fromTimestamp % minutesInDay) / minutesInHour);
+            let minute = bankOpeningTime.minute + fromTimestamp % minutesInHour;
+            while (length >= duration) {
+                goodMoments.push({ day, hour, minute });
+                minute += timeBetweenRobberies;
+                if (minute >= minutesInHour) {
+                    hour++;
+                    minute -= minutesInHour;
+                }
+                length -= timeBetweenRobberies;
+            }
+        }
+    }
 
     return {
+        goodMoments,
+        ansIndex: -1,
 
         /**
          * Найдено ли время
          * @returns {Boolean}
          */
         exists: function () {
-            return false;
+            return this.tryLater();
         },
 
         /**
@@ -34,7 +122,13 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            return template;
+            if (this.goodMoments.length === 0 || this.ansIndex >= this.goodMoments.length) {
+                return '';
+            }
+            return template
+                    .replace('%DD', ('0' + this.goodMoments[this.ansIndex].day).slice(-2))
+                    .replace('%HH', ('0' + this.goodMoments[this.ansIndex].hour).slice(-2))
+                    .replace('%MM', ('0' + this.goodMoments[this.ansIndex].minute).slice(-2));
         },
 
         /**
@@ -43,7 +137,12 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            return false;
+            if (this.ansIndex + 1 >= this.goodMoments.length) {
+                return false;
+            }
+            this.ansIndex++;
+
+            return true;
         }
     };
 }
