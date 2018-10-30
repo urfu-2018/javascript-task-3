@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = false;
+const isStar = true;
 const minutesFromStart = {
     'ПН': 0,
     'ВТ': 1440,
