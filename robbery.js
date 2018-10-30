@@ -58,6 +58,11 @@ function checkBank(start, scheduleBank, duration) {
 function findTimeToRobbery(scheduleBand, scheduleBank, duration) {
     const endTime = 24 * 60 * robbery.length;
 
+    // const checkRobbers = (current, { from, to }) => {
+    //     return (current < from && current + duration <= from) ||
+    //         (current >= to && current + duration >= to);
+    // };
+
     for (let startRobbery = 0; startRobbery < endTime; startRobbery++) {
         const hasFreeTime =
             checkRobbers(startRobbery, scheduleBand, duration).length === scheduleBand.length;
@@ -126,8 +131,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             const hours = Math.floor((moment.time - day * 1440) / 60);
             const minutes = moment.time - day * 1440 - hours * 60;
 
-            return template.replace('%HH', hours.toString())
-                .replace('%MM', minutes.toString())
+            return template.replace('%HH', hours.toString().padStart(2, '0'))
+                .replace('%MM', minutes.toString().padStart(2, '0'))
                 .replace('%DD', days[day]);
         },
 
