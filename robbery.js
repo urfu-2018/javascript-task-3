@@ -121,21 +121,19 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 return '';
             }
             const startTime = resultTime[0][0];
-            let days = '';
-            Object.keys(DAYS).map(day => {
-                if (startTime > DAYS[day]) {
-                    days = day;
-                }
 
-                return day;
-            });
-
-            let hours = Math.trunc(startTime / 60) - DAYS[days] / 60;
-            let minutes = (startTime / 60 - Math.floor(startTime / 60)) * 60;
+            const days = {
+                0: 'ПН',
+                1: 'ВТ',
+                2: 'СР'
+            };
+            const index = Math.floor(startTime / (24 * 60));
+            let hours = Math.trunc(startTime / 60) - index * 24;
+            let minutes = startTime - index * 24 * 60 - hours * 60;
 
             return template
                 .replace(/%HH/, hours.toString().padStart(2, '0'))
-                .replace(/%DD/, days)
+                .replace(/%DD/, days[index])
                 .replace(/%MM/, minutes.toString().padStart(2, '0'));
         },
 
