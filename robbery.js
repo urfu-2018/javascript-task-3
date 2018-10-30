@@ -90,7 +90,7 @@ function findIntersections(first, second) {
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = true;
+const isStar = false;
 
 /**
  * @param {Object} schedule – Расписание Банды
