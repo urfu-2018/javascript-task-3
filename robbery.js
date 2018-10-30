@@ -18,7 +18,12 @@ function getTime(stringTime, bankTimeZone) {
     return daysToMinutes[day] + hour * 60 + minute;
 }
 
+function sortByFrom(a, b) {
+    return a.from - b.from;
+}
+
 function getTimeSections(sections, bankTimeZone) {
+    sections.sort(sortByFrom);
     let newSections = [];
     let lastBorder = 0;
     for (let s = 0; s < sections.length; s++) {
