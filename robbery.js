@@ -6,7 +6,8 @@
  */
 const isStar = true;
 const weekdayNames = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
-const friendsCount = 3; 
+const friends = ['Danny', 'Rusty', 'Linus'];
+const friendsCount = friends.length;
 const hoursInDay = 24;
 const minutesInHour = 60;
 const minutesInDay = hoursInDay * minutesInHour;
@@ -41,33 +42,33 @@ function getTimestampFromMondayBankOpening(timeString, bankOpening) {
     return timestamp;
 }
 
-/**
- * @param {Object} schedule – Расписание Банды
- * @param {Number} duration - Время на ограбление в минутах
- * @param {Object} workingHours – Время работы банка
- * @param {String} workingHours.from – Время открытия, например, "10:00+5"
- * @param {String} workingHours.to – Время закрытия, например, "18:00+5"
- * @returns {Object}
- */
-function getAppropriateMoment(schedule, duration, workingHours) {
-    const bankOpeningTime = parseTime(workingHours.from);
-    const workingEndTimestamp = getTimestampFromMondayBankOpening(workingHours.to, bankOpeningTime);
-
+function initCollisions() {
     const collisionsByTimestamp = new Array(maxTimestamp);
     for (let timestamp = 0; timestamp < collisionsByTimestamp.length; timestamp++) {
         collisionsByTimestamp[timestamp] = 0;
     }
 
-    for (const friend in schedule) {
+    return collisionsByTimestamp;
+}
+
+function handleFriends(schedule, bankOpeningTime, collisionsByTimestamp) {
+    for (let friendId = 0; friendId < friendsCount; friendId++) {
+        const friend = friends[friendId];
         for (let i = 0; i < schedule[friend].length; i++) {
-            const fromTimestamp = getTimestampFromMondayBankOpening(schedule[friend][i].from, 
-                                                                    bankOpeningTime);
-            const toTimestamp = getTimestampFromMondayBankOpening(schedule[friend][i].to, 
-                                                                  bankOpeningTime);
+            const fromTimestamp = getTimestampFromMondayBankOpening(schedule[friend][i].from,
+                bankOpeningTime);
+            const toTimestamp = getTimestampFromMondayBankOpening(schedule[friend][i].to,
+                bankOpeningTime);
             collisionsByTimestamp[fromTimestamp]++;
             collisionsByTimestamp[toTimestamp]--;
         }
     }
+}
+
+function calcCollisions(schedule, bankOpeningTime, workingEndTimestamp) {
+    const collisionsByTimestamp = initCollisions();
+
+    handleFriends(schedule, bankOpeningTime, collisionsByTimestamp);
 
     for (let timestamp = 1; timestamp < maxTimestamp; timestamp++) {
         collisionsByTimestamp[timestamp] += collisionsByTimestamp[timestamp - 1];
@@ -80,28 +81,59 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         }
     }
 
+    return collisionsByTimestamp;
+}
+
+function createMoment(momentStart, curTime, bankOpeningTime) {
+    let length = curTime - momentStart + 1;
+    const day = weekdayNames[Math.trunc(momentStart / minutesInDay)];
+    let hour = (bankOpeningTime.hour + Math.trunc((momentStart % minutesInDay) / minutesInHour));
+    let minute = bankOpeningTime.minute + momentStart % minutesInHour;
+
+    return { day, hour, minute, length };
+}
+
+function handleCurrentInterval(collisionsByTimestamp, bankOpeningTime, 
+    duration, momentStart, goodMoments) {
+    let curTime = momentStart;
+    while (collisionsByTimestamp[curTime + 1] === 0) {
+        curTime++;
+    }
+    let length = curTime - momentStart + 1;
+    while (length >= duration) {
+        goodMoments.push(createMoment(momentStart, curTime, bankOpeningTime));
+        momentStart += timeBetweenRobberies;
+        length -= timeBetweenRobberies;
+    }
+
+    return curTime;
+}
+
+function findGoodMoments(collisionsByTimestamp, bankOpeningTime, duration) {
     const goodMoments = [];
     for (let timestamp = 0; timestamp < maxTimestamp; timestamp++) {
         if (collisionsByTimestamp[timestamp] === 0) {
-            const fromTimestamp = timestamp;
-            while (collisionsByTimestamp[timestamp + 1] === 0) {
-                timestamp++;
-            }
-            let length = timestamp - fromTimestamp + 1;
-            const day = weekdayNames[Math.trunc(fromTimestamp / minutesInDay)];
-            let hour = bankOpeningTime.hour + Math.trunc((fromTimestamp % minutesInDay) / minutesInHour);
-            let minute = bankOpeningTime.minute + fromTimestamp % minutesInHour;
-            while (length >= duration) {
-                goodMoments.push({ day, hour, minute });
-                minute += timeBetweenRobberies;
-                if (minute >= minutesInHour) {
-                    hour++;
-                    minute -= minutesInHour;
-                }
-                length -= timeBetweenRobberies;
-            }
+            timestamp = handleCurrentInterval(
+                collisionsByTimestamp, bankOpeningTime, duration, timestamp, goodMoments);
         }
     }
+
+    return goodMoments;
+}
+
+/**
+ * @param {Object} schedule – Расписание Банды
+ * @param {Number} duration - Время на ограбление в минутах
+ * @param {Object} workingHours – Время работы банка
+ * @param {String} workingHours.from – Время открытия, например, "10:00+5"
+ * @param {String} workingHours.to – Время закрытия, например, "18:00+5"
+ * @returns {Object}
+ */
+function getAppropriateMoment(schedule, duration, workingHours) {
+    const bankOpeningTime = parseTime(workingHours.from);
+    const workingEndTimestamp = getTimestampFromMondayBankOpening(workingHours.to, bankOpeningTime);
+    const collisionsByTimestamp = calcCollisions(schedule, bankOpeningTime, workingEndTimestamp);
+    const goodMoments = findGoodMoments(collisionsByTimestamp, bankOpeningTime, duration);
 
     return {
         goodMoments,
@@ -125,10 +157,11 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (this.goodMoments.length === 0 || this.ansIndex >= this.goodMoments.length) {
                 return '';
             }
+
             return template
-                    .replace('%DD', ('0' + this.goodMoments[this.ansIndex].day).slice(-2))
-                    .replace('%HH', ('0' + this.goodMoments[this.ansIndex].hour).slice(-2))
-                    .replace('%MM', ('0' + this.goodMoments[this.ansIndex].minute).slice(-2));
+            .replace('%DD', ('0' + this.goodMoments[this.ansIndex].day).slice(-2))
+            .replace('%HH', ('0' + this.goodMoments[this.ansIndex].hour).slice(-2))
+            .replace('%MM', ('0' + this.goodMoments[this.ansIndex].minute).slice(-2));
         },
 
         /**
