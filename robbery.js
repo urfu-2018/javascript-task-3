@@ -26,7 +26,7 @@ function convertTimeToMinutes(time, bankTimeShift) {
     const minutes = Number(timeParts[2]);
     const timeShift = Number(timeParts[3]);
     if (typeof bankTimeShift === 'undefined') {
-        bankTimeShift = Number(timeParts[3]);
+        bankTimeShift = timeShift;
     }
 
     return dayOfWeek * hoursInDay * minutesInHour +
