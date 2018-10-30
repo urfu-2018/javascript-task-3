@@ -139,14 +139,14 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
     return {
         goodMoments,
-        ansIndex: -1,
+        ansIndex: 0,
 
         /**
          * Найдено ли время
          * @returns {Boolean}
          */
         exists: function () {
-            return this.tryLater();
+            return this.goodMoments.length > 0;
         },
 
         /**
@@ -156,7 +156,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            if (this.goodMoments.length === 0 || this.ansIndex >= this.goodMoments.length) {
+            if (this.ansIndex >= this.goodMoments.length) {
                 return '';
             }
 
