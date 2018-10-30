@@ -94,7 +94,7 @@ function convertToMinutesInBankTime(timestring, bankTime) {
     let hours = parseInt(timestring.slice(3, 5)) - parseInt(timestring.slice(9)) + bankTime;
     let minutes = parseInt(timestring.slice(6, 8));
 
-    return (weekdays.indexOf(day)*24 + hours) * 60 + minutes;
+    return (weekdays.indexOf(day) * 24 + hours) * 60 + minutes;
 }
 
 function scheduleToIntervals(schedule, bankTime) {
