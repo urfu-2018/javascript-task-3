@@ -121,14 +121,14 @@ function splitTimeZone(tZ) {
     var h = 0;
     var m = 0;
     for (var i = 0; i < 48; i++) {
+        if (toMinutes(h, m) >= toMinutes(tZ[0][0], tZ[0][1]) &&
+        toMinutes(h, m) <= toMinutes(tZ[1][0], tZ[1][1])) {
+            result.add([h, m].toString());
+        }
         m += 30;
         if (m === 60) {
             h += 1;
             m = 0;
-        }
-        if (toMinutes(h, m) >= toMinutes(tZ[0][0], tZ[0][1]) &&
-        toMinutes(h, m) <= toMinutes(tZ[1][0], tZ[1][1])) {
-            result.add([h, m].toString());
         }
     }
 
