@@ -108,13 +108,13 @@ function findTimeRange(daysRanges, duration, formattedWorkingHours) {
 
                 if (counter === daysRanges[day].length) {
                     variants[day].push(i);
-                    i += 29;
                 }
             } else {
                 variants[day].push(i);
-                i += 29;
             }
         });
+
+        i += 29;
     }
 
     return variants;
