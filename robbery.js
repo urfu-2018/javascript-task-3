@@ -165,7 +165,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 return true;
             }
 
-            if (resultTime.length === 1) {
+            if (resultTime.length <= 1) {
                 return false;
             }
             resultTime.shift();
