@@ -186,12 +186,14 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            let needingTime = answer[0];
-            if (needingTime.to - needingTime.from - 30 >= duration) {
+            if (!answer.length) {
+                return false;
+            }
+            if (answer[0].to - answer[0].from - 30 >= duration) {
                 answer[0].from += 30;
 
                 return true;
-            } else if (answer[1] !== undefined) {
+            } else if (answer.length > 1) {
                 answer.shift();
 
                 return true;
