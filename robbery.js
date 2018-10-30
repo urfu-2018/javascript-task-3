@@ -60,17 +60,16 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                     dayTimeStrToMinutes(
                         ...`${day} ${workingHours.to}`.split(/ |\+/), bankTimeZone)))
         .concat([startTime, endTime, -endWeek]);
-    let answer = [{ count: 0, intervals: [] }]
-        .concat(Object.keys(schedule)
-            .map((friend)=>[...schedule[friend]])
-            .reduce((a, b)=>a.concat(b))
-            .map((record)=>
-                [
-                    dayTimeStrToMinutes(...record.from.split(/ |\+/), bankTimeZone),
-                    -dayTimeStrToMinutes(...record.to.split(/ |\+/), bankTimeZone)])
-            .reduce((a, b)=>a.concat(b))
-            .concat(workingHours)
-            .sort((a, b) => Math.abs(a) - Math.abs(b)))
+    let answer = Object.keys(schedule)
+        .map((friend)=>[...schedule[friend]])
+        .reduce((a, b)=>a.concat(b))
+        .map((record)=>
+            [
+                dayTimeStrToMinutes(...record.from.split(/ |\+/), bankTimeZone),
+                -dayTimeStrToMinutes(...record.to.split(/ |\+/), bankTimeZone)])
+        .reduce((a, b)=>a.concat(b), [])
+        .concat(workingHours)
+        .sort((a, b) => Math.abs(a) - Math.abs(b))
         .reduce(function (result, time) {
             let lastInterval = result.intervals[result.intervals.length - 1];
             let sign = Math.sign(time);
@@ -82,7 +81,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             }
 
             return result;
-        })
+        }, { count: 0, intervals: [] })
         .intervals
         .slice(1)
         .filter((record)=>Math.abs(record.to - record.from) >= duration)
