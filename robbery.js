@@ -32,14 +32,14 @@ function getTimeSections(sections, bankTimeZone) {
             borders.push(to);
         }
     }
+    borders.sort(sortByModule);
 
     return processBorders(borders);
 }
 
 function processBorders(borders) {
     let newSections = [];
-    borders.sort(sortByModule);
-    let section = { from: borders.length !== 0 ? borders[0] : -1, to: -1 };
+    let section = { from: borders[0], to: -1 };
     let i = 1;
     while (i < borders.length) {
         if (section.from !== -1 && borders[i] > 0) {
@@ -53,8 +53,7 @@ function processBorders(borders) {
         if (section.to === -1 && borders[i] < 0) {
             section.to = -borders[i];
             newSections.push({ from: section.from, to: section.to });
-            section.from = -1;
-            section.to = -1;
+            section = { from: -1, to: -1 };
         }
         i++;
     }
@@ -67,8 +66,7 @@ function sortByModule(a, b) {
     return Math.abs(a) - Math.abs(b);
 }
 
-function getCommonTimeSections(first, second) {
-    let commonTimeSections = [];
+function getBorders(first, second) {
     let borders = [];
     for (let f of first) {
         borders.push(f.from);
@@ -79,6 +77,13 @@ function getCommonTimeSections(first, second) {
         borders.push(-s.to);
     }
     borders.sort(sortByModule);
+
+    return borders;
+}
+
+function getCommonTimeSections(first, second) {
+    let commonTimeSections = [];
+    let borders = getBorders(first, second);
     let section = { from: -1, to: -1 };
     let counter = 0;
     for (let b of borders) {
@@ -89,8 +94,7 @@ function getCommonTimeSections(first, second) {
         if (counter === 1 && b < 0) {
             section.to = b;
             commonTimeSections.push({ from: section.from, to: -section.to });
-            section.from = -1;
-            section.to = -1;
+            section = { from: -1, to: -1 };
         }
     }
 
@@ -174,8 +178,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
             template = template.replace('%DD', day);
             template = template.replace('%HH', hour);
-            template = template.replace('%MM', minute < 10 ? '0'+ String(minute) : String(minute));
-        
+            template = template.replace('%MM', minute < 10 ? '0' + String(minute) : String(minute));
+
             return template;
         },
 
