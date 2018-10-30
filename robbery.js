@@ -24,7 +24,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
 
     let momentFound = findNext(
-        [-timeZoneShift, 70 * 60 - timeZoneShift],
+        [-timeZoneShift, 72 * 60 - timeZoneShift],
         bankOpenedIntervals,
         gangstersBusyIntervals,
         duration
@@ -61,7 +61,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          */
         tryLater: function () {
             const next = findNext(
-                [momentFound + 30, 70 * 60 - timeZoneShift],
+                [momentFound + 30, 72 * 60 - timeZoneShift],
                 bankOpenedIntervals,
                 gangstersBusyIntervals,
                 duration
