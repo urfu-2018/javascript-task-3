@@ -4,111 +4,101 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = false;
+const isStar = true;
+
+const MINUTES_IN_DAY = 60 * 24;
+const DAY_TO_MINUTES = {'ПН': 0, 'ВТ': MINUTES_IN_DAY, 'СР': 2 * MINUTES_IN_DAY};
+const DAYS = ['ПН', 'ВТ', 'СР'];
 
 const TIME_RE = /^(\d{2}):(\d{2})\+(\d{1,2})$/;
 const DATE_TIME_RE = /^(ПН|ВТ|СР) (\d{2}):(\d{2})\+(\d{1,2})$/;
 
-const MINUTES_IN_DAY = 60 * 24;
-const DAY_TO_MINUTES = { 'ПН': 0, 'ВТ': MINUTES_IN_DAY, 'СР': 2 * MINUTES_IN_DAY };
-
-class Timestamp {
-    static _validateDate(date, parseDay) {
-        if (parseDay && !DATE_TIME_RE.test(date) || !parseDay && !TIME_RE.test(date)) {
-            throw new TypeError();
-        }
-    }
-
-    normalize() {
-        if (this.minutes >= 60) {
-            this.hours = (this.hours + Math.floor(this.minutes / 60)) % 24;
-            this.minutes = this.minutes % 60;
-        }
-    }
-
-    constructor(hours, minutes, value) {
-        this.hours = hours;
-        this.minutes = minutes;
-        this.value = value;
-
-        this.normalize();
-    }
-
-    static parse(date, baseTz = null, parseDay = false) {
-        Timestamp._validateDate(date, parseDay);
-
-        if (!parseDay) {
-            date = `ПН ${date}`;
-        }
-
-        const groups = DATE_TIME_RE.exec(date)
-            .slice(1)
-            .map((e, i) => i > 0 ? parseInt(e) : e);
-
-        if (baseTz === null) {
-            baseTz = groups[3];
-        }
-
-        const hours = baseTz - groups[3] + groups[1];
-        const minutes = groups[2];
-
-        const value = DAY_TO_MINUTES[groups[0]] + 60 * hours + minutes;
-
-        return new Timestamp(hours, minutes, value);
-    }
-
-    get day() {
-        if (this.value < MINUTES_IN_DAY) {
-            return 'ПН';
-        } else if (this.value < 2 * MINUTES_IN_DAY) {
-            return 'ВТ';
-        }
-
-        return 'СР';
-    }
-
-    _choose(other, predicate) {
-        if (predicate()) {
-            return this;
-        }
-
-        return other;
-    }
-
-    max(other) {
-        return this._choose(other, () => this.value > other.value);
-    }
-
-    min(other) {
-        return this._choose(other, () => this.value < other.value);
-    }
-
-    addMinutes(minutes) {
-        return new Timestamp(this.hours, this.minutes + minutes, this.value + minutes);
-    }
-
-    addDay() {
-        return new Timestamp(this.hours, this.minutes, this.value + 24 * 60);
+function validateDate(date, parseDay) {
+    if (parseDay && !DATE_TIME_RE.test(date) || !parseDay && !TIME_RE.test(date)) {
+        throw new TypeError();
     }
 }
 
+function parseTimestamp(date, baseTz = null, parseDay = false) {
+    validateDate(date, parseDay);
+
+    if (!parseDay) {
+        date = `ПН ${date}`;
+    }
+
+    const groups = DATE_TIME_RE.exec(date)
+        .slice(1)
+        .map((e, i) => i > 0 ? parseInt(e) : e);
+
+    if (baseTz === null) {
+        baseTz = groups[3];
+    }
+
+    const hours = baseTz - groups[3] + groups[1];
+    const minutes = groups[2];
+
+    return DAY_TO_MINUTES[groups[0]] + 60 * hours + minutes;
+}
+
+function extractDate(timestamp) {
+    const day = DAYS[Math.floor(timestamp / MINUTES_IN_DAY)];
+    timestamp %= MINUTES_IN_DAY;
+
+    const hours = Math.floor(timestamp / 60);
+    const minutes = timestamp % 60;
+
+    return { day, hours, minutes };
+}
+
+class TimeSpan {
+    constructor(left, right) {
+        if (right < left) {
+            throw new TypeError();
+        }
+
+        this._left = left;
+        this._right = right;
+    }
+
+    get left() {
+        return this._left;
+    }
+
+    get right() {
+        return this._right;
+    }
+
+    get length() {
+        return this.right - this.left;
+    }
+
+    static fromStrSpan(span, baseTz = null, parseDay = false) {
+        return new TimeSpan(
+            parseTimestamp(span.from, baseTz, parseDay),
+            parseTimestamp(span.to, baseTz, parseDay)
+        );
+    }
+
+    add(delta) {
+        return new TimeSpan(this.left + delta, this.right + delta);
+    }
+}
 
 function getBankIntervals(workingHours) {
-    const result = [[Timestamp.parse(workingHours.from), Timestamp.parse(workingHours.to)]];
+    const result = [TimeSpan.fromStrSpan(workingHours)];
 
     for (let i = 1; i < 3; i++) {
-        result.push([result[i - 1][0].addDay(), result[i - 1][1].addDay()]);
+        result.push(result[i - 1].add(MINUTES_IN_DAY));
     }
 
     return result;
 }
 
-function getGangMemberIntervals(schedule, baseTime) {
+function getGangMemberIntervals(schedule, baseTz) {
     const result = [];
 
     for (let span of schedule) {
-        result.push([Timestamp.parse(span.from, baseTime, true),
-            Timestamp.parse(span.to, baseTime, true)]);
+        result.push(TimeSpan.fromStrSpan(span, baseTz, true));
     }
 
     return result;
@@ -119,8 +109,11 @@ function getIntersections(intervals1, intervals2) {
 
     intervals1.forEach(int1 => {
         intervals2.forEach(int2 => {
-            if (int1[1].value > int2[0].value && int1[0].value < int2[1].value) {
-                result.push([int1[0].max(int2[0]), int1[1].min(int2[1])]);
+            if (int1.right > int2.left && int1.left < int2.right) {
+                result.push(new TimeSpan(
+                    Math.max(int1.left, int2.left),
+                    Math.min(int1.right, int2.right)
+                ));
             }
         });
     });
@@ -130,14 +123,18 @@ function getIntersections(intervals1, intervals2) {
 
 function getFreeTime(intervals) {
     const result = [];
-    intervals.sort((u, v) => u[0].value - v[0].value);
+    intervals.sort((u, v) => u.left - v.left);
 
-    let left = new Timestamp(0, 0, 0);
+    let left = 0;
     for (let interval of intervals) {
-        result.push([left, interval[0]]);
-        left = interval[1];
+        result.push(new TimeSpan(left, interval.left));
+        left = interval.right;
     }
-    result.push([left, new Timestamp(23, 59, MINUTES_IN_DAY * 3 - 1)]);
+
+    const endOfTime = MINUTES_IN_DAY * 3 - 1;
+    if (left < endOfTime) {
+        result.push(new TimeSpan(left, endOfTime));
+    }
 
     return result;
 }
@@ -151,15 +148,15 @@ function getFreeTime(intervals) {
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    const baseTime = parseInt(workingHours.from.split('+')[1]);
+    const baseTz = parseInt(workingHours.from.split('+')[1]);
     const bankIntervals = getBankIntervals(workingHours);
     const gangIntervals = Object.values(schedule)
-        .map(s => getGangMemberIntervals(s, baseTime))
+        .map(s => getGangMemberIntervals(s, baseTz))
         .map(getFreeTime)
         .reduce(getIntersections);
 
     let suiteTimes = getIntersections(bankIntervals, gangIntervals)
-        .filter(e => e[1].value - e[0].value >= duration);
+        .filter(e => e.length >= duration);
 
     return {
 
@@ -182,7 +179,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 return '';
             }
 
-            const suiteTime = suiteTimes[0][0];
+            const suiteTime = extractDate(suiteTimes[0].left);
 
             return template
                 .replace('%HH', suiteTime.hours.toString()
@@ -205,8 +202,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
             const suiteTime = suiteTimes[0];
 
-            if (suiteTime[0].value + duration + delta <= suiteTime[1].value) {
-                suiteTimes[0][0] = suiteTime[0].addMinutes(delta);
+            if (suiteTime.left + duration + delta <= suiteTime.right) {
+                suiteTimes[0] = new TimeSpan(suiteTime.left + delta, suiteTime.right);
 
                 return true;
             }
