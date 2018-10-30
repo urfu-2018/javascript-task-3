@@ -67,7 +67,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     };
 }
 
-function getRobberyTimeFrame(timeZone) {
+function getRobberyTimeFrame() {
     return {
         from: 0,
         to: (daysOfTheWeek.length * MINUTES_IN_DAY) - 1
@@ -214,6 +214,7 @@ function getAllTodaysIntersections(freeIntervals, bankWorkingHours, day) {
 
 function getBankWorkingIntervalForDay(bankWorkingHours, day) {
     const bankTimeZone = parseInt(bankWorkingHours.from.match(/\+(\d)/));
+
     return {
         from: getTimestamp(`${day} ${bankWorkingHours.from}`, bankTimeZone),
         to: getTimestamp(`${day} ${bankWorkingHours.to}`, bankTimeZone)
@@ -227,10 +228,6 @@ function getMoment(robberyIntervals, duration) {
             return interval.from;
         }
     }
-}
-
-function shiftTime(time, timeZoneOffset) {
-    return time + timeZoneOffset * MINUTES_IN_HOUR;
 }
 
 function formatDateString(date, template) {
