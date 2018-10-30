@@ -27,6 +27,7 @@ function getDataAndTimeFromMinute(startTime) {
     let minutes = minutesFromWeekStart - dayNumber * minutesInDay - hours * minutesInHour;
     hours = String(hours).length === 1 ? '0' + hours : hours;
     minutes = String(minutes).length === 1 ? '0' + minutes : minutes;
+
     return { day, hours, minutes };
 }
 function intersectRobberAndBankSheduleInDayPeriod(day, robberSchedule, bankSchedule) {
