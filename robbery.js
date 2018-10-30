@@ -155,7 +155,9 @@ function minutesToDate(dateInMinutes) {
 
 function cutBusyTime(freeIntervals, busyInterval) {
     return freeIntervals.reduce((freeTime, interval) => {
-        if (inclide(interval, busyInterval)) {
+        if (notIntersect(busyInterval, interval)) {
+            freeTime.push(interval);
+        } else if (inclide(interval, busyInterval)) {
             freeTime.push({
                 from: interval.from,
                 to: busyInterval.from
@@ -174,14 +176,16 @@ function cutBusyTime(freeIntervals, busyInterval) {
                 from: interval.from,
                 to: busyInterval.from
             });
-        } else if (!inclide(busyInterval, interval)) {
-            freeTime.push(interval);
         }
 
         return freeTime;
     }, []);
 }
 
+function notIntersect(firstInterval, secondInterval) {
+    return (secondInterval.from < firstInterval.from && secondInterval.to <= firstInterval.from) ||
+        (secondInterval.to > firstInterval.to && secondInterval.from >= firstInterval.to);
+}
 function leftIntersection(firstInterval, secondInterval) {
     return firstInterval.from >= secondInterval.from &&
         secondInterval.to > firstInterval.from &&
