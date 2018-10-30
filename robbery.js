@@ -106,7 +106,7 @@ function getTimeForJob(schedule, duration, workingHours) {
     const timeBank = formatTimeForBank(workingHours);
     const arrTimeForJob = [];
     for (const dayWeek in busyTime) {
-        if (busyTime.hasOwnProperty(dayWeek)) {
+        if (busyTime.hasOwnProperty(dayWeek) && busyTime[dayWeek].length) {
             busyTime[dayWeek].sort(compareStartTime);
             arrTimeForJob.push(getTimeForWork(busyTime[dayWeek], timeBank));
         }
