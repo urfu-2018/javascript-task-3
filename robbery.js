@@ -21,15 +21,15 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     let bankSchedule = getNewScheduleBank(workingHours, bankTimeZone);
     let newSchedule = getNewScheduleFormat(schedule, bankTimeZone);
     // const emptyDays = possibleWeHaveEmptyDay(schedule, newSchedule, bankSchedule);
-    let mergedSchedule = [];
+    let mergedSchedule = bankSchedule;
     Object.keys(newSchedule).forEach(key => {
         mergedSchedule = merge(newSchedule[key], mergedSchedule);
     });
-    let possibleTimes = findDifference(mergedSchedule, bankSchedule);
+    // let possibleTimes = findDifference(mergedSchedule, bankSchedule);
     // if (emptyDays.length > 0) {
     //  possibleTimes.push(...emptyDays);
     // }
-    const rightTimes = (possibleTimes
+    const rightTimes = (mergedSchedule
         .filter(t => t.to - t.from >= duration))
         .map(t => minutesToDateObject(t.from));
 
@@ -105,35 +105,6 @@ function dayToMinutes(day) {
     return 10000;
 }
 
-function firstConditionIsTheUnion(timeRange1, timeRange2) {
-    return timeRange1.from <= timeRange2.from && timeRange2.from <= timeRange1.to;
-}
-
-function secondConditionIsTheUnion(timeRange1, timeRange2) {
-    return timeRange2.from <= timeRange1.from && timeRange1.from <= timeRange2.to;
-}
-
-function getUnion(timeRange1, timeRange2) {
-    let union = {};
-    if (firstConditionIsTheUnion(timeRange1, timeRange2)) {
-        if (timeRange2.to >= timeRange1.to) {
-            union = { 'from': timeRange1.from, 'to': timeRange2.to };
-        } else {
-            union = { 'from': timeRange1.from, 'to': timeRange1.to };
-        }
-    } else if (secondConditionIsTheUnion(timeRange1, timeRange2)) {
-        if (timeRange1.to >= timeRange2.to) {
-            union = { 'from': timeRange2.from, 'to': timeRange1.to };
-        } else {
-            union = { 'from': timeRange2.from, 'to': timeRange2.to };
-        }
-    } else {
-        return false;
-    }
-
-    return union;
-}
-
 function getNewScheduleBank(workingHours, bankTimeZone) {
     const newWorkSchedule = [];
     days.forEach(day => {
@@ -172,29 +143,45 @@ function numberToTwoDigitableString(number) {
 
 function merge(scheduleFirstBoy, scheduleSecondBoy) {
     const mergedSchedule = [];
-    const countUseScheduleSecondBoy = [];
-    scheduleSecondBoy.forEach(() => countUseScheduleSecondBoy.push(0));
     scheduleFirstBoy.forEach(timeZonaFirst => {
-        let notMerged = true;
         scheduleSecondBoy.forEach((timeZonaSecond, i) => {
             let union = getUnion(timeZonaFirst, timeZonaSecond);
             if (union) {
-                countUseScheduleSecondBoy[i]++;
                 mergedSchedule.push(union);
-                notMerged = false;
             }
         });
-        if (notMerged) {
-            mergedSchedule.push(timeZonaFirst);
-        }
-    });
-    countUseScheduleSecondBoy.forEach((x, i) => {
-        if (x === 0) {
-            mergedSchedule.push(scheduleSecondBoy[i]);
-        }
     });
 
     return mergedSchedule;
+}
+
+function firstConditionIsTheUnion(timeRange1, timeRange2) {
+    return timeRange1.from <= timeRange2.from && timeRange2.from <= timeRange1.to;
+}
+
+function secondConditionIsTheUnion(timeRange1, timeRange2) {
+    return timeRange2.from <= timeRange1.from && timeRange1.from <= timeRange2.to;
+}
+
+function getUnion(timeRange1, timeRange2) {
+    let union = {};
+    if (firstConditionIsTheUnion(timeRange1, timeRange2)) {
+        if (timeRange2.to >= timeRange1.to) {
+            union = { 'from': timeRange2.from, 'to': timeRange1.to };
+        } else {
+            union = { 'from': timeRange2.from, 'to': timeRange2.to };
+        }
+    } else if (secondConditionIsTheUnion(timeRange1, timeRange2)) {
+        if (timeRange1.to >= timeRange2.to) {
+            union = { 'from': timeRange1.from, 'to': timeRange2.to };
+        } else {
+            union = { 'from': timeRange1.from, 'to': timeRange1.to };
+        }
+    } else {
+        return false;
+    }
+
+    return union;
 }
 
 function getNewScheduleFormat(schedule, bankTimeZone) {
@@ -203,7 +190,34 @@ function getNewScheduleFormat(schedule, bankTimeZone) {
         newSchedule[key] = schedule[key].map(r => getNewScheduleRowFormat(r, bankTimeZone));
     });
 
-    return newSchedule;
+    return revertSchedule(newSchedule);
+}
+
+function revertSchedule(schedule){
+    const freeTimeSchedule = [];
+    Object.keys(schedule).forEach(key => {
+        freeTimeSchedule[key] = getFreeTimeSchedule(schedule[key]);
+    });
+    return freeTimeSchedule;
+}
+
+function getFreeTimeSchedule(schedule) {
+    const freeTimeSchedule = [];
+    let leftBorder = -1;
+    schedule.forEach(function (timeRange) {
+        if (leftBorder < timeRange.from) {
+            const freeTimeRange = { from: leftBorder, to: timeRange.from };
+            freeTimeSchedule.push(freeTimeRange);
+        }
+        leftBorder = timeRange.to;
+    });
+    const end = days.length * 60 * 24;
+    if (leftBorder < end) {
+        const freeTimeRange = { 'from': leftBorder, 'to': end };
+        freeTimeSchedule.push(freeTimeRange);
+    }
+
+    return freeTimeSchedule;
 }
 
 function getNewScheduleRowFormat(r, bankTimeZone) {
