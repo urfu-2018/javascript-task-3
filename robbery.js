@@ -7,7 +7,7 @@
 const isStar = true;
 
 const MINUTES_IN_DAY = 60 * 24;
-const DAY_TO_MINUTES = {'ПН': 0, 'ВТ': MINUTES_IN_DAY, 'СР': 2 * MINUTES_IN_DAY};
+const DAY_TO_MINUTES = { 'ПН': 0, 'ВТ': MINUTES_IN_DAY, 'СР': 2 * MINUTES_IN_DAY };
 const DAYS = ['ПН', 'ВТ', 'СР'];
 
 const TIME_RE = /^(\d{2}):(\d{2})\+(\d{1,2})$/;
