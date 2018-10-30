@@ -126,7 +126,7 @@ function getAppropriateMinutes(isSuitable, duration, endTime) {
     let freeMinutes = 0;
     let appropriateMomemts = [];
 
-    for (let i = 0; i < endTime; ++i) {
+    for (let i = 0; i <= endTime; ++i) {
         if (!isSuitable(i)) {
             freeMinutes = 0;
             continue;
@@ -137,11 +137,12 @@ function getAppropriateMinutes(isSuitable, duration, endTime) {
         }
 
         let previousTime = appropriateMomemts[appropriateMomemts.length - 1];
-        if (previousTime !== undefined && (i - duration + 1) - previousTime < 30) {
+        let moment = i - duration + 1;
+        if (previousTime !== undefined && moment - previousTime < 30) {
             continue;
         }
 
-        appropriateMomemts.push(i - duration + 1);
+        appropriateMomemts.push(moment);
     }
 
     return appropriateMomemts;
