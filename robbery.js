@@ -1,7 +1,6 @@
 'use strict';
 
 var week = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
-var BANK_TIME_ZONE = 5;
 var MINUTES_IN_DAY = 60 * 24;
 
 function pad(num) {
@@ -10,21 +9,14 @@ function pad(num) {
     return str.length === 2 ? str : `0${str}`;
 }
 
-function timeStrToMinutes(d) {
+function timeStrToMinutes(d, bankTimeZone) {
     var arr = d.split(' ');
     var weekDay = week.indexOf(arr[0]);
     var timeArr = arr[1].split('+');
     var hoursMinutes = timeArr[0].split(':');
 
     return weekDay * MINUTES_IN_DAY + Number(hoursMinutes[0]) * 60 +
-        Number(hoursMinutes[1]) + (BANK_TIME_ZONE - Number(timeArr[1])) * 60;
-}
-
-function timeObjToMinutes(obj) {
-    return {
-        from: timeStrToMinutes(obj.from),
-        to: timeStrToMinutes(obj.to)
-    };
+        Number(hoursMinutes[1]) + (bankTimeZone - Number(timeArr[1])) * 60;
 }
 
 function cut(obj, limit) {
@@ -106,6 +98,14 @@ const isStar = true;
  */
 
 function getAppropriateMoment(schedule, duration, workingHours) {
+    var bankTimeZone = Number(workingHours.to.split('+')[1]);
+    function timeObjToMinutes(obj) {
+        return {
+            from: timeStrToMinutes(obj.from, bankTimeZone),
+            to: timeStrToMinutes(obj.to, bankTimeZone)
+        };
+    }
+
     function findAppropriate(limit) {
 
         var daysForRobbery = week.slice(0, 3);
