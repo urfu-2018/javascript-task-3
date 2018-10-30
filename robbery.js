@@ -20,13 +20,16 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     const workingDays = getWorkingDates(workingHours, bankTime);
     // console.info('working:');
     // console.info(workingDays);
-    const dannyPossibleTimes = invertPeriods(schedule.Danny.map(x => createPeriod(x, bankTime)), bankTime);
+    const dannyPossibleTimes = invertPeriods(schedule.Danny
+        .map(x => createPeriod(x, bankTime)), bankTime);
     // console.info('danny:');
     // console.info(dannyPossibleTimes);
-    const linusPossibleTimes = invertPeriods(schedule.Linus.map(x => createPeriod(x, bankTime)), bankTime);
+    const linusPossibleTimes = invertPeriods(schedule.Linus
+        .map(x => createPeriod(x, bankTime)), bankTime);
     // console.info('linus:');
     // console.info(linusPossibleTimes);
-    const rustyPossibleTimes = invertPeriods(schedule.Rusty.map(x => createPeriod(x, bankTime)), bankTime);
+    const rustyPossibleTimes = invertPeriods(schedule.Rusty
+        .map(x => createPeriod(x, bankTime)), bankTime);
     // console.info('rusty:');
     // console.info(rustyPossibleTimes);
     // throw new Error();
@@ -84,7 +87,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
             if (appropriateTimes.length > 1) {
                 appropriateTimes.shift();
-                
+
                 return true;
             }
 
@@ -196,6 +199,7 @@ function getMinutes(dateString, bankTimeZone) {
     let day = dateString.slice(0, 2);
     let hours = parseInt(dateString.slice(3, 5)) - parseInt(dateString.slice(9)) + bankTimeZone;
     let minutes = parseInt(dateString.slice(6, 8));
+
     return (dayNameToHours.get(day) + hours) * 60 + minutes;
 }
 
