@@ -70,21 +70,25 @@ function possibleWeHaveEmptyDay(schedule, bankSchedule) {
     Object.keys(schedule).forEach(key => {
         schedule[key].forEach(r => {
             if ((r.from + r.to).indexOf('ПН') !== -1) {
-                countDayInSschedule['ПН']++
+                countDayInSschedule['ПН']++;
             }
             if ((r.from + r.to).indexOf('ВТ') !== -1) {
-                countDayInSschedule['ВТ']++
+                countDayInSschedule['ВТ']++;
             }
             if ((r.from + r.to).indexOf('СР') !== -1) {
-                countDayInSschedule['СР']++
+                countDayInSschedule['СР']++;
             }
         });
     });
     Object.keys(countDayInSschedule).forEach(k => {
         if (countDayInSschedule[k] === 0) {
-            emptyDays.push({ from: dayToMinutes(k)+bankSchedule[0].from, to: (bankSchedule[0].to + dayToMinutes(k) + 24 * 60) });
+            emptyDays.push({
+                from: dayToMinutes(k) + bankSchedule[0].from,
+                to: (bankSchedule[0].to + dayToMinutes(k) + 24 * 60)
+            });
         }
-    })
+    });
+
     return emptyDays;
 }
 
