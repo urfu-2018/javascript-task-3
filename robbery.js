@@ -85,21 +85,23 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            const interval = intersections[0];
-            const delay = 30;
             if (this.exists()) {
-                const timeForRobbery = intersections[0].to - intersections[0].from;
-                if (timeForRobbery - delay >= duration) {
-                    intersections[0].from += 30;
+                const interval = intersections[0];
+                const delay = 30;
+                if (this.exists()) {
+                    const timeForRobbery = intersections[0].to - intersections[0].from;
+                    if (timeForRobbery - delay >= duration) {
+                        intersections[0].from += 30;
 
+                        return true;
+                    }
+                }
+                intersections.shift();
+                if (intersections.length > 0) {
                     return true;
                 }
+                intersections.push(interval);
             }
-            intersections.shift();
-            if (intersections.length > 0) {
-                return true;
-            }
-            intersections.push(interval);
 
             return false;
         }
