@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = false;
+const isStar = true;
 
 /**
  * @param {Object} schedule – Расписание Банды
@@ -142,12 +142,13 @@ const daysPriority = { ПН: 1, ВТ: 2, СР: 3 };
 function moveToNextTime(closestTime, possibleTimes) {
     const days = Object.keys(possibleTimes);
     const currentTime = closestTime[1];
+    const currentDay = closestTime[0];
 
     for (const day of days) {
         const filtered = possibleTimes[day].filter(possibleTime => possibleTime > currentTime);
-        if (day === closestTime[0] && filtered.length) {
+        if (day === currentDay && filtered.length) {
             return [day, filtered[0]];
-        } else if (daysPriority[day] > daysPriority[closestTime[0]] && possibleTimes[day].length) {
+        } else if (daysPriority[day] > daysPriority[currentDay] && possibleTimes[day].length) {
             return [day, possibleTimes[day][0]];
         }
     }
