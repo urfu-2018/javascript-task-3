@@ -19,16 +19,16 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     const bankTimeZone = parseInt(workingHours.from.substring(6));
     // console.info(schedule, duration, workingHours);
     let bankSchedule = getNewScheduleBank(workingHours, bankTimeZone);
-    const emptyDays = possibleWeHaveEmptyDay(schedule, bankSchedule);
     let newSchedule = getNewScheduleFormat(schedule, bankTimeZone);
+    const emptyDays = possibleWeHaveEmptyDay(schedule, newSchedule, bankSchedule);
     let mergedSchedule = [];
     Object.keys(newSchedule).forEach(key => {
         mergedSchedule = merge(newSchedule[key], mergedSchedule);
     });
     let possibleTimes = findDifference(mergedSchedule, bankSchedule);
-    if (emptyDays.length > 0) {
-        possibleTimes.push(...emptyDays);
-    }
+    // if (emptyDays.length > 0) {
+    //  possibleTimes.push(...emptyDays);
+    // }
     const rightTimes = (possibleTimes
         .filter(t => t.to - t.from >= duration))
         .map(t => minutesToDateObject(t.from));
@@ -64,7 +64,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     };
 }
 
-function possibleWeHaveEmptyDay(schedule, bankSchedule) {
+function possibleWeHaveEmptyDay(schedule, newSchedule, bankSchedule) {
     const emptyDays = [];
     const countDayInSschedule = { 'ПН': 0, 'ВТ': 0, 'СР': 0 };
     Object.keys(schedule).forEach(key => {
@@ -81,13 +81,14 @@ function possibleWeHaveEmptyDay(schedule, bankSchedule) {
         });
     });
     Object.keys(countDayInSschedule).forEach(k => {
-        if (countDayInSschedule[k] === 0) {
-            emptyDays.push({
-                from: dayToMinutes(k) + bankSchedule[0].from,
-                to: (bankSchedule[0].to + dayToMinutes(k) + 24 * 60)
-            });
-        }
+        // if (countDayInSschedule[k] === 0) {
+        emptyDays.push({
+            from: dayToMinutes(k) + bankSchedule[0].from,
+            to: (bankSchedule[0].to + dayToMinutes(k) + 24 * 60)
+        });
+        //  }
     });
+    //const svobVremay = findDifference(emptyDays, newSchedule)
 
     return emptyDays;
 }
@@ -216,9 +217,11 @@ function getNewScheduleRowFormat(r, bankTimeZone) {
 
 function findDifference(scheduleBoys, scheduleBank) {
     const possibleTimes = [];
-    scheduleBoys.forEach(boysTime => {
-        scheduleBank.forEach(bankTime => {
+    scheduleBank.forEach(bankTime => {
+        let flagNichego = true;
+        scheduleBoys.forEach(boysTime => {
             if (boysTime.from >= bankTime.from && boysTime.from <= bankTime.to) {
+                flagNichego = false;
                 let from = bankTime.from;
                 scheduleBoys.forEach(s => {
                     if (s.to < boysTime.from && s.to > bankTime.from) {
@@ -228,6 +231,7 @@ function findDifference(scheduleBoys, scheduleBank) {
                 possibleTimes.push({ 'from': from, 'to': boysTime.from });
             }
             if (boysTime.to <= bankTime.to && boysTime.to >= bankTime.from) {
+                flagNichego = false;
                 let to = bankTime.to;
                 scheduleBoys.forEach(s => {
                     if (s.from > boysTime.to && s.to < bankTime.to) {
@@ -237,6 +241,9 @@ function findDifference(scheduleBoys, scheduleBank) {
                 possibleTimes.push({ 'from': boysTime.to, 'to': to });
             }
         });
+        if (flagNichego) {
+            possibleTimes.push(bankTime);
+        }
     });
     if (scheduleBoys.length === 0) {
         return scheduleBank;
