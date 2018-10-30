@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = false;
+const isStar = true;
 
 const daysOfTheWeek = ['ПН', 'ВТ', 'СР'];
 const MINUTES_IN_DAY = 1440;
@@ -28,7 +28,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     const freeIntervals = getFreeTimeIntervals(busyIntervals, timeFrame);
     const robberyIntervals = getIntersectionsOfFreeAndBank(freeIntervals, workingHours);
 
-    const moment = getMoment(robberyIntervals, duration);
+    const moments = getAllMoments(robberyIntervals, duration);
 
     return {
 
@@ -37,7 +37,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            return moment !== undefined;
+            return moments.get() !== undefined;
         },
 
         /**
@@ -47,7 +47,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            const robberyDate = getDateFromTimestamp(moment);
+            const robberyDate = getDateFromTimestamp(moments.get());
 
             if (this.exists()) {
                 return formatDateString(robberyDate, template);
@@ -62,7 +62,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            return false;
+            return moments.next();
         }
     };
 }
@@ -221,13 +221,48 @@ function getBankWorkingIntervalForDay(bankWorkingHours, day) {
     };
 }
 
-function getMoment(robberyIntervals, duration) {
-    for (const interval of robberyIntervals) {
-        const intervalLength = interval.to - interval.from;
-        if (intervalLength >= duration) {
-            return interval.from;
+function getAllMoments(robberyIntervals, duration) {
+    const ATTEMPT_OFFSET = 30;
+
+    const moments = robberyIntervals.reduce((acc, interval) => {
+        let currentInterval = interval;
+        let currentIntervalLength = currentInterval.to - currentInterval.from;
+
+        do {
+            if (currentIntervalLength >= duration) {
+                acc.push(currentInterval.from);
+            }
+
+            currentInterval = cutInterval(currentInterval, ATTEMPT_OFFSET);
+            currentIntervalLength = currentInterval.to - currentInterval.from;
+
+        } while (currentIntervalLength > ATTEMPT_OFFSET);
+
+        return acc;
+    }, []);
+
+    return {
+        moments,
+        index: 0,
+
+        get: function () {
+            return this.moments[this.index];
+        },
+
+        next: function () {
+            if (moments[this.index + 1]) {
+                this.index++;
+
+                return true;
+            }
+
+            return false;
         }
-    }
+    };
+}
+
+function cutInterval(interval, startOffset) {
+    return { from: interval.from + startOffset, to: interval.to };
 }
 
 function formatDateString(date, template) {
