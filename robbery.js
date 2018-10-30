@@ -92,6 +92,10 @@ function totalFreeTime(firstTimes, secondTimes) {
     return schedule;
 }
 
+function checkBankTime(bankTime, duration) {
+    return bankTime[0][1] - bankTime[0][0] > duration;
+}
+
 function getAppropriateMoment(schedule, duration, workingHours) {
     console.info(schedule, duration, workingHours);
     const bankZone = parseInt(workingHours.from.slice(6));
@@ -114,7 +118,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            return resultTime !== null && resultTime.length > 0;
+            return resultTime !== null && resultTime.length > 0 &&
+                checkBankTime(bankTime, duration);
         },
 
         /**
