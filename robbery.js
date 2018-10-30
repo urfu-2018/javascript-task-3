@@ -112,6 +112,10 @@ function formatAnswer(foundObj, workingHours) {
     return { day, hour, minute };
 }
 
+function addLeadingZero(a) {
+    return a < 10 ? '0' + toString(a) : a;
+}
+
 /**
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
@@ -168,8 +172,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             }
 
             return template
-                .replace('%HH', answer.hour)
-                .replace('%MM', answer.minute)
+                .replace('%HH', addLeadingZero(answer.hour))
+                .replace('%MM', addLeadingZero(answer.minute))
                 .replace('%DD', answer.day);
         },
 
