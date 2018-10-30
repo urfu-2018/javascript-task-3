@@ -9,14 +9,25 @@ const isStar = false;
 const days = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
 const robbery = ['ПН', 'ВТ', 'СР'];
 
-function getTimeInMinute(time) {
-    const dayInMinute = days.indexOf(time.split(' ')[0]) * 24 * 60;
-    const matchTime = /(\d{2}):(\d{2})\+(\d)/.exec(time);
-    const timeZone = parseInt(matchTime[3]);
-    const hours = parseInt(matchTime[1]) * 60;
-    const minute = parseInt(matchTime[2]);
+function getAllTime(time) {
+    const day = days.indexOf(time.split(' ')[0]) * 24 * 60;
+    const strTime = time.split(' ')[1];
+    const comparator = /(\d{2}):(\d{2})\+(\d)/.exec(strTime);
+    const hour = parseInt(comparator[1]) * 60;
+    const minute = parseInt(comparator[2]);
+    const timeZone = parseInt(comparator[3]);
 
-    return { time: dayInMinute + hours + minute - (timeZone * 60), timeZone: timeZone };
+    return { time: day + hour + minute, timeZone: timeZone };
+}
+
+function getTimeZone(strTime) {
+    const comparator = /(\d{2}):(\d{2})\+(\d)/.exec(strTime);
+
+    return parseInt(comparator[3]);
+}
+
+function correctTimeZone(time, oldTimeZone, newTimeZone) {
+    return { time: time + (newTimeZone - oldTimeZone) * 60, timeZone: newTimeZone };
 }
 
 function checkRobbers(start, scheduleBand, duration) {
@@ -50,7 +61,6 @@ function findTimeToRobbery(scheduleBand, scheduleBank, duration) {
     for (let startRobbery = 0; startRobbery < endTime; startRobbery++) {
         const hasFreeTime =
             checkRobbers(startRobbery, scheduleBand, duration).length === scheduleBand.length;
-
         const isBankWork = checkBank(startRobbery, scheduleBank, duration).length > 0;
 
         if (hasFreeTime && isBankWork) {
@@ -72,20 +82,21 @@ function findTimeToRobbery(scheduleBand, scheduleBank, duration) {
 function getAppropriateMoment(schedule, duration, workingHours) {
     const scheduleBand = [].concat.apply([], Object.values(schedule));
     const scheduleBandMinutes = [];
+    const bankZone = getTimeZone(workingHours.from);
 
     for (let i = 0; i < scheduleBand.length; i++) {
-        scheduleBandMinutes.push({ from: getTimeInMinute(scheduleBand[i].from).time,
-            to: getTimeInMinute(scheduleBand[i].to).time });
+        const from = getAllTime(scheduleBand[i].from);
+        const to = getAllTime(scheduleBand[i].to);
+
+        scheduleBandMinutes.push({ from: correctTimeZone(from.time, from.timeZone, bankZone).time,
+            to: correctTimeZone(to.time, to.timeZone, bankZone).time });
     }
 
     const scheduleBankMinutes = [];
-    let bankZone;
 
     for (let i = 0; i < robbery.length; i++) {
-        bankZone = getTimeInMinute(`${robbery[i]} ${workingHours.from}`).timeZone;
-
-        scheduleBankMinutes.push({ from: getTimeInMinute(`${robbery[i]} ${workingHours.from}`).time,
-            to: getTimeInMinute(`${robbery[i]} ${workingHours.to}`).time });
+        scheduleBankMinutes.push({ from: getAllTime(`${robbery[i]} ${workingHours.from}`).time,
+            to: getAllTime(`${robbery[i]} ${workingHours.to}`).time });
     }
 
     const moment = findTimeToRobbery(scheduleBandMinutes, scheduleBankMinutes, duration);
@@ -113,10 +124,10 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
             const day = Math.floor(moment.time / 1440);
             const hours = Math.floor((moment.time - day * 1440) / 60);
-            const min = moment.time - day * 1440 - hours * 60;
+            const minutes = moment.time - day * 1440 - hours * 60;
 
-            return template.replace('%HH', (hours + bankZone).toString())
-                .replace('%MM', min.toString())
+            return template.replace('%HH', hours.toString())
+                .replace('%MM', minutes.toString())
                 .replace('%DD', days[day]);
         },
 
