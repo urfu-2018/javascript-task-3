@@ -30,6 +30,9 @@ function getTimeSections(sections, bankTimeZone) {
             newSections.push({ from: lastBorder, to: 4 * 24 * 60 - 1 });
         }
     }
+    if (newSections.length === 0) {
+        newSections.push({ from: 0, to: 4 * 24 * 60 - 1 });
+    }
 
     return newSections;
 }
@@ -92,7 +95,43 @@ function getBankTime(workingHours) {
     return sections;
 }
 
+function correctSchedule(schedule) {
+    if (typeof schedule !== 'object') {
+
+        return false;
+    }
+    if (typeof schedule.Danny === undefined ||
+        typeof schedule.Rusty === undefined ||
+        typeof schedule.Linus === undefined) {
+
+        return false;
+    }
+
+    return true;
+}
+
+function correctWorkingHours(workingHours) {
+    if (typeof workingHours !== 'object') {
+
+        return false;
+    }
+    if (typeof workingHours.from !== 'string' || typeof workingHours.to !== 'string') {
+
+        return false;
+    }
+    if (typeof getTimeForBank(workingHours.from) !== 'number' ||
+        typeof getTimeForBank(workingHours.to) !== 'number') {
+        return false;
+    }
+
+    return true;
+}
+
 function fillFreeTime(schedule, workingHours) {
+    if (!correctWorkingHours(workingHours) || !correctSchedule(schedule)) {
+
+        return [];
+    }
     const bankTimezone = parseInt(workingHours.from.split('+')[1]);
     let dannyFreeTime = getTimeSections(schedule.Danny, bankTimezone);
     let rustyFreeTime = getTimeSections(schedule.Rusty, bankTimezone);
