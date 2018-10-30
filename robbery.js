@@ -114,7 +114,9 @@ function formatAnswer(foundObj) {
 }
 
 function addLeadingZero(a) {
-    return a < 10 ? '0' + toString(a) : a;
+    a = a.toString();
+
+    return a.length === 2 ? a : '0' + a;
 }
 
 /**
