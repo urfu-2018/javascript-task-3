@@ -95,7 +95,6 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 to: minutesToDayTime(record.to, bankTimeZone) };
         });
 
-    console.log(answer);
     return {
 
         /**
