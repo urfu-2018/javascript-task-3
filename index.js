@@ -20,7 +20,7 @@ const gangSchedule = {
 
 const bankWorkingHours = {
     from: '10:00+5',
-    to: '18:00+5'
+    to: '24:00+5'
 };
 
 // Время не существует

@@ -120,7 +120,7 @@ function splitTimeZone(tZ) {
     let result = new Set();
     var h = 0;
     var m = 0;
-    for (var i = 0; i < 48; i++) {
+    for (var i = 0; i < 49; i++) {
         if (toMinutes(h, m) >= toMinutes(tZ[0][0], tZ[0][1]) &&
         toMinutes(h, m) <= toMinutes(tZ[1][0], tZ[1][1])) {
             result.add([h, m].toString());
