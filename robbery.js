@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = false;
+const isStar = true;
 
 /**
  * @param {Object} schedule – Расписание Банды
@@ -232,25 +232,25 @@ function getTimeForWork(arrBusyTime, timeBank) {
 }
 
 function isNotTime(busyTime, dateStart, dateFinish) {
-    return busyTime[0] <= dateStart &&
-        busyTime[1] >= dateFinish;
+    return busyTime[0] < dateStart &&
+        busyTime[1] > dateFinish;
 }
 
 function firstHappenInterval(busyTime, dateStart, dateFinish) {
-    return busyTime[0] < dateStart &&
-            busyTime[1] > dateStart &&
-            busyTime[1] < dateFinish;
+    return busyTime[0] <= dateStart &&
+            busyTime[1] >= dateStart &&
+            busyTime[1] <= dateFinish;
 }
 
 function secondHappenInterval(busyTime, dateStart, dateFinish) {
-    return busyTime[0] > dateStart &&
-            busyTime[1] < dateFinish;
+    return busyTime[0] >= dateStart &&
+            busyTime[1] <= dateFinish;
 }
 
 function thirdHappenInterval(busyTime, dateStart, dateFinish) {
-    return busyTime[0] > dateStart &&
-            busyTime[0] < dateFinish &&
-            busyTime[1] > dateFinish;
+    return busyTime[0] >= dateStart &&
+            busyTime[0] <= dateFinish &&
+            busyTime[1] >= dateFinish;
 }
 
 function filterTimeDuration(arrTime, duration) {
