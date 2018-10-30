@@ -26,14 +26,13 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     const posibleTime = getPosibleTimes(scheduleInMinutes, duration, bankWorkingMinutes);
 
     return {
-        time: posibleTime,
 
         /**
          * Найдено ли время
          * @returns {Boolean}
          */
         exists: function () {
-            return this.time.length !== 0;
+            return posibleTime.length !== 0;
         },
 
         /**
@@ -44,9 +43,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          */
         format: function (template) {
             if (this.exists()) {
-                const day = days[Math.floor(this.time[0] / minutesInDay)];
-                const hours = Math.floor((this.time[0] % minutesInDay) / minutesInHour);
-                const minutes = (this.time[0] % minutesInDay) % minutesInHour;
+                const day = days[Math.floor(posibleTime[0] / minutesInDay)];
+                const hours = Math.floor((posibleTime[0] % minutesInDay) / minutesInHour);
+                const minutes = (posibleTime[0] % minutesInDay) % minutesInHour;
 
                 return template.replace('%DD', day)
                     .replace('%HH', getNumber(hours))
@@ -62,8 +61,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            if (this.time.length > 1) {
-                this.time.shift();
+            if (posibleTime.length > 1) {
+                posibleTime.shift();
 
                 return true;
             }
