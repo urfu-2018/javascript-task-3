@@ -95,6 +95,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 return '';
             }
             let moment = appropriateMomemts[this.index];
+            console.log(moment);
             let day = Math.floor(moment / MINUTES_IN_DAY);
             moment %= MINUTES_IN_DAY;
             let hour = Math.floor(moment / MINUTES_IN_HOUR);
@@ -132,7 +133,7 @@ function getAppropriateMinutes(isSuitable, duration, endTime) {
             continue;
         }
 
-        if (++freeMinutes < duration - 1) {
+        if (++freeMinutes < duration) {
             continue;
         }
 
@@ -160,11 +161,11 @@ function buildSchedule(rawSchedule, workingHours, bankTimeZone) {
 
     return (time) => {
         let timeOfDay = time % MINUTES_IN_DAY;
-        if (!(openTime < timeOfDay && timeOfDay < closeTime)) {
+        if (!(openTime <= timeOfDay && timeOfDay < closeTime)) {
             return false;
         }
 
-        return busyTimes.every(x => !(x.from <= time && time <= x.to));
+        return busyTimes.every(x => !(x.from <= time && time < x.to));
     };
 }
 
