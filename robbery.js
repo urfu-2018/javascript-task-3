@@ -56,6 +56,14 @@ class Time {
     }
 }
 
+function copyTime(time, timeZone) {
+    let cloneTime = new Time();
+    cloneTime.time = time;
+    cloneTime.timeZone = timeZone;
+
+    return cloneTime;
+}
+
 /**
  * @param {Object} schedule – Расписание Банды
  * @param {Number} duration - Время на ограбление в минутах
@@ -67,7 +75,7 @@ class Time {
 function getAppropriateMoment(schedule, duration, workingHours) {
     const freeTime = getFreeTime(schedule, workingHours);
     const robberyTime = getRobberiesTime(freeTime, duration);
-    let i = 0;
+    let indexSuitableTime = 0;
 
     return {
 
@@ -94,9 +102,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 return '';
             }
 
-            template = template.replace(/%HH/, robberyTime[i].getHours());
-            template = template.replace(/%MM/, robberyTime[i].getMinutes());
-            template = template.replace(/%DD/, robberyTime[i].getDay());
+            template = template.replace(/%HH/, robberyTime[indexSuitableTime].getHours());
+            template = template.replace(/%MM/, robberyTime[indexSuitableTime].getMinutes());
+            template = template.replace(/%DD/, robberyTime[indexSuitableTime].getDay());
 
             return template;
         },
@@ -107,8 +115,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            if (robberyTime.length - 1 > i) {
-                i++;
+            if (robberyTime.length - 1 > indexSuitableTime) {
+                indexSuitableTime++;
 
                 return true;
             }
@@ -125,10 +133,7 @@ function getRobberiesTime(freeTime, duration) {
         let fTime = element.to.time - element.from.time;
 
         while (fTime >= duration) {
-            let aTime = new Time();
-            aTime.time = element.to.time - fTime;
-            aTime.timeZone = element.to.timeZone;
-            robberyTime.push(aTime);
+            robberyTime.push(copyTime(element.to.time - fTime, element.to.timeZone));
             fTime -= 30;
         }
     });
@@ -153,10 +158,8 @@ function getFreeTime(schedule, workingHours) {
             continue;
         }
 
-        const a = getUnsuitableTime(schedule[key], freeTime[0].from.timeZone);
-        for (let i = 0; i < a.length; i++) {
-            unsuitableTime.push(a[i]);
-        }
+        const arrayUnsuitableTime = getUnsuitableTime(schedule[key], freeTime[0].from.timeZone);
+        arrayUnsuitableTime.forEach(element => unsuitableTime.push(element));
     }
 
     return differenceIntervals(freeTime, unionIntervals(unsuitableTime));
@@ -191,6 +194,7 @@ function differenceIntervals(freeTime, unsuitableTime) {
                 intervals[i].to.time > value.from.time;
                 const toIncludedInTheInterval = intervals[i].from.time < value.to.time &&
                 intervals[i].to.time > value.to.time;
+
                 if (fromIncludedInTheInterval && toIncludedInTheInterval) {
                     intervals.splice(i, 1, {
                         from: intervals[i].from,
@@ -201,7 +205,7 @@ function differenceIntervals(freeTime, unsuitableTime) {
                         to: intervals[i].to
                     });
                 } else {
-                    intervals[i] = d(fromIncludedInTheInterval, toIncludedInTheInterval,
+                    intervals[i] = cutLimit(fromIncludedInTheInterval, toIncludedInTheInterval,
                         intervals[i], value);
                 }
             }
@@ -217,7 +221,7 @@ function differenceIntervals(freeTime, unsuitableTime) {
     return arrayFreeTime;
 }
 
-function d(fromIncludedInTheInterval, toIncludedInTheInterval, intervals, value) {
+function cutLimit(fromIncludedInTheInterval, toIncludedInTheInterval, intervals, value) {
     if (fromIncludedInTheInterval) {
         intervals.to.time = value.from.time;
     } else if (toIncludedInTheInterval) {
