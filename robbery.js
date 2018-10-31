@@ -176,32 +176,20 @@ function getAllBankWorkingIntervals(workingHours, bankTimezone) {
 }
 
 function getIntersections(freeIntervals, bankWorkingIntervals) {
-    let intersections = [];
+    const allIntersections = bankWorkingIntervals.reduce((intersections, workingInterval) => {
+        freeIntervals.forEach(interval => {
+            if (interval.from < workingInterval.to && interval.to > workingInterval.from) {
+                intersections.push({
+                    from: Math.max(interval.from, workingInterval.from),
+                    to: Math.min(interval.to, workingInterval.to)
+                });
+            }
+        }, []);
 
-    for (const workingInterval of bankWorkingIntervals) {
-        const intersectionsToday = getIntersectionsForDay(freeIntervals, workingInterval);
-        intersections = intersections.concat(intersectionsToday);
-    }
-
-    return intersections;
-}
-
-function getIntersectionsForDay(freeIntervals, workingInterval) {
-    return freeIntervals.reduce((free, interval) => {
-        const intervalStartsAfterBankClosing = interval.from >= workingInterval.to;
-        const intervalEndsBeforeBankOpening = interval.to <= workingInterval.from;
-
-        if (intervalEndsBeforeBankOpening || intervalStartsAfterBankClosing) {
-            return free;
-        }
-
-        free.push({
-            from: Math.max(interval.from, workingInterval.from),
-            to: Math.min(interval.to, workingInterval.to)
-        });
-
-        return free;
+        return intersections;
     }, []);
+
+    return allIntersections;
 }
 
 function getAllMoments(robberyIntervals, duration) {
@@ -266,9 +254,7 @@ function formatDateString(date, template) {
 }
 
 function addLeadingZero(number) {
-    const string = number.toString();
-
-    return string.length === 2 ? string : '0' + string;
+    return number >= 10 ? number : '0' + number;
 }
 
 module.exports = {
