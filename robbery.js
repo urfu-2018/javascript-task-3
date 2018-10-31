@@ -291,6 +291,7 @@ function getAppropriateMoment(schedule, duration, workingHours, availableTimeSta
     };
 }
 
+// noinspection JSUnresolvedVariable
 module.exports = {
     getAppropriateMoment,
 
