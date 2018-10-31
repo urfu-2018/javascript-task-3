@@ -160,7 +160,7 @@ function revertSchedule(schedule) {
 
 function getRevertSchedule(schedule) {
     const freeTimeSchedule = [];
-    let left = -1;
+    let left = 0;
     schedule.forEach(timeRange => {
         freeTimeSchedule.push({ from: left, to: timeRange.from });
         left = timeRange.to;
