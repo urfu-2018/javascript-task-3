@@ -46,8 +46,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             const [minutes, hours, day] = convertFromMinutes(successfulTimes[0]);
 
             return template
-                .replace('%MM', minutes > 9 ? minutes : '0' + minutes)
-                .replace('%HH', hours > 9 ? hours : '0' + hours)
+                .replace('%MM', convertTimeToFormat(minutes))
+                .replace('%HH', convertTimeToFormat(hours))
                 .replace('%DD', day);
         },
 
@@ -66,54 +66,23 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         }
     };
 
-    function getDayOfWeek(time) {
-        return time.slice(0, 2);
-    }
+    function getSuccessfulTimes() {
+        const freeTimes = Object.getOwnPropertyNames(schedule).map(
+            person => getFreeTimeForOnePerson(person));
+        freeTimes.push(getWorkingTimeOfBank());
+        const possibleTime = freeTimes.reduce(
+            (prevIntersect, nextFreeTimes) => getIntersect(prevIntersect, nextFreeTimes));
 
-    function getHours(time) {
-        return parseInt(time.slice(3, 5));
-    }
-
-    function getMinutes(time) {
-        return parseInt(time.slice(6, 8));
-    }
-
-    function getTimeZone(time) {
-        return parseInt(time.slice(9));
-    }
-
-    function getTimeInMinutes(time) {
-        const dayInHours = DAYS.indexOf(getDayOfWeek(time)) * HOURS_IN_DAY;
-        const timeZoneOfBank = getTimeZone('ПН ' + workingHours.from);
-        const tzDiff = timeZoneOfBank - getTimeZone(time);
-        const hours = getHours(time) + dayInHours + tzDiff;
-        const hourInMinute = hours * MINUTES_IN_HOUR;
-
-        return hourInMinute + getMinutes(time);
-    }
-
-    function getWorkingTimeOfBank() {
-        const result = [];
-        for (let i = 0; i < DAYS.length; i++) {
-            const from = getTimeInMinutes(DAYS[i] + ' ' + workingHours.from);
-            const to = getTimeInMinutes(DAYS[i] + ' ' + workingHours.to);
-            result.push([from, to]);
-        }
-
-        return result;
+        return pushSuccessfulTimes(possibleTime);
     }
 
     function getFreeTimeForOnePerson(person) {
-        const workingTimesInMinutes = [];
         let result = [];
+        const workingTimesInMinutes = schedule[person].map(
+            time => ([getTimeInMinutes(time.from), getTimeInMinutes(time.to)]));
 
-        for (let time of schedule[person]) {
-            workingTimesInMinutes.push([getTimeInMinutes(time.from), getTimeInMinutes(time.to)]);
-        }
         if (workingTimesInMinutes.length === 0) {
-            result.push([0, MAX_TIME_FOR_ROBBERY_IN_MINUTES]);
-
-            return result;
+            return result.concat([[0, MAX_TIME_FOR_ROBBERY_IN_MINUTES]]);
         }
 
         const tempTimes = workingTimesInMinutes[workingTimesInMinutes.length - 1];
@@ -129,73 +98,96 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         return result;
     }
 
-    function getDiffTimePeriods(times, minTime) {
-        const result = [];
-        let a0 = minTime;
-        for (let time of times) {
-            const tempArr = [a0, time[0]];
-            a0 = time[1];
-            if (tempArr[0] < tempArr[1]) {
-                result.push(tempArr);
-            }
-        }
+    function getTimeInMinutes(time) {
+        const dayInHours = DAYS.indexOf(getDayOfWeek(time)) * HOURS_IN_DAY;
+        const timeZoneOfBank = getTimeZone('ПН ' + workingHours.from);
+        const tzDiff = timeZoneOfBank - getTimeZone(time);
+        const hours = getHours(time) + dayInHours + tzDiff;
+        const hourInMinute = hours * MINUTES_IN_HOUR;
 
-        return result;
+        return hourInMinute + getMinutes(time);
     }
 
-    function getIntersect(oneFreeTimes, twoFreeTimes) {
-        const timeIntersects = [];
-        for (let freeTime1 of oneFreeTimes) {
-            for (let freeTime2 of twoFreeTimes) {
-                tryPush(freeTime1, freeTime2, timeIntersects);
-            }
-        }
+    function getWorkingTimeOfBank() {
+        return DAYS.map(day => {
+            const from = getTimeInMinutes(`${day} ${workingHours.from}`);
+            const to = getTimeInMinutes(`${day} ${workingHours.to}`);
 
-        return timeIntersects;
-    }
-
-    function tryPush(freeTime1, freeTime2, timeIntersects) {
-        const [a1, b1] = freeTime1;
-        const [a2, b2] = freeTime2;
-        const [a3, b3] = [Math.max(a1, a2), Math.min(b1, b2)];
-        if (a3 < b3) {
-            timeIntersects.push([a3, b3]);
-        }
+            return [from, to];
+        });
     }
 
     function pushSuccessfulTimes(possibleTime) {
         const result = [];
         for (let time of possibleTime) {
-            let temp = time[0];
-            while (temp + duration <= time[1]) {
-                result.push([temp, time[1]]);
-                temp += OFFSET_IN_MINUTES;
+            let [leftEdge, rightEdge] = time;
+            while (leftEdge + duration <= rightEdge) {
+                result.push([leftEdge, rightEdge]);
+                leftEdge += OFFSET_IN_MINUTES;
             }
         }
 
         return result;
     }
+}
 
-    function convertFromMinutes(start) {
-        const minutes = start[0] % 60;
-        const hours = Math.floor(start[0] / 60);
-        const remainedHours = hours % 24;
-        const day = DAYS[Math.floor(hours / 24)];
+function getDiffTimePeriods(times, currentLeftEdge) {
+    return times.map(time => {
+        let result = [currentLeftEdge, time[0]];
+        currentLeftEdge = time[1];
 
-        return [minutes, remainedHours, day];
-    }
+        return result;
+    }).filter(([leftEdge, rightEdge]) => leftEdge < rightEdge);
+}
 
-    function getSuccessfulTimes() {
-        const freeTimeOfPersons = [];
-        for (let person of Object.getOwnPropertyNames(schedule)) {
-            freeTimeOfPersons.push(getFreeTimeForOnePerson(person));
+function getDayOfWeek(time) {
+    return time.slice(0, 2);
+}
+
+function getHours(time) {
+    return parseInt(time.slice(3, 5));
+}
+
+function getMinutes(time) {
+    return parseInt(time.slice(6, 8));
+}
+
+function getTimeZone(time) {
+    return parseInt(time.slice(9));
+}
+
+function getIntersect(oneFreeTimes, twoFreeTimes) {
+    const timeIntersects = [];
+    for (let freeTime1 of oneFreeTimes) {
+        for (let freeTime2 of twoFreeTimes) {
+            tryPush(freeTime1, freeTime2, timeIntersects);
         }
-        let intersects = getIntersect(freeTimeOfPersons[0], freeTimeOfPersons[1]);
-        intersects = getIntersect(intersects, freeTimeOfPersons[2]);
-        const possibleTime = getIntersect(intersects, getWorkingTimeOfBank());
-
-        return pushSuccessfulTimes(possibleTime);
     }
+
+    return timeIntersects;
+}
+
+function tryPush(freeTime1, freeTime2, timeIntersects) {
+    const [leftEdge1, rightEdge1] = freeTime1;
+    const [leftEdge2, rightEdge2] = freeTime2;
+    const [resultLeftEdge, resultRightEdge] =
+        [Math.max(leftEdge1, leftEdge2), Math.min(rightEdge1, rightEdge2)];
+    if (resultLeftEdge < resultRightEdge) {
+        timeIntersects.push([resultLeftEdge, resultRightEdge]);
+    }
+}
+
+function convertFromMinutes(start) {
+    const minutes = start[0] % MINUTES_IN_HOUR;
+    const hours = Math.floor(start[0] / MINUTES_IN_HOUR);
+    const remainedHours = hours % HOURS_IN_DAY;
+    const day = DAYS[Math.floor(hours / HOURS_IN_DAY)];
+
+    return [minutes, remainedHours, day];
+}
+
+function convertTimeToFormat(time) {
+    return time > 9 ? time : '0' + time;
 }
 
 module.exports = {
