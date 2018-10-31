@@ -6,38 +6,61 @@
  */
 const isStar = true;
 
+const robberyDays = [0, 1, 2];
+const members = ['Danny', 'Rusty', 'Linus'];
+
 /**
  * Произвольный понедельник
  */
 const baseDate = new Date(2018, 9, 22);
-const weekdaysToDaysOffset = new Map();
-weekdaysToDaysOffset.set('ПН', 0);
-weekdaysToDaysOffset.set('ВТ', 1);
-weekdaysToDaysOffset.set('СР', 2);
-weekdaysToDaysOffset.set('ЧТ', 3);
-weekdaysToDaysOffset.set('ПТ', 4);
-weekdaysToDaysOffset.set('СБ', 5);
-weekdaysToDaysOffset.set('ВС', 6);
+const weekdaysToDaysOffset = new Map([
+    ['ПН', 0],
+    ['ВТ', 1],
+    ['СР', 2],
+    ['ЧТ', 3],
+    ['ПТ', 4],
+    ['СБ', 5],
+    ['ВС', 6]]);
 
 const daysToWeekdays = new Map();
 for (let day of weekdaysToDaysOffset.keys()) {
     daysToWeekdays.set(weekdaysToDaysOffset.get(day), day);
 }
 
-const timeRegexp = /([^\d\s]{2}) (\d\d):(\d\d)(?:\+(\d))?/;
+const dateTimeRegexp = /^(?:([^\d\s]{2}) )?(\d\d):(\d\d)(?:\+(\d{1,2}))?$/;
 
-function parseTime(timeString) {
-    const matcher = timeString.match(timeRegexp);
+function parseTimeAsDatetime(str) {
+    return customDatetimeObjectToDatetime(parseTimeString(str));
+}
+
+function parseTimeString(timeString) {
+    const matcher = timeString.match(dateTimeRegexp);
     if (!matcher) {
         throw new Error();
     }
+    const day = matcher[1] ? weekdaysToDaysOffset.get(matcher[1]) : 0;
+    const hours = parseInt(matcher[2]);
+    const minutes = parseInt(matcher[2 + 1]);
+    const timezone = matcher[2 + 2] ? parseInt(matcher[2 + 2]) : 0;
+
+    return {
+        day: day,
+        hours: hours,
+        minutes: minutes,
+        timezone: timezone
+    };
+}
+
+function customDatetimeObjectToDatetime(obj) {
+    return getDatetime(obj.day, obj.hours, obj.minutes, obj.timezone);
+}
+
+function getDatetime(days, hours, minutes, timezone) {
     const datetime = new Date(baseDate.getTime());
-    datetime.setDate(datetime.getDate() + weekdaysToDaysOffset.get(matcher[1]));
-    datetime.setHours(parseInt(matcher[2]));
-    datetime.setMinutes(parseInt(matcher[3]));
-    if (matcher[4]) {
-        datetime.setHours(datetime.getHours() - parseInt(matcher[4]));
-    }
+    datetime.setDate(datetime.getDate() + days);
+    datetime.setHours(hours);
+    datetime.setMinutes(minutes);
+    datetime.setHours(datetime.getHours() - timezone);
 
     return datetime;
 }
@@ -86,7 +109,7 @@ class TimePeriod {
      * @returns {TimePeriod}
      */
     static fromStringPeriodObject(period) {
-        return new TimePeriod(parseTime(period.from), parseTime(period.to));
+        return new TimePeriod(parseTimeAsDatetime(period.from), parseTimeAsDatetime(period.to));
     }
 }
 
@@ -133,7 +156,7 @@ function subtractFromTimePeriods(timePeriods, timePeriod) {
 }
 
 function getTimeZone(timeString) {
-    const match = timeString.match(timeRegexp);
+    const match = timeString.match(dateTimeRegexp);
     if (!match) {
         throw new Error();
     }
@@ -157,11 +180,13 @@ function zfill(str, length) {
 }
 
 function addBankWorkingHours(timePeriodsAvailable, workingHours) {
-    const robberyDays = ['ПН', 'ВТ', 'СР'];
+    const workingHoursFrom = parseTimeString(workingHours.from);
+    const workingHoursTo = parseTimeString(workingHours.to);
     for (let day of robberyDays) {
+        workingHoursFrom.day = workingHoursTo.day = day;
         timePeriodsAvailable.push(new TimePeriod(
-            parseTime(day + ' ' + workingHours.from),
-            parseTime(day + ' ' + workingHours.to)));
+            customDatetimeObjectToDatetime(workingHoursFrom),
+            customDatetimeObjectToDatetime(workingHoursTo)));
     }
 }
 
@@ -195,10 +220,9 @@ function getAppropriateMoment(schedule, duration, workingHours, availableTimeSta
 
     if (availableTimeStart) {
         timePeriodsAvailable = subtractFromTimePeriods(timePeriodsAvailable,
-            new TimePeriod(parseTime('ПН ' + workingHours.from), availableTimeStart));
+            new TimePeriod(parseTimeAsDatetime(workingHours.from), availableTimeStart));
     }
 
-    const members = ['Danny', 'Rusty', 'Linus'];
     for (let member of members) {
         const memberSchedule = schedule[member];
         for (let rawPeriod of memberSchedule) {
@@ -231,13 +255,13 @@ function getAppropriateMoment(schedule, duration, workingHours, availableTimeSta
             }
             let date = new Date(suitingStart.getTime());
             date.setHours(date.getHours() + bankTimeZone);
-            const weekday = daysToWeekdays.get((date.getDay() + 7 - 1) % 7);
+            // +6 = +7 - 1: getDay() возвращает индекс дня недели, причем в началае стоит ВС,
+            // а не ПН, поэтому нужно дни недели сдвинуть
+            const weekday = daysToWeekdays.get((date.getDay() + 6) % 7);
 
             return template
-                .replace('%HH', zfill(date.getHours()
-                    .toString(), 2))
-                .replace('%MM', zfill(date.getMinutes()
-                    .toString(), 2))
+                .replace('%HH', zfill(date.getHours().toString(), 2))
+                .replace('%MM', zfill(date.getMinutes().toString(), 2))
                 .replace('%DD', weekday);
         },
 
