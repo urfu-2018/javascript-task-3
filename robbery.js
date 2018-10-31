@@ -11,59 +11,40 @@ const isStar = false;
  * в занятые минуты на интервале минут
  * по Гринвичу
  */
-// const gangSchedule = {
-//     Danny: [
-//         { from: 'ПН 12:00+10', to: 'ПН 17:00+5' },
-//         { from: 'ВТ 13:00+5', to: 'ВТ 16:00+5' }
-//     ],
-//     Rusty: [
-//         { from: 'ПН 11:30+5', to: 'ПН 16:30+5' },
-//         { from: 'ВТ 13:00+5', to: 'ВТ 16:00+5' }
-//     ],
-//     Linus: [
-//         { from: 'ПН 09:00+3', to: 'ПН 14:00+3' },
-//         { from: 'ПН 21:00+3', to: 'ВТ 09:30+3' },
-//         { from: 'СР 09:30+3', to: 'СР 15:00+3' }
-//     ]
-// };
 
 function setDay(str) {
-    let day = 0;
+    let dayShift = 0;
     if (str === 'ВТ') {
-        day = 24;
+        dayShift = 24;
     }
     if (str === 'СР') {
-        day = 48;
+        dayShift = 48;
     }
 
-    return day;
+    return dayShift;
 }
 
-function convertIntoInterval(Name) {
+function formatScheduleToInterval(NameInSchedule) {
     let arrayOfIntervals = [];
-    for (let period of Name) {
+    for (let period of NameInSchedule) {
         let dayStart = setDay(period.from.substring(0, 2));
-        let hourStart = 60 * dayStart + 60 * parseInt(period.from.substring(3, 5));
-        let mintStart = parseInt(period.from.substring(6, 8));
-        let grinvichStart = 60 * period.from.split('+')[1];
         let dayFinish = setDay(period.to.substring(0, 2));
+        let hourStart = 60 * dayStart + 60 * parseInt(period.from.substring(3, 5));
         let hourFinish = 60 * dayFinish + 60 * parseInt(period.to.substring(3, 5));
-        let mintFinish = parseInt(period.to.substring(6, 8));
+        let minutStart = parseInt(period.from.substring(6, 8));
+        let minutFinish = parseInt(period.to.substring(6, 8));
+        let grinvichStart = 60 * period.from.split('+')[1];
         let grinvichFinish = 60 * period.to.split('+')[1];
         let interval = {};
-        interval.from = hourStart + mintStart - grinvichStart;
-        interval.to = hourFinish + mintFinish - grinvichFinish;
+        interval.from = hourStart + minutStart - grinvichStart;
+        interval.to = hourFinish + minutFinish - grinvichFinish;
         arrayOfIntervals.push(interval);
     }
 
     return arrayOfIntervals;
 }
 
-// const bankTime1 = { from: '10:13+5', to: '18:00+5' };
-
-// console.log(allTimeOfBusy);
-
-function convertBankTime(bankTime) {
+function formatBankTimeToInterval(bankTime) {
     let fromHour = parseInt(bankTime.from.substring(0, 2));
     let fromMin = parseInt(bankTime.from.substring(3, 5));
     let toHour = parseInt(bankTime.to.substring(0, 2));
@@ -79,10 +60,10 @@ function convertBankTime(bankTime) {
     return arrayOfIntervals;
 }
 
-function haveAnyIntersect(arrayOfIntervals, interval) {
+function haveAnyIntersect(arrayOfIntervals, currentInterval) {
     let flag = false;
     for (let i in arrayOfIntervals) {
-        if (!notIntersect(interval, arrayOfIntervals[i])) {
+        if (!notIntersect(currentInterval, arrayOfIntervals[i])) {
             flag = true;
             break;
         }
@@ -107,12 +88,10 @@ function notIntersect(x, y) {
     return y.to <= x.from || y.from >= x.to;
 }
 
-// (getAppropriateMoment(gangSchedule, 90, bankTime1).exists());
-
 function getTimeOfBusy(gangSchedule, workingHours) {
-    let timeDanny = (convertIntoInterval(gangSchedule.Danny));
-    let timeRusty = (convertIntoInterval(gangSchedule.Rusty));
-    let timeLinus = (convertIntoInterval(gangSchedule.Linus));
+    let timeDanny = (formatScheduleToInterval(gangSchedule.Danny));
+    let timeRusty = (formatScheduleToInterval(gangSchedule.Rusty));
+    let timeLinus = (formatScheduleToInterval(gangSchedule.Linus));
     let allTimeOfBusy =
         timeDanny.concat(timeRusty.concat(timeLinus)); // Все перевели в массивы минут
     allTimeOfBusy = setBankTimezone(workingHours, allTimeOfBusy); // Сдвинули для час.п.б.
@@ -121,20 +100,19 @@ function getTimeOfBusy(gangSchedule, workingHours) {
 }
 
 function searchInterval(interval, bankTime, allTimeOfBusy) {
-    let arrayOfReturn = [];
+    let arrayOfResults = [];
     let flag = false;
     while (interval.to <= bankTime.to) {
         if (!haveAnyIntersect(allTimeOfBusy, interval)) {
-            // console.log(formatCatchedPeriod(interval));
             flag = true;
             break;
         }
         interval.to += 1;
         interval.from += 1;
     }
-    arrayOfReturn.push(flag, interval);
+    arrayOfResults.push(flag, interval);
 
-    return arrayOfReturn;
+    return arrayOfResults;
 }
 
 function formatCatchedPeriod(period) {
@@ -148,15 +126,15 @@ function formatCatchedPeriod(period) {
     return res;
 }
 
-function getDay(day) {
+function getDay(dayShift) {
     let strDay;
-    if (day === 0) {
+    if (dayShift === 0) {
         strDay = 'ПН';
     }
-    if (day === 1) {
+    if (dayShift === 1) {
         strDay = 'ВТ';
     }
-    if (day === 2) {
+    if (dayShift === 2) {
         strDay = 'СР';
     }
 
@@ -184,18 +162,15 @@ function numInStr(num) {
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
     let allTimeOfBusy = getTimeOfBusy(schedule, workingHours);
-    // console.info(allTimeOfBusy, 'ALL TIME OF BUSY');
-    // console.info(duration, 'TIME FOR WORK');
-    let arrayBankTime = convertBankTime(workingHours);
-    // console.info(arrayBankTime, 'BANK TIME');
+    let arrayBankTime = formatBankTimeToInterval(workingHours);
     let flag = false;
-    let result = [];
+    let resultInterval = [];
     for (let i = 0; i < arrayBankTime.length && flag === false; i++) {
         let interval = { from: arrayBankTime[i].from, to: arrayBankTime[i].from + duration };
-        let arrayOfReturn = searchInterval(interval, arrayBankTime[i], allTimeOfBusy);
-        flag = arrayOfReturn[0];
+        let resultOfSearch = searchInterval(interval, arrayBankTime[i], allTimeOfBusy);
+        flag = resultOfSearch[0];
         if (flag) {
-            result = formatCatchedPeriod(arrayOfReturn[1]);
+            resultInterval = formatCatchedPeriod(resultOfSearch[1]);
         }
     }
 
@@ -216,16 +191,16 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            let returnedResult;
-            if (result.length === 0) {
-                returnedResult = '';
+            let formatedResult;
+            if (resultInterval.length === 0) {
+                formatedResult = '';
             } else {
-                returnedResult = template.replace('%DD', result[0])
-                    .replace('%HH', result[1])
-                    .replace('%MM', result[2]);
+                formatedResult = template.replace('%DD', resultInterval[0])
+                    .replace('%HH', resultInterval[1])
+                    .replace('%MM', resultInterval[2]);
             }
 
-            return returnedResult;
+            return formatedResult;
         },
 
         /**
