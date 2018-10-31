@@ -67,6 +67,7 @@ class Time {
 function getAppropriateMoment(schedule, duration, workingHours) {
     const freeTime = getFreeTime(schedule, workingHours);
     const robberyTime = getRobberiesTime(freeTime, duration);
+    let i = 0;
 
     return {
 
@@ -93,9 +94,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 return '';
             }
 
-            template = template.replace(/%HH/, robberyTime[0].from.getHours());
-            template = template.replace(/%MM/, robberyTime[0].from.getMinutes());
-            template = template.replace(/%DD/, robberyTime[0].from.getDay());
+            template = template.replace(/%HH/, robberyTime[i].getHours());
+            template = template.replace(/%MM/, robberyTime[i].getMinutes());
+            template = template.replace(/%DD/, robberyTime[i].getDay());
 
             return template;
         },
@@ -106,7 +107,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            if (robberyTime.length > 1) {
+            if (robberyTime.length - 1 > i) {
+                i++;
+
                 return true;
             }
 
@@ -122,8 +125,11 @@ function getRobberiesTime(freeTime, duration) {
         let fTime = element.to.time - element.from.time;
 
         while (fTime >= duration) {
-            robberyTime.push(element.to.time - fTime);
-            fTime -= duration + 30;
+            let aTime = new Time();
+            aTime.time = element.to.time - fTime;
+            aTime.timeZone = element.to.timeZone;
+            robberyTime.push(aTime);
+            fTime -= 30;
         }
     });
 
