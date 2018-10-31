@@ -152,24 +152,20 @@ function getNewScheduleFormat(schedule, bankTimeZone) {
 function revertSchedule(schedule) {
     const freeTimeSchedule = [];
     Object.keys(schedule).forEach(key => {
-        freeTimeSchedule[key] = getFreeTimeSchedule(schedule[key]);
+        freeTimeSchedule[key] = getRevertSchedule(schedule[key]);
     });
 
     return freeTimeSchedule;
 }
 
-function getFreeTimeSchedule(schedule) {
+function getRevertSchedule(schedule) {
     const freeTimeSchedule = [];
     let left = -1;
     schedule.forEach(timeRange => {
-        if (left < timeRange.from) {
-            freeTimeSchedule.push({ from: left, to: timeRange.from });
-        }
+        freeTimeSchedule.push({ from: left, to: timeRange.from });
         left = timeRange.to;
     });
-    if (left < days.length * 60 * 24) {
-        freeTimeSchedule.push({ 'from': left, 'to': days.length * 60 * 24 });
-    }
+    freeTimeSchedule.push({ 'from': left, 'to': days.length * 60 * 24 });
 
     return freeTimeSchedule;
 }
