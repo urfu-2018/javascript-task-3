@@ -25,7 +25,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     });
     const rightTimes = (mergedSchedule
         .filter(t => t.to - t.from >= duration))
-        .map(t => minutesToDateObject(t.from));
+        .map(t => parseMinutesToDate(t.from));
 
     return {
         moments: rightTimes,
@@ -77,17 +77,14 @@ function getNewScheduleBank(workingHours, bankTimeZone) {
     return newWorkSchedule;
 }
 
-function minutesToDateObject(minutes) {
-    const minutesInDay = 24 * 60;
-    const daysCount = Math.floor(minutes / minutesInDay);
-    const d = days[daysCount];
-    minutes -= daysCount * minutesInDay;
-    const hoursCount = Math.floor(minutes / 60);
-    const h = numberToTwoDigitableString(hoursCount);
-    minutes -= hoursCount * 60;
-    const m = numberToTwoDigitableString(minutes);
+function parseMinutesToDate(minutes) {
+    const day = days[Math.floor(minutes / (24 * 60))];
+    minutes -= Math.floor(minutes / (24 * 60)) * (24 * 60);
+    const hour = numberToTwoDigitableString(Math.floor(minutes / 60));
+    minutes -= Math.floor(minutes / 60) * 60;
+    const newMinutes = numberToTwoDigitableString(minutes);
 
-    return { 'day': d, 'hours': h, 'minutes': m };
+    return { 'day': day, 'hours': hour, 'minutes': newMinutes };
 
 }
 
