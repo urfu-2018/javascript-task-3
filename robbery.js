@@ -13,6 +13,7 @@ const momentPattern = /^([А-Я]{2}) (.+)$/;
 const minutesInAHour = 60;
 const hoursInADay = 24;
 const minutesInADay = minutesInAHour * hoursInADay;
+const firstImpossibleDay = weekDays.indexOf('ЧТ');
 
 function parseMoment(momentString) {
     const tokens = momentString.match(momentPattern);
@@ -27,21 +28,19 @@ const timePattern = /^(\d{2}):(\d{2})(\+\d{1,2})?$/;
 
 function parseTime(timeline) {
     const tokens = timeline.match(timePattern);
-    const timeZone = tokens[3] ? parseInt(tokens[3]) : 0;
+    const timeZone = tokens[3] ? Number.parseInt(tokens[3]) : 0;
 
     return {
-        hours: parseInt(tokens[1]),
+        hours: Number.parseInt(tokens[1]),
         minutes: Number.parseInt(tokens[2]),
         timeZone: timeZone
     };
 }
 
 function momentToMinutes(time, bankTimeZone = 0) {
-    const result = (time.day ? time.day : 0) * minutesInADay +
+    return (time.day ? time.day : 0) * minutesInADay +
         (time.hours - time.timeZone + bankTimeZone) * minutesInAHour +
         time.minutes;
-
-    return result;
 }
 
 function getDay(minutes) {
@@ -68,21 +67,27 @@ function pairToInterval(pair, parser, bankTimeZone) {
         .map(time => momentToMinutes(time, bankTimeZone));
 }
 
-function intersect(a, b) {
-    if (!a || !b) {
+function intersect(first, second) {
+    if (!first || !second) {
         return undefined;
     }
 
-    const left = Math.max(a[0], b[0]);
-    const right = Math.min(a[1], b[1]);
+    const left = Math.max(first[0], second[0]);
+    const right = Math.min(first[1], second[1]);
 
     return left < right ? [left, right] : undefined;
 }
 
 function formatDate(pattern, moment) {
-    return pattern.replace('%HH', (moment.hours < 10 ? '0' : '') + moment.hours)
-        .replace('%MM', (moment.minutes < 10 ? '0' : '') + moment.minutes)
+    const formatByZero = subject => (subject < 10 ? '0' : '') + subject;
+
+    return pattern.replace('%HH', formatByZero(moment.hours))
+        .replace('%MM', formatByZero(moment.minutes))
         .replace('%DD', weekDays[moment.day]);
+}
+
+function intervalLength(interval) {
+    return interval[1] - interval[0];
 }
 
 /**
@@ -94,14 +99,13 @@ function formatDate(pattern, moment) {
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    console.info(schedule, duration, workingHours);
     const bankTimeZone = parseTime(workingHours.from).timeZone;
     const bankWorkInterval = pairToInterval(workingHours, parseTime, bankTimeZone);
-    const impossibleTimes = Object.keys(schedule)
-        .map(key => schedule[key])
+    const impossibleTimes = Object
+        .values(schedule)
         .reduce((x, y) => x.concat(y))
         .map(pair => pairToInterval(pair, parseMoment, bankTimeZone))
-        .concat([[0, 0], [4 * minutesInADay, 7 * minutesInADay]]);
+        .concat([[0, 0], [firstImpossibleDay * minutesInADay, weekDays.length * minutesInADay]]);
     const borders = impossibleTimes.reduce((x, y) => x.concat(y));
     let possibleTimes = [];
     let day = 0;
@@ -110,16 +114,17 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         let end = day * minutesInADay + bankWorkInterval[1];
         possibleTimes = possibleTimes.concat(
             [...new Set(borders.filter(b => b >= start && b <= end))]
-                .concat([start, end])
+                .concat(start, end)
                 .sort((x, y) => x - y)
                 .map((_, index, array) => index > 0 ? [array[index - 1], array[index]] : null)
                 .slice(1)
-                .filter(pair => pair[1] - pair[0] >= duration)
+                .filter(pair => intervalLength(pair) >= duration)
         );
         day++;
     }
     possibleTimes = possibleTimes
-        .filter(pair => impossibleTimes.every(i => intersect(i, pair) === undefined));
+        .filter(pair => impossibleTimes
+            .every(impossible => intersect(impossible, pair) === undefined));
 
     return {
 
@@ -155,11 +160,13 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             const temporaryTimes = possibleTimes.slice();
             if (temporaryTimes.length > 0) {
                 temporaryTimes[0] = [temporaryTimes[0][0] + 30, temporaryTimes[0][1]];
+                // Как ниже нельзя, будет копирование
+                // temporaryTimes[0][0] += 30
             }
 
             while (temporaryTimes.length > 0) {
                 const firstPossible = temporaryTimes[0];
-                if (firstPossible[1] - firstPossible[0] >= duration) {
+                if (intervalLength(firstPossible) >= duration) {
                     possibleTimes = temporaryTimes;
 
                     return true;
@@ -175,6 +182,5 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 // noinspection JSUnresolvedVariable
 module.exports = {
     getAppropriateMoment,
-
     isStar
 };
