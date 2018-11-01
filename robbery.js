@@ -160,25 +160,19 @@ function cutBusyTime(freeIntervals, busyInterval) {
     return freeIntervals.reduce((freeTime, interval) => {
         if (notIntersect(busyInterval, interval)) {
             freeTime.push(interval);
-        } else if (inclide(interval, busyInterval)) {
-            freeTime.push({
-                from: interval.from,
-                to: busyInterval.from
-            });
-            freeTime.push({
-                from: busyInterval.to,
-                to: interval.to
-            });
-        } else if (leftIntersection(interval, busyInterval)) {
-            freeTime.push({
-                from: busyInterval.to,
-                to: interval.to
-            });
-        } else if (rightIntersection(interval, busyInterval)) {
-            freeTime.push({
-                from: interval.from,
-                to: busyInterval.from
-            });
+        } else {
+            if (busyInterval.to < interval.to) {
+                freeTime.push({
+                    from: busyInterval.to,
+                    to: interval.to
+                });
+            }
+            if (interval.from < busyInterval.from) {
+                freeTime.push({
+                    from: interval.from,
+                    to: busyInterval.from
+                });
+            }
         }
 
         return freeTime;
@@ -189,21 +183,21 @@ function notIntersect(firstInterval, secondInterval) {
     return firstInterval.from >= secondInterval.to || firstInterval.to <= secondInterval.from;
 }
 
-function leftIntersection(firstInterval, secondInterval) {
-    return firstInterval.from >= secondInterval.from &&
-        secondInterval.to > firstInterval.from &&
-        secondInterval.to < firstInterval.to;
-}
+// function leftIntersection(firstInterval, secondInterval) {
+//     return firstInterval.from >= secondInterval.from &&
+//         secondInterval.to > firstInterval.from &&
+//         secondInterval.to < firstInterval.to;
+// }
 
-function rightIntersection(firstInterval, secondInterval) {
-    return firstInterval.from < secondInterval.from &&
-        secondInterval.to > firstInterval.from &&
-        secondInterval.to >= firstInterval.to;
-}
+// function rightIntersection(firstInterval, secondInterval) {
+//     return firstInterval.from < secondInterval.from &&
+//         secondInterval.to > firstInterval.from &&
+//         secondInterval.to >= firstInterval.to;
+// }
 
-function inclide(firstInterval, secondInterval) {
-    return firstInterval.from < secondInterval.from && secondInterval.to < firstInterval.to;
-}
+// function inclide(firstInterval, secondInterval) {
+//     return firstInterval.from < secondInterval.from && secondInterval.to < firstInterval.to;
+// }
 
 module.exports = {
     getAppropriateMoment,
