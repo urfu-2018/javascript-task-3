@@ -22,31 +22,35 @@ const MAXMINUTEINDAYS = MINUTEINDAY * 3 - 1;
  * @returns {Object}
  */
 
+function sortByGrow(schedule) {
+    schedule.sort((a, b) => a[0] - b[0]);
+}
 
 function invertSchedule(schedule) {
-    schedule.sort((a, b) => a[0] - b[0]);
+    sortByGrow(schedule);
     let startOfInterval = 0;
     const freeTime = [];
-    schedule.forEach(time => {
+    schedule.map(time => {
         freeTime.push([startOfInterval, time[0]]);
         startOfInterval = time[1];
+
+        return time;
     });
     freeTime.push([startOfInterval, MAXMINUTEINDAYS]);
-    freeTime.sort((a, b) => a[0] - b[0]);
+    sortByGrow(freeTime);
 
     return freeTime;
 }
 
 function parseBankTime(open, close) {
-    const openFrom = parseInMinutes(parseInt(open.slice(0, 2)), parseInt(open.slice(3, 5)));
-    const closeTo = parseInMinutes(parseInt(close.slice(0, 2)), parseInt(close.slice(3, 5)));
+    const openFrom = parseInMinutes(open.slice(0, 2), open.slice(3, 5));
+    const closeTo = parseInMinutes(close.slice(0, 2), close.slice(3, 5));
 
-    return [[openFrom, closeTo], [openFrom + DAYS['ВТ'], closeTo + DAYS['ВТ']],
-        [openFrom + DAYS['СР'], closeTo + DAYS['СР']]];
+    return Object.keys(DAYS).map(day => [openFrom + DAYS[day], closeTo + DAYS[day]]);
 }
 
 function parseInMinutes(hours, minutes) {
-    return hours * 60 + minutes;
+    return parseInt(hours) * 60 + parseInt(minutes);
 }
 
 function correctTime(time, timeZone, bankZone, day) {
@@ -57,10 +61,7 @@ function correctTime(time, timeZone, bankZone, day) {
 }
 
 function rightFormat(time, bankZone) {
-    const day = time.slice(0, 2);
-    let minutes = correctTime(time.slice(3, 8), time.slice(9), bankZone, day);
-
-    return minutes;
+    return correctTime(time.slice(3, 8), time.slice(9), bankZone, time.slice(0, 2));
 }
 
 function parseBusyTime(schedule, bankZone) {
@@ -130,11 +131,13 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             const index = Math.floor(startTime / (24 * 60));
             let hours = Math.trunc(startTime / 60) - index * 24;
             let minutes = startTime - index * 24 * 60 - hours * 60;
+            hours = hours < 10 ? `0${hours}` : hours.toString();
+            minutes = minutes < 10 ? `0${minutes}` : minutes.toString();
 
             return template
-                .replace(/%HH/, hours.toString().padStart(2, '0'))
+                .replace(/%HH/, hours)
                 .replace(/%DD/, days[index])
-                .replace(/%MM/, minutes.toString().padStart(2, '0'));
+                .replace(/%MM/, minutes);
         },
 
         /**
