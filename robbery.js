@@ -6,6 +6,11 @@
  */
 const isStar = true;
 
+const MINUTES_IN_DAY = 60 * 24;
+
+const WEEK_DAYS = Object.freeze({ 'ПН': 0, 'ВТ': 1, 'СР': 2 });
+const WEEK_DAYS_REVERSED = Object.freeze({ 0: 'ПН', 1: 'ВТ', 2: 'СР' });
+
 /**
  * @param {Object} schedule – Расписание Банды
  * @param {Number} duration - Время на ограбление в минутах
@@ -17,50 +22,48 @@ const isStar = true;
 function getAppropriateMoment(schedule, duration, workingHours) {
     console.info(schedule, '\n', duration, '\n', workingHours);
 
-    const MINUTES_IN_DAY = 60 * 24;
-
-    const WEEK_DAYS = Object.freeze({ 'ПН': 0, 'ВТ': 1, 'СР': 2 });
-    const WEEK_DAYS_REVERSED = Object.freeze({ 0: 'ПН', 1: 'ВТ', 2: 'СР' });
-
     const TARGET_TIME_ZONE = parseInt(workingHours.from.split('+')[1]);
 
+    /**
+     * По времени в форме 09:35+5 возвращает количество минут с 00:00
+     * @param {String} time
+     * @returns {Number}
+     */
+    function getTimeBankWrapper(time) {
+        return getTimeInMinutes('ПН ' + time);
+    }
+
+    /**
+     * По времени в форме ПН 09:35+5 возвращает кол-во минут с ПН 00:00
+     * @param {String} time
+     * @returns {Number}
+     */
+    function getTimeInMinutes(time) {
+        // 'ПН 09:35+5' => [ПН, 09, 35, 5]
+        const timeToMinutesRegex = /^(.{2}) (\d{2}):(\d{2})+.(\d)+$/g;
+
+        const intervalParts = time.split(timeToMinutesRegex).filter(part => part.length > 0);
+        const day = WEEK_DAYS[time.split(' ')[0]] * MINUTES_IN_DAY;
+        const timeOfDay = parseInt(intervalParts[1]) * 60 + parseInt(intervalParts[2]);
+        const timezoneShift = (TARGET_TIME_ZONE - parseInt(intervalParts[3])) * 60;
+
+        return day + timeOfDay + timezoneShift;
+    }
 
     /**
      * Собирает все входные данные в один массив, приводя к минутам с ПН 00:00+зона_банка
      * @returns {Object}
      */
     function congregateIntervals() {
-
-        /**
-         * По времени в форме from: ПН: 09:35+5 возвращает кол-во минут с ПН 00:00
-         * @param {Object} time
-         * @returns {Object}
-         */
-        function transformTime(time) {
-            // 'ПН 09:35+5' => [ПН, 09, 35, 5]
-            const regex = /^(.{2}) (\d{2}):(\d{2})+.(\d)+$/g;
-
-            // Для интервалов без дня, полагаем что с нуля (нужно для банка).
-            if (!time.includes(' ')) {
-                time = 'ПН ' + time;
-            }
-            const intervalParts = time.split(regex).filter(part => part.length > 0);
-            const day = WEEK_DAYS[time.split(' ')[0]] * MINUTES_IN_DAY;
-            const timeOfDay = parseInt(intervalParts[1]) * 60 + parseInt(intervalParts[2]);
-            const timezoneShift = (TARGET_TIME_ZONE - parseInt(intervalParts[3])) * 60;
-
-            return day + timeOfDay + timezoneShift;
-        }
-
         const workTimes = Object.values(WEEK_DAYS).map(day => ({
-            from: transformTime(workingHours.from) + MINUTES_IN_DAY * day,
-            to: transformTime(workingHours.to) + MINUTES_IN_DAY * day
+            from: getTimeBankWrapper(workingHours.from) + MINUTES_IN_DAY * day,
+            to: getTimeBankWrapper(workingHours.to) + MINUTES_IN_DAY * day
         }));
 
         const busyTimes = [];
         Object.values(schedule).map(person => person.map(interval => busyTimes.push({
-            from: transformTime(interval.from),
-            to: transformTime(interval.to)
+            from: getTimeInMinutes(interval.from),
+            to: getTimeInMinutes(interval.to)
         })));
 
         return { bank: workTimes, people: busyTimes };
@@ -73,63 +76,6 @@ function getAppropriateMoment(schedule, duration, workingHours) {
      * @returns {Object[]}
      */
     function intersectIntervals(fullSchedule) {
-
-        /**
-         * Возвращает множество интервалов, содержащихся в A, но не содержащихся в B
-         * @param {Object} intervalA
-         * @param {Object} intervalB
-         * @returns {Object[]}
-         */
-        function subtractIntervals(intervalA, intervalB) {
-
-            /**
-             * Проверяет, содержится ли интервал a в b.
-             * @param {Object} a
-             * @param {Object} b
-             * @returns {boolean}
-             */
-            function contains(a, b) {
-                return a.from >= b.from && a.to <= b.to;
-            }
-
-            /**
-             * Эта функция проверяет, лежит ли число b между a1 и a2
-             * @param {Number} a1
-             * @param {Number} b
-             * @param {Number} a2
-             * @returns {Boolean}
-             */
-            function liesInBetween(a1, b, a2) {
-                return a1 <= b && a2 >= b;
-            }
-
-            if (contains(intervalA, intervalB)) { // или равны
-                return [];
-            }
-            if (contains(intervalB, intervalA)) {
-                return [{
-                    from: intervalA.from,
-                    to: intervalB.from }, {
-                    from: intervalB.to,
-                    to: intervalA.to }];
-            }
-            // следующие два if отличаются только .to или .from во втором аргументе, вынести?
-            if (liesInBetween(intervalA.from, intervalB.to, intervalA.to)) {
-                return [{
-                    from: intervalB.to,
-                    to: intervalA.to
-                }];
-            }
-            if (liesInBetween(intervalA.from, intervalB.from, intervalA.to)) {
-                return [{
-                    from: intervalA.from,
-                    to: intervalB.from
-                }];
-            }
-
-            return [intervalA];
-        }
-
         for (let busyTime of fullSchedule.people) {
             let leftovers = [];
             for (let workTime of fullSchedule.bank) {
@@ -139,6 +85,62 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         }
 
         return fullSchedule.bank;
+    }
+
+    /**
+     * Проверяет, содержится ли интервал a в b.
+     * @param {Object} a
+     * @param {Object} b
+     * @returns {boolean}
+     */
+    function contains(a, b) {
+        return a.from >= b.from && a.to <= b.to;
+    }
+
+    /**
+     * Эта функция проверяет, лежит ли число value между begin и end
+     * @param {Number} begin
+     * @param {Number} end
+     * @param {Number} value
+     * @returns {Boolean}
+     */
+    function liesInBetween(begin, end, value) {
+        return begin <= value && end >= value;
+    }
+
+    /**
+     * Возвращает множество интервалов, содержащихся в A, но не содержащихся в B
+     * @param {Object} intervalA
+     * @param {Object} intervalB
+     * @returns {Object[]}
+     */
+    function subtractIntervals(intervalA, intervalB) {
+
+        if (contains(intervalA, intervalB)) { // или равны
+            return [];
+        }
+        if (contains(intervalB, intervalA)) {
+            return [{
+                from: intervalA.from,
+                to: intervalB.from }, {
+                from: intervalB.to,
+                to: intervalA.to }];
+        }
+        // следующие два if отличаются только .to или .from во втором аргументе, вынести?
+        if (liesInBetween(intervalA.from, intervalA.to, intervalB.to)) {
+            return [{
+                from: intervalB.to,
+                to: intervalA.to
+            }];
+        }
+        if (liesInBetween(intervalA.from, intervalA.to, intervalB.from)) {
+            return [{
+                from: intervalA.from,
+                to: intervalB.from
+            }];
+        }
+
+        return [intervalA];
     }
 
     const candidates = intersectIntervals(congregateIntervals())
