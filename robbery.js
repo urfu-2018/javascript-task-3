@@ -183,22 +183,6 @@ function notIntersect(firstInterval, secondInterval) {
     return firstInterval.from >= secondInterval.to || firstInterval.to <= secondInterval.from;
 }
 
-// function leftIntersection(firstInterval, secondInterval) {
-//     return firstInterval.from >= secondInterval.from &&
-//         secondInterval.to > firstInterval.from &&
-//         secondInterval.to < firstInterval.to;
-// }
-
-// function rightIntersection(firstInterval, secondInterval) {
-//     return firstInterval.from < secondInterval.from &&
-//         secondInterval.to > firstInterval.from &&
-//         secondInterval.to >= firstInterval.to;
-// }
-
-// function inclide(firstInterval, secondInterval) {
-//     return firstInterval.from < secondInterval.from && secondInterval.to < firstInterval.to;
-// }
-
 module.exports = {
     getAppropriateMoment,
 
