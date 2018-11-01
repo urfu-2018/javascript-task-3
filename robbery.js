@@ -141,9 +141,11 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         tryLater: function () {
             if (robberyTimes.length !== 0) {
                 robberyTime = robberyTimes.shift();
+
+                return this.exists();
             }
 
-            return this.exists();
+            return false;
         }
     };
 }
