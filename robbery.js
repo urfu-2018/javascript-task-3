@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-exports.isStar = true;
+const isStar = true;
 
 const timeRE = new RegExp('^(.{2})\\s(\\d{2}):(\\d{2})\\+(\\d)$');
 const dayNames = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
@@ -26,23 +26,22 @@ function getMinutesFromWeekStart(timeString) {
     return days * minutesInDay + hours * minutesInHour + minutes;
 }
 
-function populateEvents(schedule, events, reverse = false) {
+function getPopulatedEvents(schedule, events, reverse = false) {
+    events = events.slice();
     for (let { from, to } of schedule) {
         events.push({ time: getMinutesFromWeekStart(from), type: reverse ? close : open });
         events.push({ time: getMinutesFromWeekStart(to), type: reverse ? open : close });
     }
-}
-
-function getEvents(schedule) {
-    let events = [];
-    populateEvents(schedule, events);
 
     return events;
 }
 
+function getEvents(schedule) {
+    return getPopulatedEvents(schedule, []);
+}
+
 function getEventsFromRobberSchedule(robberSchedule) {
-    let events = [{ time: timeBeforeStart, type: open }];
-    populateEvents(robberSchedule, events, true);
+    let events = getPopulatedEvents(robberSchedule, [{ time: timeBeforeStart, type: open }], true);
     events.push({ time: timeAfterEnd, type: close });
 
     return events;
@@ -50,17 +49,16 @@ function getEventsFromRobberSchedule(robberSchedule) {
 
 function getEventsFromBankWorkingHours({ from, to }) {
     let bankWorkingHoursByDays = dayNames.slice(0, 3)
-        .map(day => {
-            return {
-                from: `${day} ${from}`,
-                to: `${day} ${to}`
-            };
-        });
+        .map(day => ({
+            from: `${day} ${from}`,
+            to: `${day} ${to}`
+        }));
 
     return getEvents(bankWorkingHoursByDays);
 }
 
-function sortEvents(events) {
+function getSortedEvents(events) {
+    events = events.slice();
     events.sort((first, second) => {
         let result = first.time - second.time;
         if (result !== 0) {
@@ -69,13 +67,15 @@ function sortEvents(events) {
 
         return first.type - second.type;
     });
+
+    return events;
 }
 
 // Use ScanLine algorithm
 // Don't really know how to simplify it, so just disable warning
 // eslint-disable-next-line complexity
 function getCommonMomentRanges(events, enoughOpenedForRobbery) {
-    sortEvents(events);
+    events = getSortedEvents(events);
     let openedCount = 0;
     const notStarted = timeBeforeStart - 1;
     let rangeStarted = notStarted;
@@ -112,7 +112,7 @@ function formatNumber(number) {
  * @param {String} workingHours.to – Время закрытия, например, "18:00+5"
  * @returns {Object}
  */
-module.exports.getAppropriateMoment = function (schedule, duration, workingHours) {
+function getAppropriateMoment(schedule, duration, workingHours) {
     console.info(schedule, duration, workingHours);
     const bankTimeZone = parseInt(workingHours.from[workingHours.from.length - 1]);
     timeBeforeStart = getMinutesFromWeekStart('ПН 00:00+' + bankTimeZone);
@@ -184,4 +184,10 @@ module.exports.getAppropriateMoment = function (schedule, duration, workingHours
             return false;
         }
     };
+}
+
+module.exports = {
+    getAppropriateMoment,
+
+    isStar
 };
