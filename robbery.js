@@ -7,6 +7,9 @@
 const isStar = true;
 
 const weekdays = ['ПН', 'ВТ', 'СР'];
+const hoursInDay = 24;
+const minutesInHour = 60;
+const minutesInDay = 24 * 60;
 
 /**
  * @param {Object} schedule – Расписание Банды
@@ -48,20 +51,21 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (goodTimes.length === 0) {
                 return '';
             }
-            let startTime = goodTimes[0][0];
-            const weekdayIndex = Math.floor(startTime / (24 * 60));
+            const startTime = goodTimes[0][0];
+            const weekdayIndex = Math.floor(startTime / minutesInDay);
             const weekday = weekdays[weekdayIndex];
-            const hour = (Math.floor((startTime - 24 * 60 * weekdayIndex) /
-                60)).toString();
-            let paddedHour = hour.length === 1 ? '0' + hour : hour;
-            const minute = (startTime % 60).toString();
+            const hour = (Math.floor((startTime - minutesInDay * weekdayIndex) /
+                minutesInHour)).toString();
+            let paddedHour=hour.padStart(2, '0');
+            const minute = (startTime % minutesInHour).toString();
             let paddedMinute = minute.length === 1 ? '0' + minute : minute;
             const replacementDict = {
-                '%HH': paddedHour, '%DD': weekday,
+                '%HH': paddedHour,
+                '%DD': weekday,
                 '%MM': paddedMinute
             };
 
-            return template.replace(/%HH|%MM|%DD/gi, m => replacementDict[m]);
+            return template.replace(/%HH|%MM|%DD/gi, templateItem => replacementDict[templateItem]);
         },
 
         /**
@@ -94,20 +98,22 @@ function convertToMinutesInBankTime(timestring, bankTime) {
     let hours = parseInt(timestring.slice(3, 5)) - parseInt(timestring.slice(9)) + bankTime;
     let minutes = parseInt(timestring.slice(6, 8));
 
-    return (weekdays.indexOf(day) * 24 + hours) * 60 + minutes;
+    return (weekdays.indexOf(day) * hoursInDay + hours) * minutesInHour + minutes;
 }
 
 function scheduleToIntervals(schedule, bankTime) {
-    return schedule.map(x =>
-        [convertToMinutesInBankTime(x.from, bankTime),
-            convertToMinutesInBankTime(x.to, bankTime)]
+    return schedule.map(scheduleItem =>
+        [convertToMinutesInBankTime(scheduleItem.from, bankTime),
+            convertToMinutesInBankTime(scheduleItem.to, bankTime)]
     );
 }
 
 function intersectSchedules(firstSchedule, secondSchedule) {
     firstSchedule.sort((a, b) => a[0] - b[0]);
     secondSchedule.sort((a, b) => a[0] - b[0]);
+
     const intersection = [];
+
     firstSchedule.forEach(first => {
         secondSchedule.forEach(second => {
             if (first[1] > second[0] && first[0] < second[1]) {
@@ -118,24 +124,21 @@ function intersectSchedules(firstSchedule, secondSchedule) {
 
     return intersection;
 }
+
 function workingHoursToSchedule(workingHours) {
-    let prefixes = ['ПН ', 'ВТ ', 'СР '];
-
-    return prefixes.map(x => {
-        return { from: x + workingHours.from, to: x + workingHours.to };
+    return weekdays.map(weekday => {
+        return { from: weekday + ' ' + workingHours.from, to: weekday + ' ' + workingHours.to };
     });
-
 }
 
-
 function invertIntervals(intervals) {
-    intervals.sort((a, b)=>a[0] - b[0]);
-    const max = 72 * 60 - 1;
+    intervals.sort((a, b) => a[0] - b[0]);
+    const max = 3 * minutesInDay - 1;
     let rightBorder = 0;
     const newIntervals = [];
-    intervals.forEach(x => {
-        newIntervals.push([rightBorder, x[0]]);
-        rightBorder = x[1];
+    intervals.forEach(interval => {
+        newIntervals.push([rightBorder, interval[0]]);
+        rightBorder = interval[1];
     });
     newIntervals.push([rightBorder, max]);
 
