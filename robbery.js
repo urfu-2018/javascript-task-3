@@ -103,8 +103,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     const bankWorkInterval = pairToInterval(workingHours, parseTime, bankTimeZone);
     const impossibleTimes = Object
         .values(schedule)
-        .flat()
-        // .reduce((x, y) => x.concat(y))
+        .reduce((x, y) => x.concat(y))
         .map(pair => pairToInterval(pair, parseMoment, bankTimeZone))
         .concat([[0, 0], [firstImpossibleDay * minutesInADay, weekDays.length * minutesInADay]]);
     const borders = impossibleTimes.reduce((x, y) => x.concat(y));
