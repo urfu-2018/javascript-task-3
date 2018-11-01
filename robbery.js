@@ -56,7 +56,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             const weekday = weekdays[weekdayIndex];
             const hour = (Math.floor((startTime - minutesInDay * weekdayIndex) /
                 minutesInHour)).toString();
-            let paddedHour=hour.padStart(2, '0');
+            let paddedHour = hour.padStart(2, '0');
             const minute = (startTime % minutesInHour).toString();
             let paddedMinute = minute.length === 1 ? '0' + minute : minute;
             const replacementDict = {
