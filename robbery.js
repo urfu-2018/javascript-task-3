@@ -8,9 +8,10 @@ const isStar = true;
 
 const MILLISECONDS_IN_MINUTE = 60 * 1000;
 const MILLISECONDS_IN_HOUR = 60 * MILLISECONDS_IN_MINUTE;
-const MILLISEC_IN_HALF = 30 * MILLISECONDS_IN_MINUTE;
-const FORMAT_TIME = /^(ПН|ВТ|СР)\s(\d{2}):(\d{2})\+(\d+)$/;
+const MILLISECONDS_IN_HALF = 30 * MILLISECONDS_IN_MINUTE;
 const DAYS_OF_WEEK = ['ПН', 'ВТ', 'СР'];
+const DaysForRegExpTime = `${DAYS_OF_WEEK[0]}|${DAYS_OF_WEEK[1]}|${DAYS_OF_WEEK[2]}`;
+const TIME_FORMAT = new RegExp(`^(${DaysForRegExpTime})\\s(\\d{2}):(\\d{2})\\+(\\d+)$`);
 
 class TimeRange {
     constructor(timeRange) {
@@ -18,16 +19,27 @@ class TimeRange {
         this.to = timeRange.to;
     }
 
-    static createTimeRangeFromString(stringTimeRange) {
+    static createTimeRangeFromString(fromDateString, toDateString) {
         return new TimeRange(
             {
-                from: parseDate(stringTimeRange.from),
-                to: parseDate(stringTimeRange.to)
+                from: parseDate(fromDateString),
+                to: parseDate(toDateString)
             }
         );
     }
 
-    static intersectsAndReplaces(timeRangeFirst, timeRangeSecond) {
+    union(timeRange) {
+        if (this.from < timeRange.to && this.to > timeRange.from) {
+            const newFrom = Math.min(this.from, timeRange.from);
+            const newTo = Math.max(this.to, timeRange.to);
+
+            return new TimeRange({ from: newFrom, to: newTo });
+        }
+
+        return null;
+    }
+
+    static union(timeRangeFirst, timeRangeSecond) {
         if (timeRangeFirst.from < timeRangeSecond.to && timeRangeFirst.to > timeRangeSecond.from) {
             const newFrom = Math.min(timeRangeFirst.from, timeRangeSecond.from);
             const newTo = Math.max(timeRangeFirst.to, timeRangeSecond.to);
@@ -49,33 +61,33 @@ class TimeRange {
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
     const worksTimeRanges = [
-        TimeRange.createTimeRangeFromString({
-            from: 'ПН ' + workingHours.from,
-            to: 'ПН ' + workingHours.to
-        }),
-        TimeRange.createTimeRangeFromString({
-            from: 'ВТ ' + workingHours.from,
-            to: 'ВТ ' + workingHours.to
-        }),
-        TimeRange.createTimeRangeFromString({
-            from: 'СР ' + workingHours.from,
-            to: 'СР ' + workingHours.to
-        })
+        TimeRange.createTimeRangeFromString(
+            'ПН ' + workingHours.from,
+            'ПН ' + workingHours.to
+        ),
+        TimeRange.createTimeRangeFromString(
+            'ВТ ' + workingHours.from,
+            'ВТ ' + workingHours.to
+        ),
+        TimeRange.createTimeRangeFromString(
+            'СР ' + workingHours.from,
+            'СР ' + workingHours.to
+        )
     ];
     const gangTimesRanges = combineAllTimeRanges(
         Object.values(schedule)
             .reduce((allTimes, timesRobber) => allTimes.concat(timesRobber), [])
-            .map(timeline => TimeRange.createTimeRangeFromString(timeline))
+            .map(timeline => TimeRange.createTimeRangeFromString(timeline.from, timeline.to))
     );
     const durationMillis = duration * MILLISECONDS_IN_MINUTE;
     const robberyTimes = worksTimeRanges
         .reduce((dates, date, dayIndex) => {
             const endDate = date.to - durationMillis;
-            for (let time = date.from; time <= endDate; time += MILLISEC_IN_HALF) {
+            for (let time = date.from; time <= endDate; time += MILLISECONDS_IN_HALF) {
                 const checkedTime = new TimeRange({ from: time, to: time + durationMillis });
                 if (gangTimesRanges &&
                     !gangTimesRanges.some(timeline =>
-                        TimeRange.intersectsAndReplaces(timeline, checkedTime),
+                        TimeRange.union(timeline, checkedTime),
                     )) {
                     dates.push({
                         time: checkedTime.from,
@@ -114,17 +126,11 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             const date = new Date(robberyTime.time + millisecondInZone);
             let hour = date.getHours().toString();
             let minute = date.getMinutes().toString();
-            if (hour.length !== 2) {
-                hour = '0' + hour;
-            }
-            if (minute.length !== 2) {
-                minute = '0' + minute;
-            }
 
             return template
                 .replace('%DD', robberyTime.nameDay)
-                .replace('%HH', hour)
-                .replace('%MM', minute);
+                .replace('%HH', paddingTime(hour))
+                .replace('%MM', paddingTime(minute));
         },
 
         /**
@@ -133,35 +139,45 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            if (robberyTime && robberyTimes.length !== 0) {
+            if (robberyTimes.length !== 0) {
                 robberyTime = robberyTimes.shift();
 
-                return true;
+                return this.exists();
             }
-
-            return false;
         }
     };
 }
 
+function paddingTime(time) {
+    if (time.length !== 2) {
+
+        return '0' + time;
+    }
+
+    return time;
+}
 
 function parseDate(date) {
-    return parseInt(date.replace(FORMAT_TIME,
+    return parseInt(date.replace(TIME_FORMAT,
         (fullDate, ...time) => {
             const [day, hours, minutes, timezone] = time;
+            const dayOfMonth = DAYS_OF_WEEK.indexOf(day) + 1;
+            const unifiedHour = hours - timezone;
 
-            return Date.UTC(2018, 1, DAYS_OF_WEEK.indexOf(day) + 1, hours - timezone, minutes);
+            return Date.UTC(2018, 1, dayOfMonth, unifiedHour, minutes);
         }), 10);
 }
 
 
 function combineAllTimeRanges(gangTimesRanges) {
-    let combinedTimesRange = [];
-    while (combinedTimesRange.length !== gangTimesRanges.length) {
-        combinedTimesRange = gangTimesRanges.reduce((timesRanges, timeRange) => {
+
+
+    const combinedTimesRange = gangTimesRanges.sort(
+        (firstDateNumber, secondDateNumber) => firstDateNumber - secondDateNumber)
+        .reduce((timesRanges, timeRange) => {
             for (let i = 0; i < timesRanges.length; i++) {
-                if (TimeRange.intersectsAndReplaces(timesRanges[i], timeRange)) {
-                    timesRanges[i] = TimeRange.intersectsAndReplaces(timesRanges[i], timeRange);
+                if (TimeRange.union(timesRanges[i], timeRange)) {
+                    timesRanges[i] = timesRanges[i].union(timeRange);
 
                     return timesRanges;
                 }
@@ -169,8 +185,6 @@ function combineAllTimeRanges(gangTimesRanges) {
 
             return timesRanges.concat(timeRange);
         }, []);
-        gangTimesRanges = combinedTimesRange;
-    }
 
     return combinedTimesRange;
 }
