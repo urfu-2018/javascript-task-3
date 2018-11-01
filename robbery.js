@@ -174,7 +174,7 @@ function cutBusyTime(freeIntervals, busyInterval) {
                 from: busyInterval.to,
                 to: interval.to
             });
-        } else if (leftIntersection(busyInterval, interval)) {
+        } else if (rightIntersection(interval, busyInterval)) {
             freeTime.push({
                 from: interval.from,
                 to: busyInterval.from
@@ -190,9 +190,15 @@ function notIntersect(firstInterval, secondInterval) {
 }
 
 function leftIntersection(firstInterval, secondInterval) {
-    return firstInterval.from <= secondInterval.to &&
-        firstInterval.to > secondInterval.to &&
-        firstInterval.from > secondInterval.from;
+    return firstInterval.from >= secondInterval.from &&
+        secondInterval.to > firstInterval.from &&
+        secondInterval.to < firstInterval.to;
+}
+
+function rightIntersection(firstInterval, secondInterval) {
+    return firstInterval.from < secondInterval.from &&
+        secondInterval.to > firstInterval.from &&
+        secondInterval.to >= firstInterval.to;
 }
 
 function inclide(firstInterval, secondInterval) {
