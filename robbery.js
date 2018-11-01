@@ -19,31 +19,9 @@ const TASK_TIME = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
 function getAppropriateMoment(schedule, duration, workingHours) {
     const TIME_ZONE = Number(workingHours.from.split('+')[1]);
     const BANK_SCHEDULE = getScheduleInMinutes(getWorkSchedule(workingHours), TIME_ZONE);
+    const BUSY_TIME = getScheduleInMinutes(getBusyTime(schedule), TIME_ZONE);
 
-    let busyTime = [];
-    Object.keys(schedule).forEach(member => {
-        busyTime = busyTime.concat(getScheduleInMinutes(schedule[member], TIME_ZONE));
-    });
-
-    let appropriateMoments = BANK_SCHEDULE.slice(0, 3);
-    busyTime.forEach(busyInterval => {
-        appropriateMoments = cutBusyTime(appropriateMoments, busyInterval);
-    });
-
-    appropriateMoments = appropriateMoments
-        .filter(interval => interval.to - interval.from >= duration)
-        .reduce((moments, interval) => {
-            let from = interval.from;
-            while (from + duration <= interval.to) {
-                moments.push({
-                    from,
-                    to: from + duration
-                });
-                from += 30;
-            }
-
-            return moments;
-        }, [])
+    let appropriateMoments = getTimeForRobbery(BANK_SCHEDULE.slice(0, 3), BUSY_TIME, duration)
         .sort((a, b) => a.from - b.from)
         .map(interval => {
             return {
@@ -51,7 +29,6 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 to: minutesToDate(interval.to)
             };
         });
-    // console.info(appropriateMoments);
 
     return {
         appropriateMoments,
@@ -88,7 +65,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            if (this.appropriateMoments.length - 1 > this.index) {
+            if (this.appropriateMoments[this.index + 1]) {
                 ++this.index;
 
                 return true;
@@ -115,12 +92,18 @@ function parseDate(date) {
 }
 
 function getWorkSchedule(workingHours) {
-    return TASK_TIME.map(weekDay => {
+    return TASK_TIME.map(day => {
         return {
-            from: weekDay + ' ' + workingHours.from,
-            to: weekDay + ' ' + workingHours.to
+            from: day + ' ' + workingHours.from,
+            to: day + ' ' + workingHours.to
         };
     });
+}
+
+function getBusyTime(schedule) {
+    return Object.keys(schedule).reduce((busyTime, member) => {
+        return busyTime.concat(schedule[member]);
+    }, []);
 }
 
 function getScheduleInMinutes(schedule, timezone) {
@@ -153,6 +136,26 @@ function minutesToDate(dateInMinutes) {
     };
 }
 
+function getTimeForRobbery(freeTime, busyTime, duration) {
+    return busyTime
+        .reduce((appropriateMoments, busyInterval) => {
+            return cutBusyTime(appropriateMoments, busyInterval);
+        }, freeTime)
+        .filter(interval => interval.to - interval.from >= duration)
+        .reduce((moments, interval) => {
+            let from = interval.from;
+            while (from + duration <= interval.to) {
+                moments.push({
+                    from,
+                    to: from + duration
+                });
+                from += 30;
+            }
+
+            return moments;
+        }, []);
+}
+
 function cutBusyTime(freeIntervals, busyInterval) {
     return freeIntervals.reduce((freeTime, interval) => {
         if (notIntersect(busyInterval, interval)) {
@@ -171,7 +174,7 @@ function cutBusyTime(freeIntervals, busyInterval) {
                 from: busyInterval.to,
                 to: interval.to
             });
-        } else if (rightIntersection(interval, busyInterval)) {
+        } else if (leftIntersection(busyInterval, interval)) {
             freeTime.push({
                 from: interval.from,
                 to: busyInterval.from
@@ -183,20 +186,13 @@ function cutBusyTime(freeIntervals, busyInterval) {
 }
 
 function notIntersect(firstInterval, secondInterval) {
-    return (secondInterval.from < firstInterval.from && secondInterval.to <= firstInterval.from) ||
-        (secondInterval.to > firstInterval.to && secondInterval.from >= firstInterval.to);
+    return firstInterval.from >= secondInterval.to || firstInterval.to <= secondInterval.from;
 }
 
 function leftIntersection(firstInterval, secondInterval) {
-    return firstInterval.from >= secondInterval.from &&
-        secondInterval.to > firstInterval.from &&
-        secondInterval.to < firstInterval.to;
-}
-
-function rightIntersection(firstInterval, secondInterval) {
-    return firstInterval.from < secondInterval.from &&
-        secondInterval.to > firstInterval.from &&
-        secondInterval.to >= firstInterval.to;
+    return firstInterval.from <= secondInterval.to &&
+        firstInterval.to > secondInterval.to &&
+        firstInterval.from > secondInterval.from;
 }
 
 function inclide(firstInterval, secondInterval) {
