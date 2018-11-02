@@ -142,7 +142,7 @@ function findWithSomeIntersections(intersections, day, workingHours, duration) {
     let _sections = [];
     for (let n of intersections) {
         let _from = n[0].from.getMinutes();
-        let _to = n[n.length - 1].to.getMinutes();;
+        let _to = n[n.length - 1].to.getMinutes();
         _sections.push(new Section(_from, _to));
     }
     result = findWithoutIntersection(_sections, day, workingHours, duration);
