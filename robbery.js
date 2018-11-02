@@ -11,6 +11,9 @@ dayOfWeek['ВТ'] = 1;
 dayOfWeek['СР'] = 2;
 const backToDay = ['ПН', 'ВТ', 'СР'];
 let timezone = 0;
+let bankTimeFrom;
+let bankTimeTo;
+let _duration;
 
 
 class Time {
@@ -70,6 +73,9 @@ class Section {
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
+    _duration = duration;
+    bankTimeFrom = parseWorkingHours(workingHours.from).getMinutes();
+    bankTimeTo = parseWorkingHours(workingHours.to).getMinutes();
     console.info(schedule, duration, workingHours);
 
     return {
@@ -108,7 +114,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                     sections[from.day].push(new Section(from, to));
                 }
             }
-            let result = findTime(duration, sections, workingHours);
+            let result = findTime(sections);
 
             return result !== null ? formatTime(template, result.getTimeFromMinutes()) : '';
         },
@@ -124,48 +130,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     };
 }
 
-function formatTime(template, time) {
-    let minutes = time.minutes < 10 ? '0' + time.minutes : time.minutes;
-    let _template = template.replace(/%HH:%MM/,
-        `${time.hours}:${minutes}`);
-    _template = _template.replace(/%DD/,
-        time.day);
-
-    return _template;
-}
-
-function findWithOneIntersection(intersections, day, workingHours, duration) {
-    let result = null;
-    let whFromTime = parseWorkingHours(workingHours.from);
-    let whToTime = parseWorkingHours(workingHours.to);
-    let intersection = Array.from(intersections[0].values());
-    let min = intersection[0].from.getMinutes();
-    let max = intersection[intersections.length - 1].to.getMinutes();
-    if (min - whFromTime.getMinutes() >= duration) {
-        result = new Time(whFromTime.getMinutes(), day);
-    }
-    if (whToTime.getMinutes() - max >= duration) {
-        result = new Time(max, day);
-    }
-
-    return result;
-}
-
-function findWithSomeIntersections(intersections, day, workingHours, duration) {
-    let result = null;
-    let _sections = [];
-    for (let n of intersections) {
-        n = Array.from(n);
-        let _from = n[0].from.getMinutes();
-        let _to = n[n.length - 1].to.getMinutes();
-        _sections.push(new Section(_from, _to));
-    }
-    result = findWithoutIntersection(_sections, day, workingHours, duration);
-
-    return result;
-}
-
-function findTime(duration, sections, workingHours) {
+function findTime(sections) {
     let result = null;
     sections = sections.map(x=> x.sort((a, b) => {
         return a.from.getMinutes() - b.from.getMinutes();
@@ -173,50 +138,80 @@ function findTime(duration, sections, workingHours) {
 
     for (let i = 0; i < 3; i++) {
         let intersections = [];
-        let section = sections[i]
-            .sort((a, b) => {
-                return a.from.getMinutes() - b.from.getMinutes();
-            });
-        for (let j of section) {
-            let intersection = new Set();
-            section.forEach(x => {
-                if (j === x || j.isIntersection(x)) {
-                    intersection.add(x);
-                }
-            });
-            intersections.push(intersection);
-        }
+        let section = sections[i];
+        findIntersection(section, intersections);
+        intersections = intersections.filter(x => x.length !== 0);
         if (intersections.length === 1) {
-            findWithOneIntersection(intersections, i, workingHours, duration);
+            result = findWithOneIntersection(intersections, i);
         } else if (intersections.length === 0) {
-            result = findWithoutIntersection(intersections, i, workingHours, duration);
+            result = findWithoutIntersection(sections[i], i);
         } else {
-            result = findWithSomeIntersections(intersections, i, workingHours, duration);
+            result = findWithSomeIntersections(intersections, i);
+        }
+        if (result) {
+            return result;
         }
     }
 
     return result;
 }
 
-function findWithoutIntersection(section, day, workingHours, duration) {
-    let result = null;
-    let whFromTime = parseWorkingHours(workingHours.from);
-    let whToTime = parseWorkingHours(workingHours.to);
-    let start = whFromTime.getMinutes();
-    for (let m of section) {
-        if (m.from - start >= duration && m.from < whToTime.getMinutes()) {
-            console.info(m.from - start);
-            result = new Time(start, day);
-            break;
-        }
-        start = m.to;
+function findIntersection(section, intersections) {
+    for (let j of section) {
+        let intersection = new Set();
+        section.forEach(x => {
+            if (x !== j && j.isIntersection(x)) {
+                intersection.add(x);
+            }
+        });
+        intersections.push(Array.from(intersection.values()));
     }
-    if (whToTime.getMinutes() - section[section.length - 1] >= duration) {
-        console.info(whToTime.getMinutes() - section[section.length - 1]);
-        result = new Time(section[section.length - 1], day);
+}
+
+function findWithOneIntersection(intersections, day) {
+    let result = null;
+    let min = intersections[0][0].from.getMinutes();
+    let max = intersections[0][intersections.length - 1].to.getMinutes();
+    if (min - bankTimeFrom >= _duration) {
+        return new Time(bankTimeFrom, day);
+    }
+    if (bankTimeTo - max >= _duration) {
+        return new Time(max, day);
     }
 
     return result;
+}
+
+function findWithSomeIntersections(intersections, day) {
+    let _sections = [];
+    for (let n of intersections) {
+        let _from = n[0].from.getMinutes();
+        let _to = n[n.length - 1].to.getMinutes();
+        _sections.push(new Section(_from, _to));
+    }
+
+    return findWithoutIntersection(_sections, day);
+}
+
+function findWithoutIntersection(section, day) {
+    let result = null;
+    let start = bankTimeFrom;
+    for (let m of section) {
+        if (m.from.getMinutes() - start >= _duration &&
+            m.from.getMinutes() < bankTimeTo) {
+            return new Time(start, day);
+        }
+        start = m.to.getMinutes();
+    }
+    if (bankTimeTo - section[section.length - 1] >= _duration) {
+        return new Time(section[section.length - 1], day);
+    }
+
+    return result;
+}
+
+function hoursToMinutes(hours, minutes) {
+    return hours * 60 + minutes;
 }
 
 function parseWorkingHours(str) {
@@ -226,10 +221,6 @@ function parseWorkingHours(str) {
     let minutes = parseInt(str.substr(3, 2));
 
     return new Time(hoursToMinutes(_hours, minutes), 'all');
-}
-
-function hoursToMinutes(hours, minutes) {
-    return hours * 60 + minutes;
 }
 
 function parseTime(str) {
@@ -246,6 +237,16 @@ function parseTime(str) {
     }
 
     return new Time(hoursToMinutes(hours, minutes), day);
+}
+
+function formatTime(template, time) {
+    let minutes = time.minutes < 10 ? '0' + time.minutes : time.minutes;
+    let _template = template.replace(/%HH:%MM/,
+        `${time.hours}:${minutes}`);
+    _template = _template.replace(/%DD/,
+        time.day);
+
+    return _template;
 }
 
 module.exports = {
