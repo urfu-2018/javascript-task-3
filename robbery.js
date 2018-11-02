@@ -24,17 +24,15 @@ class Time {
     }
 
     getTimeFromMinutes() {
+        let hours = Math.floor(this.minutes / 60) + timezone;
+        let day = hours < 0 ? this.day - 1 : this.day;
+
         return {
-            day: backToDay[this.day],
-            hours: Math.floor(this.minutes / 60) + timezone,
+            day: backToDay[day],
+            hours: hours < 0 ? 24 + hours : hours,
             minutes: this.minutes - 60 * Math.floor(this.minutes / 60)
         };
     }
-
-    getDifference(time) {
-        return Math.abs(this.getMinutes() - time.getMinutes());
-    }
-
 }
 
 class Section {
@@ -43,9 +41,9 @@ class Section {
         this.to = to;
     }
 
-    isNoIntersection(section) {
-        return section.to.getMinutes() < this.from.getMinutes() ||
-            section.from.getMinutes() > this.to.getMinutes();
+    isIntersection(section) {
+        return section.to.getMinutes() >= this.from.getMinutes() &&
+            section.from.getMinutes() <= this.to.getMinutes();
     }
 }
 
@@ -81,7 +79,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             Object
                 .keys(schedule)
                 .map(x => schedule[x])
-                .forEach(x => x.forEach(y=>_schedule.push(y)));
+                .forEach(x => x.forEach(y => _schedule.push(y)));
             let sections = [];
             for (let i = 0; i < 3; i++) {
                 sections[i] = [];
@@ -90,7 +88,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 let from = parseTime(i.from);
                 let to = parseTime(i.to);
                 if (from.day !== to.day) {
-                    sections[from.day].push(new Section(from, new Time(1440, from.day)));
+                    console.info(from.day);
+                    sections[from.day].push(new Section(from, new Time(1439, from.day)));
                     sections[to.day].push(new Section(new Time(0, to.day), to));
                 } else {
                     sections[from.day].push(new Section(from, to));
@@ -113,8 +112,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 }
 
 function formatTime(template, time) {
+    let minutes = time.minutes < 10 ? '0' + time.minutes : time.minutes;
     let _template = template.replace(/%HH:%MM/,
-        `${time.hours}:${time.minutes}`);
+        `${time.hours}:${minutes}`);
     _template = _template.replace(/%DD/,
         time.day);
 
@@ -142,7 +142,7 @@ function findWithSomeIntersections(intersections, day, workingHours, duration) {
     let _sections = [];
     for (let n of intersections) {
         let _from = n[0].from.getMinutes();
-        let _to = n[0].to.getMinutes();
+        let _to = n[n.length - 1].to.getMinutes();;
         _sections.push(new Section(_from, _to));
     }
     result = findWithoutIntersection(_sections, day, workingHours, duration);
@@ -164,7 +164,7 @@ function findTime(duration, sections, workingHours) {
             });
         for (let j of section) {
             let intersection = section.filter(x => x === j ||
-                !j.isNoIntersection(x));
+                j.isIntersection(x));
             intersections.push(intersection);
             intersections = intersections.filter(x => {
                 return (x === intersection ||
@@ -190,7 +190,6 @@ function findWithoutIntersection(section, day, workingHours, duration) {
     let start = whFromTime.getMinutes();
     for (let m of section) {
         if (m.from - start >= duration && m.from < whToTime.getMinutes()) {
-            console.info('зашли сюда, когда', m.from, start);
             result = new Time(start, day);
             break;
         }
@@ -206,9 +205,10 @@ function findWithoutIntersection(section, day, workingHours, duration) {
 function parseWorkingHours(str) {
     timezone = parseInt(str.substr(6, 2));
     let hours = parseInt(str.substr(0, 2)) - timezone;
+    let _hours = hours < 0 ? hours + 24 : hours;
     let minutes = parseInt(str.substr(3, 2));
 
-    return new Time(hoursToMinutes(hours, minutes), 'all');
+    return new Time(hoursToMinutes(_hours, minutes), 'all');
 }
 
 function hoursToMinutes(hours, minutes) {
@@ -216,9 +216,17 @@ function hoursToMinutes(hours, minutes) {
 }
 
 function parseTime(str) {
-    let hours = parseInt(str.substr(3, 2)) - parseInt(str.substr(-1, 2));
+    let hours = parseInt(str.substr(3, 2)) - parseInt(str.substr(9, 2));
     let minutes = parseInt(str.substr(6, 2));
     let day = dayOfWeek[str.substr(0, 2)];
+    if (hours < 0) {
+        if (day - 1 >= 0) {
+            day -= 1;
+            hours += 24;
+        } else {
+            hours = 0;
+        }
+    }
 
     return new Time(hoursToMinutes(hours, minutes), day);
 }
