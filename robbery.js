@@ -160,7 +160,7 @@ function findIntersection(section, intersections) {
     for (let j of section) {
         let intersection = new Set();
         section.forEach(x => {
-            if (x !== j && j.isIntersection(x)) {
+            if (x === j || j.isIntersection(x)) {
                 intersection.add(x);
             }
         });
@@ -197,11 +197,11 @@ function findWithoutIntersection(section, day) {
     let result = null;
     let start = bankTimeFrom;
     for (let m of section) {
-        if (m.from.getMinutes() - start >= _duration &&
-            m.from.getMinutes() < bankTimeTo) {
+        if (m.from - start >= _duration &&
+            m.from < bankTimeTo) {
             return new Time(start, day);
         }
-        start = m.to.getMinutes();
+        start = m.to;
     }
     if (bankTimeTo - section[section.length - 1] >= _duration) {
         return new Time(section[section.length - 1], day);
