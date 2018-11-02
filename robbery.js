@@ -29,12 +29,11 @@ function sortByGrow(schedule) {
 function invertSchedule(schedule) {
     sortByGrow(schedule);
     let startOfInterval = 0;
-    const freeTime = [];
-    schedule.map(time => {
-        freeTime.push([startOfInterval, time[0]]);
+    const freeTime = schedule.map(time => {
+        const couple = [startOfInterval, time[0]];
         startOfInterval = time[1];
 
-        return time;
+        return couple;
     });
     freeTime.push([startOfInterval, MAXMINUTEINDAYS]);
     sortByGrow(freeTime);
