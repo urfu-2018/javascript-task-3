@@ -103,8 +103,7 @@ function findTime(sections) {
     sections = sections.map(x=> x.sort((a, b) => {
         return a.from.getMinutes() - b.from.getMinutes();
     }));
-
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < sections.length; i++) {
         let intersections = [];
         let section = sections[i];
         findIntersection(section, intersections);
@@ -112,7 +111,7 @@ function findTime(sections) {
         if (intersections.length === 1) {
             result = findWithOneIntersection(intersections, i);
         } else if (intersections.length === 0) {
-            result = findWithoutIntersection(sections[i], i);
+            result = findWithoutIntersection(section, i);
         } else {
             result = findWithSomeIntersections(intersections, i);
         }
@@ -266,7 +265,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 sections[i] = [];
             }
             makeSectionsFromSchedule(_schedule, sections);
-            let result = findTime(sections);
+            let result = findTime(sections.filter(x => x.length !== 0));
 
             return result ? formatTime(template, result.getTimeFromMinutes()) : '';
         },
