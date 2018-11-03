@@ -1,5 +1,4 @@
-/* eslint-disable complexity*/
-
+/* eslint-disable complexity */
 'use strict';
 
 /**
@@ -23,7 +22,7 @@ function toMinutes(time) {
         Number(time.slice(6, 8));
 }
 
-function toDate(minutes) {
+function toDateObject(minutes) {
     let day = Math.floor(minutes / MINUTE_PER_DAY);
     let hours = Math.floor((minutes - day * MINUTE_PER_DAY) / MINUTE_PER_HOUR);
     minutes -= day * MINUTE_PER_DAY + hours * MINUTE_PER_HOUR;
@@ -34,6 +33,7 @@ function toDate(minutes) {
 }
 
 function without(range1, range2) {
+    const deltaRangeFrom = range2.from - range1.from;
     if (range1.to <= range2.from || range2.to <= range1.from) {
         return [range1];
     }
@@ -46,7 +46,7 @@ function without(range1, range2) {
             { from: range2.to, to: range1.to }
         ];
     }
-    if (range1.from <= range2.from) {
+    if (deltaRangeFrom >= 0) {
         return [{ from: range1.from, to: range2.from }];
     }
 
@@ -65,7 +65,20 @@ function replace(element, array, position) {
 }
 
 function getMomentForPair(goodTime, badTime) {
-    for (let bad of badTime) {
+    return badTime.reduce((goodTime2, bad) => {
+        let i = 0;
+        while (i < goodTime2.length) {
+            let listOfGood = without(goodTime2[i], bad);
+            let j = replace(listOfGood[0], goodTime2, i);
+            i = i + j;
+            replace(listOfGood[1], goodTime2, goodTime2.length);
+        }
+
+        return goodTime2;
+
+    }, goodTime);
+
+    /* for (let bad of badTime) {
         let i = 0;
         while (i < goodTime.length) {
             let listOfGood = without(goodTime[i], bad);
@@ -75,7 +88,7 @@ function getMomentForPair(goodTime, badTime) {
         }
     }
 
-    return goodTime;
+    return goodTime; */
 }
 
 /**
@@ -87,21 +100,21 @@ function getMomentForPair(goodTime, badTime) {
  * @returns {Object}
  */
 exports.getAppropriateMoment = function (schedule, duration, workingHours) {
-    let listOfTimes = [];
-    let bankZone = Number(workingHours.to.split('+')[1]);
+    const listOfTimes = [];
+    const bankZone = Number(workingHours.to.split('+')[1]);
     Object.keys(schedule).forEach(guy => {
         listOfTimes.push(schedule[guy].map(time => ({
             from: convertTime(time.from, bankZone),
             to: convertTime(time.to, bankZone) })
         ));
     });
-    let goodTime = listOfTimes.reduce(getMomentForPair, [
+    const goodTime = listOfTimes.reduce(getMomentForPair, [
         { from: toMinutes('ПН ' + workingHours.from), to: toMinutes('ПН ' + workingHours.to) },
         { from: toMinutes('ВТ ' + workingHours.from), to: toMinutes('ВТ ' + workingHours.to) },
         { from: toMinutes('СР ' + workingHours.from), to: toMinutes('СР ' + workingHours.to) }
     ]);
 
-    let appropriateTime = goodTime.filter(time => time.to - time.from >= duration)
+    const appropriateTime = goodTime.filter(time => time.to - time.from >= duration)
         .sort((obj1, obj2) => obj1.from - obj2.from);
 
     return {
@@ -129,7 +142,7 @@ exports.getAppropriateMoment = function (schedule, duration, workingHours) {
             if (!time) {
                 return '';
             }
-            time = toDate(time.from);
+            time = toDateObject(time.from);
 
             return template.replace('%DD', time.day)
                 .replace('%HH', time.hours)
