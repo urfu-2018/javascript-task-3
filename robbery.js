@@ -5,10 +5,11 @@
  * Реализовано оба метода и tryLater
  */
 const isStar = false;
-const dayOfWeek = [];
-dayOfWeek['ПН'] = 0;
-dayOfWeek['ВТ'] = 1;
-dayOfWeek['СР'] = 2;
+const dayOfWeek = new Map();
+dayOfWeek.set('ПН', 0);
+dayOfWeek.set('ВТ', 1);
+dayOfWeek.set('СР', 2);
+dayOfWeek.set('ЧТ', 3);
 const backToDay = ['ПН', 'ВТ', 'СР'];
 let timezone = 0;
 let bankTimeFrom;
@@ -64,70 +65,37 @@ class Section {
     }
 }
 
-/**
- * @param {Object} schedule – Расписание Банды
- * @param {Number} duration - Время на ограбление в минутах
- * @param {Object} workingHours – Время работы банка
- * @param {String} workingHours.from – Время открытия, например, "10:00+5"
- * @param {String} workingHours.to – Время закрытия, например, "18:00+5"
- * @returns {Object}
- */
-function getAppropriateMoment(schedule, duration, workingHours) {
-    _duration = duration;
-    bankTimeFrom = parseWorkingHours(workingHours.from).getMinutes();
-    bankTimeTo = parseWorkingHours(workingHours.to).getMinutes();
-    console.info(schedule, duration, workingHours);
+function addToInSections(sections, to) {
+    sections[to.day].push(new Section(new Time(0, to.day), to));
+}
 
-    return {
+function addFromInSections(sections, from) {
+    sections[from.day].push(new Section(from, new Time(1439, from.day)));
+}
 
-        /**
-         * Найдено ли время
-         * @returns {Boolean}
-         */
-        exists: function () {
-            return this.format('%DD %HH:%MM') !== '';
-        },
+function addInSections(sections, from, to) {
+    if (from && !to) {
+        addFromInSections(sections, from);
+    } else if (to && !from) {
+        addToInSections(sections, to);
+    }
+}
 
-        /**
-         * Возвращает отформатированную строку с часами для ограбления
-         * Например, "Начинаем в %HH:%MM (%DD)" -> "Начинаем в 14:59 (СР)"
-         * @param {String} template
-         * @returns {String}
-         */
-        format: function (template) {
-            let _schedule = [];
-            Object
-                .keys(schedule)
-                .map(x => schedule[x])
-                .forEach(x => x.forEach(y => _schedule.push(y)));
-            let sections = [];
-            for (let i = 0; i < 3; i++) {
-                sections[i] = [];
-            }
-            for (let i of _schedule) {
-                let from = parseTime(i.from);
-                let to = parseTime(i.to);
-                if (from.day !== to.day) {
-                    sections[from.day].push(new Section(from, new Time(1439, from.day)));
-                    sections[to.day].push(new Section(new Time(0, to.day), to));
-                } else {
-                    sections[from.day].push(new Section(from, to));
-                }
-            }
-            let result = findTime(sections);
-
-            return result !== null ? formatTime(template, result.getTimeFromMinutes()) : '';
-        },
-
-        /**
-         * Попробовать найти часы для ограбления позже [*]
-         * @star
-         * @returns {Boolean}
-         */
-        tryLater: function () {
-            return false;
+function makeSectionsFromSchedule(_schedule, sections) {
+    for (let i of _schedule) {
+        let from = parseTime(i.from);
+        let to = parseTime(i.to);
+        if (!from || !to) {
+            addInSections(sections, from, to);
+            continue;
         }
-    };
+        if (from.day !== to.day) {
+            addFromInSections(sections, from);
+            addToInSections(sections, to);
+        } else {
+            sections[from.day].push(new Section(from, to));
+        }
+    }
 }
 
 function findTime(sections) {
@@ -193,19 +161,27 @@ function findWithSomeIntersections(intersections, day) {
     return findWithoutIntersection(_sections, day);
 }
 
+function checkLastSection(section, result, day) {
+    if (bankTimeTo - section[section.length - 1].to >= _duration) {
+        result = new Time(section[section.length - 1], day);
+    }
+
+    return result;
+}
+
 function findWithoutIntersection(section, day) {
     let result = null;
     let start = bankTimeFrom;
     for (let m of section) {
-        if (m.from - start >= _duration &&
-            m.from < bankTimeTo) {
+        if (m.from < start && m.to <= start) {
+            continue;
+        }
+        if (m.from - start >= _duration && m.from < bankTimeTo) {
             return new Time(start, day);
         }
         start = m.to;
     }
-    if (bankTimeTo - section[section.length - 1] >= _duration) {
-        return new Time(section[section.length - 1], day);
-    }
+    result = checkLastSection(section, result, day);
 
     return result;
 }
@@ -226,9 +202,9 @@ function parseWorkingHours(str) {
 function parseTime(str) {
     let hours = parseInt(str.substr(3, 2)) - parseInt(str.substr(9, 2));
     let minutes = parseInt(str.substr(6, 2));
-    let day = dayOfWeek[str.substr(0, 2)];
+    let day = dayOfWeek.has(str.substr(0, 2)) ? dayOfWeek.get(str.substr(0, 2)) : 3;
     if (hours < 0) {
-        if (day - 1 >= 0) {
+        if (day - 1 >= 0 && day - 1 < 3) {
             day -= 1;
             hours += 24;
         } else {
@@ -236,7 +212,7 @@ function parseTime(str) {
         }
     }
 
-    return new Time(hoursToMinutes(hours, minutes), day);
+    return day !== 3 ? new Time(hoursToMinutes(hours, minutes), day) : null;
 }
 
 function formatTime(template, time) {
@@ -247,6 +223,63 @@ function formatTime(template, time) {
         time.day);
 
     return _template;
+}
+
+/**
+ * @param {Object} schedule – Расписание Банды
+ * @param {Number} duration - Время на ограбление в минутах
+ * @param {Object} workingHours – Время работы банка
+ * @param {String} workingHours.from – Время открытия, например, "10:00+5"
+ * @param {String} workingHours.to – Время закрытия, например, "18:00+5"
+ * @returns {Object}
+ */
+function getAppropriateMoment(schedule, duration, workingHours) {
+    _duration = duration;
+    bankTimeFrom = parseWorkingHours(workingHours.from).getMinutes();
+    bankTimeTo = parseWorkingHours(workingHours.to).getMinutes();
+    console.info(schedule, duration, workingHours);
+
+    return {
+
+        /**
+         * Найдено ли время
+         * @returns {Boolean}
+         */
+        exists: function () {
+            return this.format('%DD %HH:%MM') !== '';
+        },
+
+        /**
+         * Возвращает отформатированную строку с часами для ограбления
+         * Например, "Начинаем в %HH:%MM (%DD)" -> "Начинаем в 14:59 (СР)"
+         * @param {String} template
+         * @returns {String}
+         */
+        format: function (template) {
+            let _schedule = [];
+            Object
+                .keys(schedule)
+                .map(x => schedule[x])
+                .forEach(x => x.forEach(y => _schedule.push(y)));
+            let sections = [];
+            for (let i = 0; i < 3; i++) {
+                sections[i] = [];
+            }
+            makeSectionsFromSchedule(_schedule, sections);
+            let result = findTime(sections);
+
+            return result ? formatTime(template, result.getTimeFromMinutes()) : '';
+        },
+
+        /**
+         * Попробовать найти часы для ограбления позже [*]
+         * @star
+         * @returns {Boolean}
+         */
+        tryLater: function () {
+            return false;
+        }
+    };
 }
 
 module.exports = {
