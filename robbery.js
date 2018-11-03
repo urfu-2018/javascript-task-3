@@ -27,11 +27,11 @@ function getEvents(schedule, invert = false) {
     let result = [];
     for (const descr of schedule) {
         if (invert) {
-            result.push([parseTime(descr.from), CLOSED]);
-            result.push([parseTime(descr.to), OPENED]);
+            result.push({ time: parseTime(descr.from), type: CLOSED });
+            result.push({ time: parseTime(descr.to), type: OPENED });
         } else {
-            result.push([parseTime(descr.from), OPENED]);
-            result.push([parseTime(descr.to), CLOSED]);
+            result.push({ time: parseTime(descr.from), type: OPENED });
+            result.push({ time: parseTime(descr.to), type: CLOSED });
         }
     }
 
@@ -47,8 +47,8 @@ function getRobbersEvents(schedule, firstMoment, lastMoment) {
     for (const robberSchedule of Object.values(schedule)) {
         result = result.concat(getEvents(robberSchedule, true));
         result = result.concat([
-            [firstMoment, OPENED],
-            [lastMoment, CLOSED]
+            { time: firstMoment, type: OPENED },
+            { time: lastMoment, type: CLOSED }
         ]);
     }
 
@@ -70,14 +70,14 @@ function isGoodMoment(balance, requiredCnt, type) {
 
 function getRobberyIntervals(events, duration, requiredCnt) {
     let [balance, lastMoment, result] = [0, Infinity, []];
-    for (let [time, type] of events) {
+    for (let { time, type } of events) {
         balance += type === OPENED ? 1 : -1;
         const curDuration = time - lastMoment;
         if (balance === requiredCnt) {
             lastMoment = time;
         }
         if (isGoodMoment(balance, requiredCnt, type) && curDuration >= duration) {
-            result.push([lastMoment, time]);
+            result.push({ start: lastMoment, end: time });
         }
     }
 
@@ -88,20 +88,14 @@ function prepareEvents(schedule, workingHours, firstMoment, lastMoment) {
     let events = getRobbersEvents(schedule, firstMoment, lastMoment)
         .concat(getBankEvents(workingHours));
     events.sort((a, b) => {
-        if (a[0] - b[0] !== 0) {
-            return a[0] - b[0];
+        if (a.time - b.time !== 0) {
+            return a.time - b.time;
         }
 
-        return b[1] - a[1];
+        return b.type - a.type;
     });
 
     return events;
-}
-
-function pad(x, length) {
-    x = x.toString();
-
-    return '0'.repeat(length - x.length) + x;
 }
 
 /**
@@ -140,7 +134,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (intervals.length === 0) {
                 return '';
             }
-            let startTimestamp = intervals[0][0] + timezone * MINUTES_IN_HOUR;
+            let startTimestamp = intervals[0].start + timezone * MINUTES_IN_HOUR;
             const day = Math.trunc(startTimestamp / MINUTES_IN_DAY);
             startTimestamp %= MINUTES_IN_DAY;
             const hours = Math.trunc(startTimestamp / MINUTES_IN_HOUR);
@@ -148,8 +142,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
             return template
                 .replace('%DD', DAYS_OF_WEEK[day])
-                .replace('%HH', pad(hours, 2))
-                .replace('%MM', pad(minutes, 2));
+                .replace('%HH', hours.toString().padStart(2, '0'))
+                .replace('%MM', minutes.toString().padStart(2, '0'));
         },
 
         /**
@@ -162,11 +156,11 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 return false;
             }
 
-            const newStart = intervals[0][0] + EXTRA_TIME;
+            const newStart = intervals[0].start + EXTRA_TIME;
             for (let i = 0; i < intervals.length; i++) {
-                if (intervals[i][1] - Math.max(newStart, intervals[i][0]) >= duration) {
+                if (intervals[i].end - Math.max(newStart, intervals[i].start) >= duration) {
                     intervals = intervals.slice(i);
-                    intervals[0][0] = Math.max(newStart, intervals[0][0]);
+                    intervals[0].start = Math.max(newStart, intervals[0].start);
 
                     return true;
                 }
