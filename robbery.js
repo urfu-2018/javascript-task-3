@@ -9,9 +9,10 @@ const minInHour = 60;
 const minInDay = minInHour * 24;
 const thirty = 30;
 const timeRegex = /([А-Я]{2}) (\d{2}):(\d{2})\+(\d+)/;
-const bankTimeRegex = new RegExp('(\\d{2}):(\\d{2})\\+(\\d+)');
+const bankTimeRegex = /(\d{2}):(\d{2})\+(\d+)/;
 const daysForRobbery = ['СР', 'ВТ', 'ПН'];
 const dayToMinutesShith = { 'ПН': 0, 'ВТ': 1, 'СР': 2, 'ЧТ': 3 };
+
 class Interval {
     constructor(leftPoint, rightPoint) {
         this.leftPoint = leftPoint;
@@ -48,8 +49,8 @@ function parseTimeIntevalToMinRelativeMonday(interval, bankShift) {
 }
 
 function parseBankTime(time) {
-    const from = bankTimeRegex.exec(time.from);
-    const to = bankTimeRegex.exec(time.to);
+    const from = time.from.match(bankTimeRegex);
+    const to = time.to.match(bankTimeRegex);
     const fromMin = parseInt(from[1]) * minInHour + parseInt(from[2]);
     const toMin = parseInt(to[1]) * minInHour + parseInt(to[2]);
 
