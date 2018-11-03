@@ -95,18 +95,18 @@ function unionBusyIntervals(intervals) {
 }
 
 function invertIntervals(intervals) {
-    const robberyIntervals = intervals.filter(interval => interval.from <= LATEST_TIME);
+    const suitableIntervals = intervals.filter(interval => interval.from <= LATEST_TIME);
     const invertInterval = (interval, i) => ({
         from: interval.to,
-        to: (robberyIntervals[i + 1]) ? robberyIntervals[i + 1].from : LATEST_TIME
+        to: (suitableIntervals[i + 1]) ? suitableIntervals[i + 1].from : LATEST_TIME
     });
 
-    if (robberyIntervals.length === 0) {
+    if (suitableIntervals.length === 0) {
         return [{ from: EARLIEST_TIME, to: LATEST_TIME }];
     }
 
-    return [{ from: EARLIEST_TIME, to: robberyIntervals[0].from }]
-        .concat(robberyIntervals.map(invertInterval));
+    return [{ from: EARLIEST_TIME, to: suitableIntervals[0].from }]
+        .concat(suitableIntervals.map(invertInterval));
 }
 
 function getRobberyIntervals(intervals, bankSchedule, duration) {
