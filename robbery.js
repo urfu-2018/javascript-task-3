@@ -30,6 +30,10 @@ function convertTimeToMinutes(time) {
     return result;
 }
 
+function deleteEmptyIntervals(schedule) {
+    return schedule.filter(interval => interval.from !== interval.to);
+}
+
 function intersectionСheck(first, second) {
     const [firstStart, firstEnd, secondStart, secondEnd] =
         [first.from, first.to, second.from, second.to];
@@ -92,24 +96,37 @@ function convertBankSchedule(bankWorkingHours) {
     return newBankSchedule;
 }
 
-function cutOutInterval(bankInterval, gangBusyInterval) {
-    const firstConditon = gangBusyInterval.from <= bankInterval.from &&
+function cutFromStartСondition(bankInterval, gangBusyInterval) {
+    return gangBusyInterval.from <= bankInterval.from &&
         gangBusyInterval.to < bankInterval.to &&
         gangBusyInterval.to > bankInterval.from;
-    const secondCondition = gangBusyInterval.from <= bankInterval.from &&
-        gangBusyInterval.to >= bankInterval.to;
-    const thirdCondition = gangBusyInterval.from > bankInterval.from &&
+}
+
+function cutFromEndСondition(bankInterval, gangBusyInterval) {
+    return gangBusyInterval.from > bankInterval.from &&
         gangBusyInterval.to >= bankInterval.to &&
         gangBusyInterval.from < bankInterval.to;
-    const fourthCondition = gangBusyInterval.from > bankInterval.from &&
+}
+
+function deleteСondition(bankInterval, gangBusyInterval) {
+    return gangBusyInterval.from <= bankInterval.from &&
+        gangBusyInterval.to >= bankInterval.to;
+}
+
+function splitCondition(bankInterval, gangBusyInterval) {
+    return gangBusyInterval.from > bankInterval.from &&
         gangBusyInterval.to < bankInterval.to;
-    if (firstConditon) { // режем конец
+}
+
+function cutOutInterval(bankInterval, gangBusyInterval) {
+
+    if (cutFromStartСondition(bankInterval, gangBusyInterval)) { //  оставляем конец
         return [{ from: gangBusyInterval.to, to: bankInterval.to }];
-    } else if (secondCondition) { // удаляем
+    } else if (deleteСondition(bankInterval, gangBusyInterval)) { // удаляем
         return [];
-    } else if (thirdCondition) { // режем начало
+    } else if (cutFromEndСondition(bankInterval, gangBusyInterval)) { // режем начало
         return [{ from: bankInterval.from, to: gangBusyInterval.from }];
-    } else if (fourthCondition) { // разбиваем на два
+    } else if (splitCondition(bankInterval, gangBusyInterval)) { // разбиваем на два
         return [{ from: bankInterval.from, to: gangBusyInterval.from },
             { from: gangBusyInterval.to, to: bankInterval.to }];
     }
@@ -142,6 +159,14 @@ function isEnoughTime(schedule, time) {
     return result;
 }
 
+function convertNumbeForOutput(number) {
+    if (number < 10) {
+        return `0${number}`;
+    }
+
+    return number;
+}
+
 /**
  * @param {Object} schedule – Расписание Банды
  * @param {Number} duration - Время на ограбление в минутах
@@ -152,6 +177,7 @@ function isEnoughTime(schedule, time) {
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
     let convertedRobbersSchedule = convertRobbersSchedule(schedule);
+    convertedRobbersSchedule = deleteEmptyIntervals(convertedRobbersSchedule);
     convertedRobbersSchedule = uniteRobbersSchedule(convertedRobbersSchedule);
     const convertedBankSchedule = convertBankSchedule(workingHours);
     const freeTimeforRobbery = cutOutBusyTime(convertedBankSchedule, convertedRobbersSchedule);
@@ -184,6 +210,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             let day = daysOfWeek[Math.floor(time / (24 * 60))];
             let hours = Math.floor((time - daysOfWeek.indexOf(day) * minutesInDay) / 60) + timeZone;
             let minutes = (time - daysOfWeek.indexOf(day) * minutesInDay) % 60;
+            day = convertNumbeForOutput(day);
+            hours = convertNumbeForOutput(hours);
+            minutes = convertNumbeForOutput(minutes);
 
             return template
                 .replace(/%DD/g, day)
