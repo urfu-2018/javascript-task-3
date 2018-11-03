@@ -21,7 +21,7 @@ function convertRobbersSchedule(schedule) {
 }
 
 function convertTimeToMinutes(time) {
-    const dayOfWeek = ['ПН', 'ВТ', 'СР'];
+    const dayOfWeek = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
     const dayToInt = dayOfWeek.indexOf(time.slice(0, 2));
     const [hours, minutes, timeZone] = [Number(time.slice(3, 5)),
         Number(time.slice(6, 8)), Number(time.slice(9))];
@@ -205,7 +205,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 return '';
             }
             const timeZone = Number(workingHours.from.slice(6));
-            let daysOfWeek = ['ПН', 'ВТ', 'СР'];
+            let daysOfWeek = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
             const minutesInDay = 24 * 60;
             let day = daysOfWeek[Math.floor(time / (24 * 60))];
             let hours = Math.floor((time - daysOfWeek.indexOf(day) * minutesInDay) / 60) + timeZone;
