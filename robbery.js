@@ -8,8 +8,9 @@ const isStar = true;
 const minInHour = 60;
 const minInDay = minInHour * 24;
 const thirty = 30;
-const timeRegex = new RegExp('([А-Я]{2}) (\\d{2}):(\\d{2})\\+(\\d+)');
+const timeRegex = /([А-Я]{2}) (\d{2}):(\d{2})\+(\d+)/;
 const bankTimeRegex = new RegExp('(\\d{2}):(\\d{2})\\+(\\d+)');
+const daysForRobbery = ['СР', 'ВТ', 'ПН'];
 const dayToMinutesShith = { 'ПН': 0, 'ВТ': 1, 'СР': 2, 'ЧТ': 3 };
 class Interval {
     constructor(leftPoint, rightPoint) {
@@ -20,10 +21,11 @@ class Interval {
     get length() {
         return this.rightPoint - this.leftPoint;
     }
+
+    toString() {
+        return `${this.leftPoint} ${this.rightPoint}`;
+    }
 }
-Interval.prototype.toString = function intervalToString() {
-    return `${this.leftPoint} ${this.rightPoint}`;
-};
 
 /**
  * @param {Object} schedule – Расписание Банды
@@ -35,7 +37,7 @@ Interval.prototype.toString = function intervalToString() {
  */
 
 function parseTimeIntevalToMinRelativeMonday(interval, bankShift) {
-    const match = timeRegex.exec(interval);
+    const match = interval.match(timeRegex);
     const day = match[1];
     const shift = parseInt(match[4]);
     const deltaShift = bankShift - shift;
@@ -46,20 +48,20 @@ function parseTimeIntevalToMinRelativeMonday(interval, bankShift) {
 }
 
 function parseBankTime(time) {
-    const matchFrom = bankTimeRegex.exec(time.from);
-    const matchTo = bankTimeRegex.exec(time.to);
-    const fromMin = parseInt(matchFrom[1]) * minInHour + parseInt(matchFrom[2]);
-    const toMin = parseInt(matchTo[1]) * minInHour + parseInt(matchTo[2]);
+    const from = bankTimeRegex.exec(time.from);
+    const to = bankTimeRegex.exec(time.to);
+    const fromMin = parseInt(from[1]) * minInHour + parseInt(from[2]);
+    const toMin = parseInt(to[1]) * minInHour + parseInt(to[2]);
 
-    return { from: fromMin, to: toMin, shift: parseInt(matchFrom[3]) };
+    return { from: fromMin, to: toMin, shift: parseInt(from[3]) };
 }
 
-function getIntervalsForPerson(intervalsArray, bankShift) {
+function getIntervalsForPerson(intervals, bankShift) {
     const result = [];
-    for (var interval of intervalsArray) {
-        const leftPoint = parseTimeIntevalToMinRelativeMonday(interval.from, bankShift);
-        const rightPoint = parseTimeIntevalToMinRelativeMonday(interval.to, bankShift);
-        result.push(new Interval(leftPoint, rightPoint));
+    for (var interval of intervals) {
+        const from = parseTimeIntevalToMinRelativeMonday(interval.from, bankShift);
+        const to = parseTimeIntevalToMinRelativeMonday(interval.to, bankShift);
+        result.push(new Interval(from, to));
     }
 
     return result;
@@ -79,7 +81,7 @@ function reverseIntervals(intervals) {
 
 function getBankOpenIntervals(bankInterval) {
     const result = [];
-    for (var i = 0; i < 3; i++) {
+    for (var i = 0; i < daysForRobbery.length; i++) {
         result.push(new Interval(bankInterval.from + i * minInDay,
             bankInterval.to + i * minInDay
         ));
@@ -87,6 +89,7 @@ function getBankOpenIntervals(bankInterval) {
 
     return result;
 }
+
 function findIntersectionOfAllGroups(intervals, duration) {
     let currentIntercestions = findIntersectionsTwoGroupsOfIntervals(intervals[0],
         intervals[1], duration);
@@ -98,10 +101,10 @@ function findIntersectionOfAllGroups(intervals, duration) {
     return currentIntercestions;
 }
 
-function findIntersectionsTwoGroupsOfIntervals(firstIntervals, secondIntervals, duration) {
+function findIntersectionsTwoGroupsOfIntervals(firstGroup, secondGroup, duration) {
     let result = [];
-    for (let firstInterval of firstIntervals) {
-        for (let secondIntrval of secondIntervals) {
+    for (let firstInterval of firstGroup) {
+        for (let secondIntrval of secondGroup) {
             checkIntervalsPartialIntersection(firstInterval, secondIntrval, duration, result);
             checkIntervalsFullIntersection(firstInterval, secondIntrval, duration, result);
             checkIntervalsPartialIntersection(secondIntrval, firstInterval, duration, result);
@@ -134,7 +137,7 @@ function div(val, by) {
 }
 
 function getDateTimeFromMinutes(minRelativeWeekStart) {
-    for (const day of ['СР', 'ВТ', 'ПН']) {
+    for (const day of daysForRobbery) {
         const minInCurrDay = dayToMinutesShith[day] * minInDay;
         if (minRelativeWeekStart >= minInCurrDay) {
             const hours = toTwoDigitNumber(div((minRelativeWeekStart - minInCurrDay), minInHour));
@@ -145,11 +148,7 @@ function getDateTimeFromMinutes(minRelativeWeekStart) {
     }
 }
 function toTwoDigitNumber(digit) {
-    if (digit < 10) {
-        return `0${digit.toString()}`;
-    }
-
-    return digit;
+    return digit.toString().padStart(2, '0');
 }
 
 function removeDuplicates(arr) {
@@ -164,14 +163,17 @@ function addAdditionTimes(intervals, duration) {
     const result = [];
     for (const interval of intervals) {
         let currLeftPart = interval.leftPoint;
-        while (currLeftPart <= interval.rightPoint &&
-            interval.rightPoint - currLeftPart >= duration) {
+        while (canShiftRobberyTime(currLeftPart, interval.rightPoint, duration)) {
             result.push(new Interval(currLeftPart, interval.rightPoint));
             currLeftPart += thirty;
         }
     }
 
     return result;
+}
+
+function canShiftRobberyTime(currLeftPart, rightPoint, duration) {
+    return currLeftPart <= rightPoint && rightPoint - currLeftPart >= duration;
 }
 
 function getFreeTimeIntervals(participantSchedule, bankShift) {
