@@ -6,7 +6,7 @@
  */
 const isStar = true;
 
-const DAYS = new Map([['ПН', 0], ['ВТ', 1], ['СР', 2], ['ЧТ', 3], ['ПТ', 4], ['СБ', 5], ['ВС', 6]]);
+const DAYS = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
 const ROBBERY_DAYS_LIMIT = 3;
 const TIME_PATTERN = /^(\d\d):(\d\d)\+(\d+)$/;
 const HOURS_IN_DAY = 24;
@@ -19,7 +19,7 @@ const ROBBERY_SHIFT = 30;
 function parseTime(rawTime) {
     const [, hours, minutes, timeZone] = rawTime.match(TIME_PATTERN);
 
-    return [hours, minutes, timeZone].map(val => parseInt(val));
+    return [hours, minutes, timeZone].map(Number);
 }
 
 function toMinutes(days, hours, minutes, diff = 0) {
@@ -28,7 +28,7 @@ function toMinutes(days, hours, minutes, diff = 0) {
 
 function fromMinutes(minutes) {
     const days = Math.floor(minutes / MINUTES_IN_DAY);
-    const dd = Array.from(DAYS.keys())[days];
+    const dd = DAYS[days];
     const hh = Math.floor((minutes - days * MINUTES_IN_DAY) / MINUTES_IN_HOUR);
     const mm = minutes - days * MINUTES_IN_DAY - hh * MINUTES_IN_HOUR;
 
@@ -45,11 +45,12 @@ function parseWokringHours(workingHours) {
             to: toMinutes(day, hoursTo, minutesTo)
         }
     );
+    const schedule = Array.from(DAYS.keys())
+        .slice(0, ROBBERY_DAYS_LIMIT)
+        .map(workingHoursToMinutes);
 
     return [
-        Array.from(DAYS.values())
-            .slice(0, ROBBERY_DAYS_LIMIT)
-            .map(workingHoursToMinutes),
+        schedule,
         timeZone
     ];
 }
@@ -62,7 +63,7 @@ function flatSchedule(schedule) {
 function intervalsToMinutes(intervals, bankTimeZone) {
     const busyTimeToMinutes = scheduleString => {
         const [day, rawTime] = scheduleString.split(' ');
-        const days = DAYS.get(day);
+        const days = DAYS.indexOf(day);
         const [hours, minutes, timeZone] = parseTime(rawTime);
         const diff = bankTimeZone - timeZone;
 
@@ -74,8 +75,7 @@ function intervalsToMinutes(intervals, bankTimeZone) {
         to: busyTimeToMinutes(to)
     });
 
-    return intervals.map(intervalToMinutes)
-        .sort((a, b) => a.from - b.from);
+    return intervals.map(intervalToMinutes).sort((a, b) => a.from - b.from);
 }
 
 function isIntersected(a, b) {
@@ -95,15 +95,18 @@ function unionBusyIntervals(intervals) {
 }
 
 function invertIntervals(intervals) {
-    const goodIntervals = intervals.filter(interval => interval.from <= LATEST_TIME);
+    const robberyIntervals = intervals.filter(interval => interval.from <= LATEST_TIME);
     const invertInterval = (interval, i) => ({
         from: interval.to,
-        to: (goodIntervals[i + 1]) ? goodIntervals[i + 1].from : LATEST_TIME
+        to: (robberyIntervals[i + 1]) ? robberyIntervals[i + 1].from : LATEST_TIME
     });
 
-    return (!goodIntervals.length) ? [{ from: EARLIEST_TIME, to: LATEST_TIME }]
-        : [{ from: EARLIEST_TIME, to: goodIntervals[0].from }]
-            .concat(goodIntervals.map(invertInterval));
+    if (robberyIntervals.length === 0) {
+        return [{ from: EARLIEST_TIME, to: LATEST_TIME }];
+    }
+
+    return [{ from: EARLIEST_TIME, to: robberyIntervals[0].from }]
+        .concat(robberyIntervals.map(invertInterval));
 }
 
 function getRobberyIntervals(intervals, bankSchedule, duration) {
@@ -118,8 +121,6 @@ function getRobberyIntervals(intervals, bankSchedule, duration) {
             robberyIntervals.push(shiftedInterval);
             addShifted(shiftedInterval);
         }
-
-        return;
     };
 
     bankSchedule.forEach(workingHours => intervals.forEach(interval => {
