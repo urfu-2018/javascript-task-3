@@ -1,6 +1,5 @@
-/* eslint-disable complexity */
 'use strict';
-
+/* eslint-disable complexity */
 /**
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
@@ -34,10 +33,11 @@ function toDateObject(minutes) {
 
 function without(range1, range2) {
     const deltaRangeFrom = range2.from - range1.from;
+    const deltaRangeTo = range2.to - range1.to;
     if (range1.to <= range2.from || range2.to <= range1.from) {
         return [range1];
     }
-    if (range2.from <= range1.from && range1.to <= range2.to) {
+    if (deltaRangeFrom <= 0 && deltaRangeTo >= 0) {
         return [null];
     }
     if (range1.from <= range2.from && range2.to <= range1.to) {
@@ -77,18 +77,6 @@ function getMomentForPair(goodTime, badTime) {
         return goodTime2;
 
     }, goodTime);
-
-    /* for (let bad of badTime) {
-        let i = 0;
-        while (i < goodTime.length) {
-            let listOfGood = without(goodTime[i], bad);
-            let j = replace(listOfGood[0], goodTime, i);
-            i = i + j;
-            replace(listOfGood[1], goodTime, goodTime.length);
-        }
-    }
-
-    return goodTime; */
 }
 
 /**
