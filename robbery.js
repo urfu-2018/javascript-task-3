@@ -173,17 +173,18 @@ function addAdditionTimes(intervals, duration) {
 
     return result;
 }
+
+function getFreeTimeIntervals(participantSchedule, bankShift) {
+    return reverseIntervals(getIntervalsForPerson(participantSchedule, bankShift));
+}
 function getAppropriateMoment(schedule, duration, workingHours) {
     const bankInterval = parseBankTime(workingHours);
-    const dannyIntervals = reverseIntervals(getIntervalsForPerson(schedule.Danny,
-        bankInterval.shift));
-    const rustyIntervals = reverseIntervals(getIntervalsForPerson(schedule.Rusty,
-        bankInterval.shift));
-    const linusIntervals = reverseIntervals(getIntervalsForPerson(schedule.Linus,
-        bankInterval.shift));
-    const bankIntervals = getBankOpenIntervals(bankInterval);
-    const participantIntrvals = [dannyIntervals, rustyIntervals, linusIntervals, bankIntervals];
-    let availableIntervals = removeDuplicates(findIntersectionOfAllGroups(participantIntrvals,
+    const participantIntervals = Object.keys(schedule)
+        .filter(x => schedule[x].length !== 0)
+        .map(part => getFreeTimeIntervals(schedule[part], bankInterval.shift));
+
+    participantIntervals.push(getBankOpenIntervals(bankInterval));
+    let availableIntervals = removeDuplicates(findIntersectionOfAllGroups(participantIntervals,
         duration));
     availableIntervals = addAdditionTimes(availableIntervals, duration);
     let pointer = 0;
