@@ -1,5 +1,5 @@
 'use strict';
-/* eslint-disable complexity */
+
 /**
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
@@ -31,16 +31,8 @@ function toDateObject(minutes) {
     return { day: days[day], hours: newHours, minutes: newMinutes };
 }
 
-function without(range1, range2) {
-    const deltaRangeFrom = range2.from - range1.from;
-    const deltaRangeTo = range2.to - range1.to;
-    if (range1.to <= range2.from || range2.to <= range1.from) {
-        return [range1];
-    }
-    if (deltaRangeFrom <= 0 && deltaRangeTo >= 0) {
-        return [null];
-    }
-    if (range1.from <= range2.from && range2.to <= range1.to) {
+function withoutDLC(deltaRangeFrom, deltaRangeTo, range1, range2) {
+    if (deltaRangeFrom >= 0 && deltaRangeTo <= 0) {
         return [
             { from: range1.from, to: range2.from },
             { from: range2.to, to: range1.to }
@@ -51,6 +43,19 @@ function without(range1, range2) {
     }
 
     return [{ from: range2.to, to: range1.to }];
+}
+
+function without(range1, range2) {
+    const deltaRangeFrom = range2.from - range1.from;
+    const deltaRangeTo = range2.to - range1.to;
+    if (range1.to <= range2.from || range2.to <= range1.from) {
+        return [range1];
+    }
+    if (deltaRangeFrom <= 0 && deltaRangeTo >= 0) {
+        return [null];
+    }
+
+    return withoutDLC(deltaRangeFrom, deltaRangeTo, range1, range2);
 }
 
 function replace(element, array, position) {
