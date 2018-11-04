@@ -18,7 +18,6 @@ const numberToWeekDay = { 1: 'ПН', 2: 'ВТ', 3: 'СР' };
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    console.info(schedule, duration, workingHours);
     const bankTimeZone = getTimeZone(workingHours.from);
 
     const timeForRobberySchedule = Object.values(schedule).map(personSchedule =>
@@ -50,8 +49,14 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             }
             const robberyTime = robberyTimes[0].from;
             const weekDay = numberToWeekDay[robberyTime.getDay()];
-            const hours = formatTime(robberyTime.getHours());
-            const minutes = formatTime(robberyTime.getMinutes());
+            const hours = robberyTime
+                .getHours()
+                .toString()
+                .padStart(2, '0');
+            const minutes = robberyTime
+                .getMinutes()
+                .toString()
+                .padStart(2, '0');
 
             return template
                 .replace(/%DD/gi, weekDay)
@@ -91,7 +96,21 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     };
 }
 
+/**
+ * Возвращает декартово произведение двух массивов
+ * @param {Array} a
+ * @param {Array} b
+ * @returns {Array}
+ */
 const cartesianOfTwo = (a, b) => [].concat(...a.map(d => b.map(e => [].concat(d, e))));
+
+/**
+ * Возвращает декартово произведение трёх массивов
+ * @param {Array} a
+ * @param {Array} b
+ * @param  {...any} c
+ * @returns {Array}
+ */
 const cartesianOfThree = (a, b, ...c) => (b ? cartesianOfThree(cartesianOfTwo(a, b), ...c) : a);
 
 function findTimeForRobbery(schedule, duration, timeZone) {
@@ -106,33 +125,7 @@ function findTimeForRobbery(schedule, duration, timeZone) {
         }
     }
 
-    return uniteIntervals(result.sort((x, y) => x.from - y.from));
-}
-
-function uniteIntervals(listOfIntervals) {
-    if (!listOfIntervals.length) {
-        return [];
-    }
-    let result = [listOfIntervals[0]];
-    for (let i = 0; i < listOfIntervals.length - 1; i++) {
-        const interval1 = listOfIntervals[i];
-        const interval2 = listOfIntervals[i + 1];
-        if (interval1.to >= interval2.from) {
-            result.pop();
-            result.push({
-                from: interval1.from,
-                to: interval1.to > interval2.to ? interval1.to : interval2.to
-            });
-        } else {
-            result.push(interval2);
-        }
-    }
-
-    return result;
-}
-
-function formatTime(timeValue) {
-    return timeValue < 10 ? '0' + timeValue : timeValue;
+    return result.sort((x, y) => x.from - y.from);
 }
 
 function parseTime(timeStr) {
@@ -153,16 +146,13 @@ function hasEnoughTime(freeTimeStart, freeTimeEnd, neededTime) {
     return freeTimeEnd - freeTimeStart >= neededTime * 60 * 1000;
 }
 
-function chooseLatestStart(time1, time2, time3) {
-    const timesArray = [time1.from, time2.from, time3.from];
-
-    return timesArray.sort((x, y) => x - y).pop();
+function chooseLatestStart(...times) {
+    return times.reduce((prev, current) => (prev > current.from ? prev : current.from),
+        times[0].from);
 }
 
-function chooseEarliestEnd(time1, time2, time3) {
-    const timesArray = [time1.to, time2.to, time3.to];
-
-    return timesArray.sort((x, y) => x - y)[0];
+function chooseEarliestEnd(...times) {
+    return times.reduce((prev, current) => (prev < current.to ? prev : current.to), times[0].to);
 }
 
 function getGoodTimeForRobberySchedule(schedule, duration, bankWorkingHours) {
