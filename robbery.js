@@ -1,9 +1,10 @@
 'use strict';
 
-var week = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
+var WEEK = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
 var MINUTES_IN_DAY = 60 * 24;
+var MINUTES_IN_HOUR = 60;
 
-function pad(num) {
+function addZero(num) {
     var str = String(num);
 
     return str.length === 2 ? str : `0${str}`;
@@ -11,15 +12,15 @@ function pad(num) {
 
 function timeStrToMinutes(d, bankTimeZone) {
     var arr = d.split(' ');
-    var weekDay = week.indexOf(arr[0]);
+    var weekDay = WEEK.indexOf(arr[0]);
     var timeArr = arr[1].split('+');
     var hoursMinutes = timeArr[0].split(':');
 
-    return weekDay * MINUTES_IN_DAY + Number(hoursMinutes[0]) * 60 +
-        Number(hoursMinutes[1]) + (bankTimeZone - Number(timeArr[1])) * 60;
+    return weekDay * MINUTES_IN_DAY + Number(hoursMinutes[0]) * MINUTES_IN_HOUR +
+        Number(hoursMinutes[1]) + (bankTimeZone - Number(timeArr[1])) * MINUTES_IN_HOUR;
 }
 
-function cut(obj, limit) {
+function cutLimits(obj, limit) {
     return {
         from: obj.from < limit.from ? limit.from : obj.from,
         to: obj.to > limit.to ? limit.to : obj.to
@@ -49,7 +50,7 @@ function invertTimesArray(arr, limit) {
     });
 
     return result.map(function (obj) {
-        return cut(obj, limit);
+        return cutLimits(obj, limit);
     });
 }
 
@@ -112,7 +113,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
     function findAppropriate(limit) {
 
-        var daysForRobbery = week.slice(0, 3);
+        var daysForRobbery = WEEK.slice(0, 3);
         var bankWorkingTime = daysForRobbery.map(function (day) {
             return {
                 from: day + ' ' + workingHours.from,
@@ -168,16 +169,16 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             var m = appropriate.from;
             var day = Math.floor(m / MINUTES_IN_DAY);
 
-            var hour = Math.floor((m - day * MINUTES_IN_DAY) / 60);
-            var minute = m - day * MINUTES_IN_DAY - hour * 60;
+            var hour = Math.floor((m - day * MINUTES_IN_DAY) / MINUTES_IN_HOUR);
+            var minute = m - day * MINUTES_IN_DAY - hour * MINUTES_IN_HOUR;
 
             return template
                 .split('%HH')
-                .join(pad(hour))
+                .join(addZero(hour))
                 .split('%MM')
-                .join(pad(minute))
+                .join(addZero(minute))
                 .split('%DD')
-                .join(week[day]);
+                .join(WEEK[day]);
         },
 
         /**
