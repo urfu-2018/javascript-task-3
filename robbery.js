@@ -128,7 +128,8 @@ function getScheduleInMinutes(schedule, bankTimeZone) {
 
 function checkTime(time, start, duration) {
     return (time.from < start && start < time.to) ||
-        (time.from < start + duration && start + duration < time.to);
+        (time.from < start + duration && start + duration < time.to) ||
+        (time.from > start && time.from < start + duration);
 }
 
 function getPosibleTimes(schedule, duration, workingMinutes) {
