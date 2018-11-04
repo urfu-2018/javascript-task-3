@@ -7,6 +7,8 @@
 const isStar = false;
 const numToWeek = { 1: 'ПН', 2: 'ВТ', 3: 'СР', 4: 'ЧТ', 5: 'ПТ', 6: 'СБ', 7: 'ВС' };
 const weekToNum = { ПН: 1, ВТ: 2, СР: 3, ЧТ: 4, ПТ: 5, СБ: 6, ВС: 7 };
+const millisecondsInHour = 3600 * 1000;
+const millisecondsInMinute = 60000;
 
 /**
  * @param {Object} schedule – Расписание Банды
@@ -45,7 +47,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         tryLater: function () {
             if (result) {
                 const start = new Date(result).getTime();
-                const end = new Date(result + 30 * 60000).getTime();
+                const end = new Date(result + 30 * millisecondsInMinute).getTime();
                 schedule.Danny.push({
                     from: ticksToDate(start, '%DD %HH:%MM+' + 0, 0),
                     to: ticksToDate(end, '%DD %HH:%MM+' + 0, 0)
@@ -130,7 +132,7 @@ function ticksToDate(ticks, format = '%DD %HH:%MM', timeZone = 5) {
     if (!ticks) {
         return '';
     }
-    const date = new Date(ticks + timeZone * 3600 * 1000);
+    const date = new Date(ticks + timeZone * millisecondsInHour);
     const hours = date.getUTCHours().toString();
     const minutes = date.getUTCMinutes().toString();
     const week = numToWeek[date.getUTCDay()];
