@@ -49,6 +49,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             }
             const robberyTime = robberyTimes[0].from;
             const weekDay = numberToWeekDay[robberyTime.getDay()];
+<<<<<<< HEAD
             const hours = robberyTime
                 .getHours()
                 .toString()
@@ -57,6 +58,10 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 .getMinutes()
                 .toString()
                 .padStart(2, '0');
+=======
+            const hours = formatTime(robberyTime.getHours());
+            const minutes = formatTime(robberyTime.getMinutes());
+>>>>>>> 44270e63104a326f58fface95829fbfde1bb2939
 
             return template
                 .replace(/%DD/gi, weekDay)
@@ -126,6 +131,13 @@ function findTimeForRobbery(schedule, duration, timeZone) {
     }
 
     return result.sort((x, y) => x.from - y.from);
+<<<<<<< HEAD
+=======
+}
+
+function formatTime(timeValue) {
+    return timeValue < 10 ? '0' + timeValue : timeValue;
+>>>>>>> 44270e63104a326f58fface95829fbfde1bb2939
 }
 
 function parseTime(timeStr) {
