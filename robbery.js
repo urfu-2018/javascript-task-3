@@ -22,9 +22,9 @@ class TimeInterval {
 
     getStart(timeZone) {
         let startInMinutes = this.from + timeZone * minutesInHour;
-        let day = daysOfTheWeek[parseInt(startInMinutes / minutesInDay)];
-        let hours = parseInt((startInMinutes % minutesInDay) / minutesInHour);
-        let minutes = parseInt((startInMinutes % minutesInDay) % minutesInHour);
+        let day = daysOfTheWeek[Math.floor(startInMinutes / minutesInDay)];
+        let hours = Math.floor((startInMinutes % minutesInDay) / minutesInHour);
+        let minutes = Math.floor((startInMinutes % minutesInDay) % minutesInHour);
 
         return { day, hours, minutes };
     }
