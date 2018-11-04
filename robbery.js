@@ -56,8 +56,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     let index = 0;
 
     let allIntervals = getRobberyFreeIntervals(workingHours, schedule)
-        .filter(i => i.length() >= duration)
-        .sort((a, b) => a.from > b.from);
+        .filter(i => i.length() >= duration);
 
     return {
 
@@ -105,9 +104,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 return true;
             }
 
-            if (index < allIntervals.length) {
-                allIntervals[index].from -= shift;
-            }
+            allIntervals[index].from -= shift;
 
             return false;
 
@@ -160,7 +157,7 @@ function invertIntervals(intervals) {
         lastEndPoint = intervals[i].to;
     }
     invertedIntervals.push(
-        new TimeInterval(lastEndPoint, (daysOfTheWeek.length + 1) * minutesInDay));
+        new TimeInterval(lastEndPoint, daysOfTheWeek.length * minutesInDay));
 
     return invertedIntervals;
 }
