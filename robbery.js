@@ -11,6 +11,7 @@ const HOURS_IN_DAY = 24;
 const DAYS = { 'ПН': 0, 'ВТ': 1, 'СР': 2, 'ЧТ': 3, 'ПТ': 4, 'СБ': 5, 'ВС': 6 };
 const DAYS_BEFORE_CLOSING = 3;
 const MAX_ROBBERY_TIME = DAYS_BEFORE_CLOSING * HOURS_IN_DAY * MINUTES_IN_HOURS - 1;
+const NEXT_TIME = 30;
 
 class Time {
     constructor(day, hours, minutes, timeZone) {
@@ -33,21 +34,21 @@ class Time {
         const hours = String(Math.floor(this.time % (HOURS_IN_DAY * MINUTES_IN_HOURS) /
         MINUTES_IN_HOURS));
 
-        if (hours.length < 2) {
-            return '0' + hours;
-        }
-
-        return hours;
+        return this.getCorrectTime(hours);
     }
 
     getMinutes() {
         const minutes = String(this.time % MINUTES_IN_HOURS);
 
-        if (minutes.length < 2) {
-            return '0' + minutes;
+        return this.getCorrectTime(minutes);
+    }
+
+    getCorrectTime(time) {
+        if (time.length < 2) {
+            return '0' + time;
         }
 
-        return minutes;
+        return time;
     }
 
     changeTimeZone(timeZone) {
@@ -134,7 +135,7 @@ function getRobberiesTime(freeTime, duration) {
 
         while (fTime >= duration) {
             robberyTime.push(copyTime(element.to.time - fTime, element.to.timeZone));
-            fTime -= 30;
+            fTime -= NEXT_TIME;
         }
     });
 
@@ -143,13 +144,13 @@ function getRobberiesTime(freeTime, duration) {
 
 function getFreeTime(schedule, workingHours) {
     const freeTime = [];
-    const unsuitableTime = [];
+    let unsuitableTime = [];
     const keys = Object.keys(DAYS);
 
     for (let i = 0; i < DAYS_BEFORE_CLOSING; i++) {
         freeTime.push({
-            from: convertStringToTime(keys[i] + ' ' + workingHours.from),
-            to: convertStringToTime(keys[i] + ' ' + workingHours.to)
+            from: convertStringToTime(`${keys[i]} ${workingHours.from}`),
+            to: convertStringToTime(`${keys[i]} ${workingHours.to}`)
         });
     }
 
@@ -158,8 +159,8 @@ function getFreeTime(schedule, workingHours) {
             continue;
         }
 
-        const arrayUnsuitableTime = getUnsuitableTime(schedule[key], freeTime[0].from.timeZone);
-        arrayUnsuitableTime.forEach(element => unsuitableTime.push(element));
+        unsuitableTime = unsuitableTime.concat(getUnsuitableTime(schedule[key],
+            freeTime[0].from.timeZone));
     }
 
     return differenceIntervals(freeTime, unionIntervals(unsuitableTime));
@@ -185,40 +186,40 @@ function unionIntervals(unsuitableTime) {
 }
 
 function differenceIntervals(freeTime, unsuitableTime) {
-    const arrayFreeTime = [];
+    let arrayFreeTime = [];
 
     freeTime.forEach(element => {
-        const array = unsuitableTime.reduce((intervals, value) => {
-            for (let i = 0; i < intervals.length; i++) {
-                const fromIncludedInTheInterval = intervals[i].from.time < value.from.time &&
-                intervals[i].to.time > value.from.time;
-                const toIncludedInTheInterval = intervals[i].from.time < value.to.time &&
-                intervals[i].to.time > value.to.time;
-
-                if (fromIncludedInTheInterval && toIncludedInTheInterval) {
-                    intervals.splice(i, 1, {
-                        from: intervals[i].from,
-                        to: value.from
-                    },
-                    {
-                        from: value.to,
-                        to: intervals[i].to
-                    });
-                } else {
-                    intervals[i] = cutLimit(fromIncludedInTheInterval, toIncludedInTheInterval,
-                        intervals[i], value);
-                }
-            }
-
-            return intervals;
-        }, [element]);
-
-        array.forEach(a => {
-            arrayFreeTime.push(a);
-        });
+        arrayFreeTime = arrayFreeTime.concat(unsuitableTime.reduce((intervals, value) => {
+            return getIntervals(intervals, value);
+        }, [element]));
     });
 
     return arrayFreeTime;
+}
+
+function getIntervals(intervals, value) {
+    for (let i = 0; i < intervals.length; i++) {
+        const fromIncludedInTheInterval = intervals[i].from.time < value.from.time &&
+        intervals[i].to.time > value.from.time;
+        const toIncludedInTheInterval = intervals[i].from.time < value.to.time &&
+        intervals[i].to.time > value.to.time;
+
+        if (fromIncludedInTheInterval && toIncludedInTheInterval) {
+            intervals.splice(i, 1, {
+                from: intervals[i].from,
+                to: value.from
+            },
+            {
+                from: value.to,
+                to: intervals[i].to
+            });
+        } else {
+            intervals[i] = cutLimit(fromIncludedInTheInterval, toIncludedInTheInterval,
+                intervals[i], value);
+        }
+    }
+
+    return intervals;
 }
 
 function cutLimit(fromIncludedInTheInterval, toIncludedInTheInterval, intervals, value) {
@@ -232,22 +233,18 @@ function cutLimit(fromIncludedInTheInterval, toIncludedInTheInterval, intervals,
 }
 
 function getUnsuitableTime(intervals, timeZone) {
-    const arrayIntervals = [];
-
-    intervals.forEach(element => {
+    return intervals.map(element => {
         const busyFrom = convertStringToTime(element.from);
         const busyTo = convertStringToTime(element.to);
 
         busyFrom.changeTimeZone(timeZone);
         busyTo.changeTimeZone(timeZone);
 
-        arrayIntervals.push({
+        return {
             from: busyFrom,
             to: busyTo
-        });
+        };
     });
-
-    return arrayIntervals;
 }
 
 function convertStringToTime(stringRepresentationDate) {
