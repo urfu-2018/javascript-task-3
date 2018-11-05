@@ -230,7 +230,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         },
         savePreviousInterval: function () {
             this.previosInterval = this.intervals;
-         },
+        },
         retrievePreviousInterval: function () {
             this.intervals = this.previosInterval;
         }
