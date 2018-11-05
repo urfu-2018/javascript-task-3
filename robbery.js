@@ -22,11 +22,11 @@ function toMinutes(time) {
 }
 
 function toDateObject(minutes) {
-    let day = Math.floor(minutes / MINUTE_PER_DAY);
-    let hours = Math.floor((minutes - day * MINUTE_PER_DAY) / MINUTE_PER_HOUR);
-    minutes -= day * MINUTE_PER_DAY + hours * MINUTE_PER_HOUR;
-    let newMinutes = `0${minutes}`.slice(-2);
-    let newHours = `0${hours}`.slice(-2);
+    const day = Math.floor(minutes / MINUTE_PER_DAY);
+    const hours = Math.floor((minutes - day * MINUTE_PER_DAY) / MINUTE_PER_HOUR);
+    const minutesResult = minutes - (day * MINUTE_PER_DAY + hours * MINUTE_PER_HOUR);
+    const newMinutes = `0${minutesResult}`.slice(-2);
+    const newHours = `0${hours}`.slice(-2);
 
     return { day: days[day], hours: newHours, minutes: newMinutes };
 }
@@ -58,8 +58,8 @@ function without(range1, range2) {
     return withoutDLC(deltaRangeFrom, deltaRangeTo, range1, range2);
 }
 
-function replace(element, array, position) {
-    if (element) {
+function replace(element, array, position, duration) {
+    if (element && element.to - element.from >= duration) {
         array[position] = element;
 
         return 1;
@@ -69,14 +69,14 @@ function replace(element, array, position) {
     return 0;
 }
 
-function getMomentForPair(goodTime, badTime) {
+function getMomentForPair(goodTime, badTime, duration) {
     return badTime.reduce((goodTime2, bad) => {
         let i = 0;
         while (i < goodTime2.length) {
             let listOfGood = without(goodTime2[i], bad);
-            let j = replace(listOfGood[0], goodTime2, i);
+            let j = replace(listOfGood[0], goodTime2, i, duration);
             i = i + j;
-            replace(listOfGood[1], goodTime2, goodTime2.length);
+            replace(listOfGood[1], goodTime2, goodTime2.length, duration);
         }
 
         return goodTime2;
@@ -101,17 +101,15 @@ exports.getAppropriateMoment = function (schedule, duration, workingHours) {
             to: convertTime(time.to, bankZone) })
         ));
     });
-    const goodTime = listOfTimes.reduce(getMomentForPair, [
-        { from: toMinutes('ПН ' + workingHours.from), to: toMinutes('ПН ' + workingHours.to) },
-        { from: toMinutes('ВТ ' + workingHours.from), to: toMinutes('ВТ ' + workingHours.to) },
-        { from: toMinutes('СР ' + workingHours.from), to: toMinutes('СР ' + workingHours.to) }
-    ]);
-
-    const appropriateTime = goodTime.filter(time => time.to - time.from >= duration)
-        .sort((obj1, obj2) => obj1.from - obj2.from);
+    const goodTime = listOfTimes.reduce(
+        (accum, currentValue) => getMomentForPair(accum, currentValue, duration), [
+            { from: toMinutes('ПН ' + workingHours.from), to: toMinutes('ПН ' + workingHours.to) },
+            { from: toMinutes('ВТ ' + workingHours.from), to: toMinutes('ВТ ' + workingHours.to) },
+            { from: toMinutes('СР ' + workingHours.from), to: toMinutes('СР ' + workingHours.to) }
+        ]).sort((obj1, obj2) => obj1.from - obj2.from);
 
     return {
-        allMoments: appropriateTime,
+        allMoments: goodTime,
         momentNumber: 0,
         duration: duration,
 
