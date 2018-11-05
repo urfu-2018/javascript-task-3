@@ -21,7 +21,6 @@ function converting(timeStartOrEnd) {
         .set('ВС', 7);
     date.setUTCDate(daysToConvert.get(timeStartOrEnd.substr(0, 2)));
     let timezone = timeStartOrEnd.substr(8, timeStartOrEnd.length - 8);
-    timezone = check(timezone);
     date.setUTCHours(timeStartOrEnd.substr(3, 2));
     date.setUTCMinutes(timeStartOrEnd.substr(6, 2));
     date.setUTCSeconds(0);
@@ -29,18 +28,6 @@ function converting(timeStartOrEnd) {
     date = date.valueOf() - Number(timezone) * 3600000;
 
     return date;
-}
-
-function check(timezone) {
-    if (timezone[0] === '-' || Number.isNaN(Number(timezone))) {
-        return '+0';
-    }
-    timezone = Number(timezone);
-    if (!Number.isInteger(timezone)) {
-        return 0;
-    }
-
-    return timezone;
 }
 
 function conversionToSpareTime(schedule) {
@@ -88,6 +75,10 @@ function conversionToCommonSpareTime(schedule) {
             }
             if (secondEveryTimeInCommonTime(time, i, leisureInterval)) {
                 leisureInterval.from = time[i + 1].from;
+            }
+            if (time[i].to < leisureInterval.from &&
+            time[i + 1].from > leisureInterval.to) {
+                leisureInterval.to = leisureInterval.from;
             }
         });
     }
