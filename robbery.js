@@ -20,13 +20,12 @@ function converting(timeStartOrEnd) {
         .set('СБ', 6)
         .set('ВС', 7);
     date.setUTCDate(daysToConvert.get(timeStartOrEnd.substr(0, 2)));
-    let regexp = timeStartOrEnd.match(/\+\d{1,}/);
-    regexp[0] = regexp[0].substr(1, regexp[0].length - 1);
+    let timezone = timeStartOrEnd.substr(8, timeStartOrEnd.length - 8);
     date.setUTCHours(timeStartOrEnd.substr(3, 2));
     date.setUTCMinutes(timeStartOrEnd.substr(6, 2));
     date.setUTCSeconds(0);
     date.setUTCMilliseconds(0);
-    date = date.valueOf() - Number(regexp[0]) * 3600000;
+    date = date.valueOf() - Number(timezone) * 3600000;
 
     return date;
 }
