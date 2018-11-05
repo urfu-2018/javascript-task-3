@@ -6,13 +6,16 @@
  */
 const isStar = true;
 const weekdayNames = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
+const dayToIndex = new Map(weekdayNames.map(function (day, index) {
+    return [day, index];
+}));
 const friends = ['Danny', 'Rusty', 'Linus'];
-const friendsCount = friends.length;
+const daysCountForRobbery = 3;
 const hoursInDay = 24;
 const minutesInHour = 60;
 const minutesInDay = hoursInDay * minutesInHour;
 const minTimestamp = 0;
-const maxTimestamp = friendsCount * minutesInDay + 5;
+const maxTimestamp = daysCountForRobbery * minutesInDay + 5;
 const timeBetweenRobberies = 30;
 
 function parseTime(timeString) {
@@ -33,7 +36,7 @@ function parseTime(timeString) {
 
 function getTimestampFromMondayBankOpening(timeString, bankOpening) {
     const time = parseTime(timeString);
-    let timestamp = (weekdayNames.indexOf(time.day) * 24 +
+    let timestamp = (dayToIndex.get(time.day) * 24 +
                      time.hour - bankOpening.hour +
                      bankOpening.timezone - time.timezone) * 60 + time.minute - bankOpening.minute;
     timestamp = Math.max(timestamp, minTimestamp);
@@ -42,31 +45,21 @@ function getTimestampFromMondayBankOpening(timeString, bankOpening) {
     return timestamp;
 }
 
-function initCollisions() {
-    const collisionsByTimestamp = new Array(maxTimestamp);
-    for (let timestamp = 0; timestamp < collisionsByTimestamp.length; timestamp++) {
-        collisionsByTimestamp[timestamp] = 0;
-    }
-
-    return collisionsByTimestamp;
-}
-
 function handleFriends(schedule, bankOpeningTime, collisionsByTimestamp) {
-    for (let friendId = 0; friendId < friendsCount; friendId++) {
-        const friend = friends[friendId];
-        for (let i = 0; i < schedule[friend].length; i++) {
-            const fromTimestamp = getTimestampFromMondayBankOpening(schedule[friend][i].from,
+    friends.forEach(friend => {
+        schedule[friend].forEach(interval => {
+            const fromTimestamp = getTimestampFromMondayBankOpening(interval.from,
                 bankOpeningTime);
-            const toTimestamp = getTimestampFromMondayBankOpening(schedule[friend][i].to,
+            const toTimestamp = getTimestampFromMondayBankOpening(interval.to,
                 bankOpeningTime);
             collisionsByTimestamp[fromTimestamp]++;
             collisionsByTimestamp[toTimestamp]--;
-        }
-    }
+        });
+    });
 }
 
 function calcCollisions(schedule, bankOpeningTime, workingEndTimestamp) {
-    const collisionsByTimestamp = initCollisions();
+    const collisionsByTimestamp = new Array(maxTimestamp).fill(0);
 
     handleFriends(schedule, bankOpeningTime, collisionsByTimestamp);
 
@@ -76,7 +69,7 @@ function calcCollisions(schedule, bankOpeningTime, workingEndTimestamp) {
 
     for (let timestamp = 0; timestamp < maxTimestamp; timestamp++) {
         if (timestamp % minutesInDay >= workingEndTimestamp ||
-            Math.trunc(timestamp / minutesInDay) >= friendsCount) {
+            Math.trunc(timestamp / minutesInDay) >= daysCountForRobbery) {
             collisionsByTimestamp[timestamp] = 1;
         }
     }
@@ -123,6 +116,10 @@ function findGoodMoments(collisionsByTimestamp, bankOpeningTime, duration) {
     return goodMoments;
 }
 
+function createTimeString(time) {
+    return ('0' + time).slice(-2);
+}
+
 /**
  * @param {Object} schedule – Расписание Банды
  * @param {Number} duration - Время на ограбление в минутах
@@ -161,9 +158,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             }
 
             return template
-                .replace('%DD', ('0' + this.goodMoments[this.ansIndex].day).slice(-2))
-                .replace('%HH', ('0' + this.goodMoments[this.ansIndex].hour).slice(-2))
-                .replace('%MM', ('0' + this.goodMoments[this.ansIndex].minute).slice(-2));
+                .replace('%DD', createTimeString(this.goodMoments[this.ansIndex].day))
+                .replace('%HH', createTimeString(this.goodMoments[this.ansIndex].hour))
+                .replace('%MM', createTimeString(this.goodMoments[this.ansIndex].minute));
         },
 
         /**
