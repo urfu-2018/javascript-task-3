@@ -5,8 +5,9 @@
  * Реализовано оба метода и tryLater
  */
 const isStar = true;
-// const isStar = false;
 
+const hoursOnDay = 24;
+const minutesOnHour = 60;
 const weekDates = { ПН: 0, ВТ: 24, СР: 48 };
 
 /**
@@ -19,13 +20,7 @@ const weekDates = { ПН: 0, ВТ: 24, СР: 48 };
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
     const bankTimeZone = getTimeZone(workingHours.from);
-    const bankWorkingMinutes = [];
-    for (let i = 0; i < 3; i++) {
-        bankWorkingMinutes.push({
-            from: convertTimeToMinutes(workingHours.from, bankTimeZone) + i * 24 * 60,
-            to: convertTimeToMinutes(workingHours.to, bankTimeZone) + i * 24 * 60
-        });
-    }
+    const bankWorkingMinutes = getBankWorkingMinutes(workingHours, bankTimeZone);
     const scheduleInMinutes = convertRobersScheduleToMinutes(schedule, bankTimeZone);
     const freeSchedule = getRobersFreeTime(scheduleInMinutes);
     const jointFreeSchedule = getJointRobersFreeTime(freeSchedule);
@@ -81,6 +76,24 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             return false;
         }
     };
+}
+
+/**
+ * @param {Object} workingHours - {from: "10:00+5", to: "18:00+5"}
+ * @param {Number} bankTimeZone
+ * @returns {Array}
+ */
+function getBankWorkingMinutes(workingHours, bankTimeZone) {
+    const bankWorkingMinutes = [];
+    for (let i = 0; i < 3; i++) {
+        const newDay = i * hoursOnDay * minutesOnHour;
+        bankWorkingMinutes.push({
+            from: convertTimeToMinutes(workingHours.from, bankTimeZone) + newDay,
+            to: convertTimeToMinutes(workingHours.to, bankTimeZone) + newDay
+        });
+    }
+
+    return bankWorkingMinutes;
 }
 
 /**
@@ -143,11 +156,12 @@ function getTimeZone(time) {
 function convertTimeToMinutes(time, bankTimeZone) {
     const regTime = /([А-Я]{2} )?(\d{2}):(\d{2})\+(\d{1,2})$/;
     const parsed = time.match(regTime);
-    const [date, hours, minutes, timeZone] = [parsed[1], parsed[2], parsed[3], parsed[4]];
-    const timeInMinutes = (Number(hours) + bankTimeZone - Number(timeZone)) * 60 + Number(minutes);
+    const [date, hours, minutes, timeZone] =
+        [parsed[1], Number(parsed[2]), Number(parsed[3]), Number(parsed[4])];
+    const timeInMinutes = (hours + bankTimeZone - timeZone) * minutesOnHour + minutes;
 
     return typeof date === 'undefined' ? timeInMinutes
-        : timeInMinutes + weekDates[date.slice(0, 2)] * 60;
+        : timeInMinutes + weekDates[date.slice(0, 2)] * minutesOnHour;
 }
 
 /**
@@ -155,15 +169,15 @@ function convertTimeToMinutes(time, bankTimeZone) {
  * @returns {Array}
  */
 function convertTimeFromMinutes(timeInMinutes) {
-    let hours = String(Math.floor(timeInMinutes / 60));
-    const minutes = String(timeInMinutes - hours * 60);
+    let hours = String(Math.floor(timeInMinutes / minutesOnHour));
+    const minutes = String(timeInMinutes - hours * minutesOnHour);
     let day = 'ПН';
-    if (hours >= 24 && hours < 48) {
+    if (hours >= weekDates['ВТ'] && hours < weekDates['СР']) {
         day = 'ВТ';
-    } else if (hours >= 48) {
+    } else if (hours >= weekDates['СР']) {
         day = 'СР';
     }
-    hours = String(hours % 24);
+    hours = String(hours % hoursOnDay);
 
     return [day,
         hours.length === 1 ? `0${hours}` : hours,
@@ -175,7 +189,7 @@ function convertTimeFromMinutes(timeInMinutes) {
  * @returns {Array} - [{from: ..., to: ...}, ...] - свободное время
  */
 function getRobersFreeTime(schedule) {
-    const maxMinute = 3 * 24 * 60 - 1;
+    const maxMinute = 3 * hoursOnDay * minutesOnHour - 1;
     const freeTimeSchedule = [];
     schedule.forEach(robber => {
         const personFreeTime = [];
