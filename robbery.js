@@ -31,31 +31,47 @@ function toDateObject(minutes) {
     return { day: days[day], hours: newHours, minutes: newMinutes };
 }
 
-function withoutDLC(deltaRangeFrom, deltaRangeTo, range1, range2) {
-    if (deltaRangeFrom >= 0 && deltaRangeTo <= 0) {
+function without(range1, range2) {
+    return getFirstRange(range1, range2) ||
+        getEmptyRange(range1, range2) ||
+        getDoubleRange(range1, range2) ||
+        getRangeOfFrom(range1, range2) ||
+        [{ from: range2.to, to: range1.to }];
+}
+
+function getRangeOfFrom(range1, range2) {
+    if (range1.from <= range2.from) {
+        return [{ from: range1.from, to: range2.from }];
+    }
+
+    return false;
+}
+
+function getDoubleRange(range1, range2) {
+    if (range1.from <= range2.from && range2.to <= range1.to) {
         return [
             { from: range1.from, to: range2.from },
             { from: range2.to, to: range1.to }
         ];
     }
-    if (deltaRangeFrom >= 0) {
-        return [{ from: range1.from, to: range2.from }];
-    }
 
-    return [{ from: range2.to, to: range1.to }];
+    return false;
 }
 
-function without(range1, range2) {
-    const deltaRangeFrom = range2.from - range1.from;
-    const deltaRangeTo = range2.to - range1.to;
+function getFirstRange(range1, range2) {
     if (range1.to <= range2.from || range2.to <= range1.from) {
         return [range1];
     }
-    if (deltaRangeFrom <= 0 && deltaRangeTo >= 0) {
+
+    return false;
+}
+
+function getEmptyRange(range1, range2) {
+    if (range2.from <= range1.from && range1.to <= range2.to) {
         return [null];
     }
 
-    return withoutDLC(deltaRangeFrom, deltaRangeTo, range1, range2);
+    return false;
 }
 
 function replace(element, array, position, duration) {
