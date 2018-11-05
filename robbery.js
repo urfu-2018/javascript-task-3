@@ -227,12 +227,6 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         nextSuitableInterval: function () {
             forTryLater.intervals[0].from = forTryLater.intervals[0].from +
             30 * 60000;
-        },
-        savePreviousInterval: function () {
-            this.previosInterval = this.intervals;
-        },
-        retrievePreviousInterval: function () {
-            this.intervals = this.previosInterval;
         }
     };
     forTryLater.filterAndSorting();
@@ -276,16 +270,24 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            forTryLater.savePreviousInterval();
-            if (forTryLater.intervals[1]) {
-                forTryLater.nextSuitableInterval();
-                forTryLater.filterAndSorting();
+            if (!forTryLater.intervals[0]) {
 
-                return true;
+                return false;
             }
-            forTryLater.retrievePreviousInterval();
+            let tempFrom = forTryLater.intervals[0].from;
+            let tempTo = forTryLater.intervals[0].from;
+            forTryLater.nextSuitableInterval();
+            forTryLater.filterAndSorting();
+            if (!forTryLater.intervals[0]) {
+                forTryLater.intervals = [{
+                    from: tempFrom,
+                    to: tempTo
+                }];
 
-            return false;
+                return false;
+            }
+
+            return true;
         }
     };
 }
