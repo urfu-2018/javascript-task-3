@@ -6,6 +6,7 @@
  */
 const isStar = true;
 
+const daysInWeek = 7;
 const hoursInDay = 24;
 const minutesInHour = 60;
 const weekDays = {
@@ -27,8 +28,6 @@ const weekDays = {
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    console.info(schedule, duration, workingHours);
-
     const bankSchedule = [
         { from: 'ПН ' + workingHours.from, to: 'ПН ' + workingHours.to },
         { from: 'ВТ ' + workingHours.from, to: 'ВТ ' + workingHours.to },
@@ -77,7 +76,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (hour.length === 1) {
                 hour = '0' + hour;
             }
-            let minute = (startTime % 60).toString();
+            let minute = (startTime % minutesInHour).toString();
             if (minute.length === 1) {
                 minute = '0' + minute;
             }
@@ -99,8 +98,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             const interval = result[0];
             const factDuration = interval.minutesTo - interval.minutesFrom;
             const needDuration = duration;
-            if (factDuration - 30 >= needDuration) {
-                interval.minutesFrom += 30;
+            if (factDuration - minutesInHour / 2 >= needDuration) {
+                interval.minutesFrom += minutesInHour / 2;
 
                 return true;
             }
@@ -147,7 +146,7 @@ function getFreeTime(intervals) {
     });
     result.push({
         minutesFrom: limit,
-        minutesTo: hoursInDay * 7 * minutesInHour - 1
+        minutesTo: hoursInDay * daysInWeek * minutesInHour - 1
     });
 
     return result;
