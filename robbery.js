@@ -16,51 +16,63 @@ const lastAppropriateMoment = days['ЧТ'] * minutesInDay - 1;
 const delay = 30;
 
 function getMinutesFromWeekStart(splitedDate, bankTimezone = 0) {
+    const [, day, hours, minutes, timezone] = splitedDate;
     let minutesFromWeekStart = 0;
-    minutesFromWeekStart += days[splitedDate[1].toUpperCase()] * minutesInDay;
-    minutesFromWeekStart +=
-        (Number(splitedDate[2]) - Number(splitedDate[4]) + bankTimezone) * minutesInHour;
-    minutesFromWeekStart += Number(splitedDate[3]);
+
+    minutesFromWeekStart += days[day.toUpperCase()] * minutesInDay;
+    minutesFromWeekStart += (Number(hours) - Number(timezone) + bankTimezone) * minutesInHour;
+    minutesFromWeekStart += Number(minutes);
 
     return minutesFromWeekStart;
 }
 
 function getMinutesFromDayStart(splitedDate, bankTimezone = 0) {
+    const [, hours, minutes, timezone] = splitedDate;
     let minutesFromDayStart = 0;
+
     minutesFromDayStart +=
-        (Number(splitedDate[1]) - Number(splitedDate[3]) + bankTimezone) * minutesInHour;
-    minutesFromDayStart += Number(splitedDate[2]);
+        (Number(hours) - Number(timezone) + bankTimezone) * minutesInHour;
+    minutesFromDayStart += Number(minutes);
 
     return minutesFromDayStart;
-}
-
-function getIntervalObject(from, to) {
-    return { from, to };
 }
 
 function toMinutesFromWeekStart(schedule, bankTimezone = 0) {
     return Object.values(schedule).map(robber =>
         robber
-            .map(time => getIntervalObject(
-                weekRegex.exec(time.from),
-                weekRegex.exec(time.to)))
-            .map(splited => getIntervalObject((getMinutesFromWeekStart(splited.from, bankTimezone)),
-                (getMinutesFromWeekStart(splited.to, bankTimezone))))
+            .map(function (time) {
+                return {
+                    from: weekRegex.exec(time.from),
+                    to: weekRegex.exec(time.to) };
+            })
+            .map(function (splited) {
+                return {
+                    from: getMinutesFromWeekStart(splited.from, bankTimezone),
+                    to: getMinutesFromWeekStart(splited.to, bankTimezone) };
+            })
             .sort((first, second) => first.from > second.from));
 }
 
-function getFreeTimeIntervals(schedule) {
-    let freeTimeIntervals = [];
-    let times = [];
-    schedule.forEach(robber => {
-        robber.forEach(interval => {
-            times.push({ from: true, value: interval.from });
-            times.push({ from: false, value: interval.to });
+function getTimesFromFormatedSchedule(schedule) {
+    const reduce = array => [].concat.apply([], array);
+    const intervals = reduce(reduce(schedule));
+
+    return reduce(intervals
+        .map(interval => Object.entries(interval)
+            .map(function (obj) {
+                return {
+                    from: obj[0] === 'from',
+                    value: obj[1] };
+            }))
+    )
+        .sort(function (first, second) {
+            return first.value - second.value;
         });
-    });
-    times = times.sort(function (first, second) {
-        return first.value - second.value;
-    });
+}
+
+function getFreeTimeIntervals(schedule) {
+    const freeTimeIntervals = [];
+    let times = getTimesFromFormatedSchedule(schedule);
     let leftBorder = 0;
     let busyNumber = 0;
     times.forEach(time => {
@@ -94,7 +106,7 @@ function getDateFromMinutes(minutesFromWeekStart) {
 }
 
 function getIntervalObjectsForWeek(workingHoursInterval) {
-    let result = [];
+    const result = [];
     Object.values(days).map(dayNumber =>
         result.push({
             from: workingHoursInterval.from + dayNumber * minutesInDay,
@@ -110,7 +122,7 @@ function haveIntersection(firstInterval, secondInterval) {
 }
 
 function getPossibleIntervals(schedule, workingHours) {
-    let possibleIntervals = [];
+    const possibleIntervals = [];
     workingHours.forEach(bankInterval => {
         schedule.forEach(robberInterval => {
             if (haveIntersection(bankInterval, robberInterval)) {
@@ -134,7 +146,7 @@ function getIntervalsWithDuration(intervals, duration) {
 }
 
 function getIntervalsWithShifts(intervals, duration) {
-    let intervalsWithPossibleShifts = [];
+    const intervalsWithPossibleShifts = [];
     let left = intervals[0].from;
     let counter = 0;
 
