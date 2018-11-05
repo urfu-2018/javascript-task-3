@@ -143,13 +143,13 @@ function conversionToRobberyTime(workingHours, commonSpareTime) {
 function robberyLaterDay(robberyInterval, day) {
     return robberyInterval.from < day.to &&
     robberyInterval.from > day.from &&
-    robberyInterval.to > day.to;
+    robberyInterval.to >= day.to;
 }
 
 function robberyEarlierDay(robberyInterval, day) {
     return robberyInterval.to > day.from &&
     robberyInterval.to < day.to &&
-    robberyInterval.from < day.from;
+    robberyInterval.from <= day.from;
 }
 function dayInRobbery(robberyInterval, day) {
     return robberyInterval.to >= day.to &&
