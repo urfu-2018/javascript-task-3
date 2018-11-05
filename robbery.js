@@ -34,7 +34,6 @@ function toDateObject(minutes) {
 function without(range1, range2) {
     return getFirstRange(range1, range2) ||
         getEmptyRange(range1, range2) ||
-        // getDoubleRange(range1, range2) ||
         getRangeOfFrom(range1, range2) ||
         [{ from: range2.to, to: range1.to }];
 }
@@ -53,17 +52,6 @@ function getRangeOfFrom(range1, range2) {
 
     return result;
 }
-
-/* function getDoubleRange(range1, range2) {
-    if (range1.from <= range2.from && range2.to <= range1.to) {
-        return [
-            { from: range1.from, to: range2.from },
-            { from: range2.to, to: range1.to }
-        ];
-    }
-
-    return false;
-} */
 
 function getFirstRange(range1, range2) {
     if (range1.to <= range2.from || range2.to <= range1.from) {
