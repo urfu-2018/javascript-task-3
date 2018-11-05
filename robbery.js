@@ -270,14 +270,24 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            if (forTryLater.intervals[0]) {
-                forTryLater.nextSuitableInterval();
-                forTryLater.filterAndSorting();
+            if (!forTryLater.intervals[0]) {
 
-                return true;
+                return false;
+            }
+            let tempFrom = forTryLater.intervals[0].from;
+            let tempTo = forTryLater.intervals[0].from;
+            forTryLater.nextSuitableInterval();
+            forTryLater.filterAndSorting();
+            if (!forTryLater.intervals[0]) {
+                forTryLater.intervals = [{
+                    from: tempFrom,
+                    to: tempTo
+                }];
+
+                return false;
             }
 
-            return false;
+            return true;
         }
     };
 }
