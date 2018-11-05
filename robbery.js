@@ -76,10 +76,6 @@ function conversionToCommonSpareTime(schedule) {
             if (secondEveryTimeInCommonTime(time, i, leisureInterval)) {
                 leisureInterval.from = time[i + 1].from;
             }
-            if (time[i].to < leisureInterval.from &&
-            time[i + 1].from > leisureInterval.to) {
-                leisureInterval.to = leisureInterval.from;
-            }
         });
     }
 
@@ -274,24 +270,14 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            if (!forTryLater.intervals[0]) {
+            if (forTryLater.intervals[0]) {
+                forTryLater.nextSuitableInterval();
+                forTryLater.filterAndSorting();
 
-                return false;
-            }
-            let tempFrom = forTryLater.intervals[0].from;
-            let tempTo = forTryLater.intervals[0].from;
-            forTryLater.nextSuitableInterval();
-            forTryLater.filterAndSorting();
-            if (!forTryLater.intervals[0]) {
-                forTryLater.intervals = [{
-                    from: tempFrom,
-                    to: tempTo
-                }];
-
-                return false;
+                return true;
             }
 
-            return true;
+            return false;
         }
     };
 }
