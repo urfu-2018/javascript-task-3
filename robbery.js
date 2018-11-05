@@ -33,11 +33,11 @@ function converting(timeStartOrEnd) {
 
 function check(timezone) {
     if (timezone[0] === '-' || Number.isNaN(Number(timezone))) {
-        throw new TypeError();
+        return '+0';
     }
     timezone = Number(timezone);
     if (!Number.isInteger(timezone)) {
-        throw new TypeError();
+        return 0;
     }
 
     return timezone;
