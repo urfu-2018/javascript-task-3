@@ -8,13 +8,13 @@ const isStar = true;
 
 const days = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
 const robbery = ['ПН', 'ВТ', 'СР'];
-const REGEX_FOR_TIME = /(\D{2}) (\d{2}):(\d{2})\+(\d)|(\d{2}):(\d{2})\+(\d)/;
+const REGEX_FOR_TIME = /(\D{2} )?(\d{2}):(\d{2})\+(\d)/;
 const MIN_IN_DAY = 1440;
 const MIN_IN_HOURS = 60;
 
 function parseTime(time) {
     const data = REGEX_FOR_TIME.exec(time);
-    const day = days.indexOf(data[1]) * MIN_IN_DAY;
+    const day = days.indexOf(data[1].trim()) * MIN_IN_DAY;
     const hour = parseInt(data[2]) * MIN_IN_HOURS;
     const minute = parseInt(data[3]);
     const timeZone = parseInt(data[4]);
@@ -26,7 +26,7 @@ function parseTime(time) {
 function getTimeZone(strTime) {
     const data = REGEX_FOR_TIME.exec(strTime);
 
-    return parseInt(data[7]);
+    return parseInt(data[4]);
 }
 
 function correctTimeZone(time, oldTimeZone, newTimeZone) {
