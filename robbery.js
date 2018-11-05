@@ -21,14 +21,18 @@ function converting(timeStartOrEnd) {
         .set('ВС', 7);
     date.setUTCDate(daysToConvert.get(timeStartOrEnd.substr(0, 2)));
     let timezone = timeStartOrEnd.substr(8, timeStartOrEnd.length - 8);
-    if (timezone[0] === '-') {
-        timezone = '+0';
+    if (timezone[0] === '-' || isNaN(Number(timezone)) === NaN) {
+        throw new TypeError();
+    }
+    timezone = Number(timezone);
+    if (!Number.isInteger(timezone)) {
+        throw new TypeError();
     }
     date.setUTCHours(timeStartOrEnd.substr(3, 2));
     date.setUTCMinutes(timeStartOrEnd.substr(6, 2));
     date.setUTCSeconds(0);
     date.setUTCMilliseconds(0);
-    date = date.valueOf() - Number(timezone) * 3600000;
+    date = date.valueOf() - timezone * 3600000;
 
     return date;
 }
