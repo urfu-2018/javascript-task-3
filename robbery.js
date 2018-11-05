@@ -279,7 +279,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          */
         tryLater: function () {
             forTryLater.savePreviousInterval();
-            if (forTryLater.intervals[1]) {
+            if (forTryLater.intervals[0]) {
                 forTryLater.nextSuitableInterval();
                 forTryLater.filterAndSorting();
 
