@@ -7,6 +7,8 @@
 const isStar = true;
 
 const TASK_TIME = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
+const MINUTES_IN_HOUR = 60;
+const MINUTES_IN_DAY = MINUTES_IN_HOUR * 24;
 
 /**
  * @param {Object} schedule – Расписание Банды
@@ -17,11 +19,11 @@ const TASK_TIME = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    const TIME_ZONE = Number(workingHours.from.split('+')[1]);
-    const BANK_SCHEDULE = getScheduleInMinutes(getWorkSchedule(workingHours), TIME_ZONE);
-    const BUSY_TIME = getScheduleInMinutes(getBusyTime(schedule), TIME_ZONE);
+    const timezone = Number(workingHours.from.split('+')[1]);
+    const bankSchedule = getScheduleInMinutes(getWorkSchedule(workingHours), timezone);
+    const busyTime = getScheduleInMinutes(getBusyTime(schedule), timezone);
 
-    let appropriateMoments = getTimeForRobbery(BANK_SCHEDULE.slice(0, 3), BUSY_TIME, duration)
+    let appropriateMoments = getTimeForRobbery(bankSchedule.slice(0, 3), busyTime, duration)
         .sort((a, b) => a.from - b.from)
         .map(interval => {
             return {
@@ -85,9 +87,9 @@ function parseDate(date) {
 
     return {
         day,
-        hours: parseInt(hours),
-        minutes: parseInt(minutes),
-        timezone: parseInt(timezone)
+        hours: parseInt(hours, 10),
+        minutes: parseInt(minutes, 10),
+        timezone: parseInt(timezone, 10)
     };
 }
 
@@ -118,16 +120,16 @@ function getScheduleInMinutes(schedule, timezone) {
 function getMinutesFromTheBegining(date, timezone) {
     let parsedDate = parseDate(date);
 
-    return TASK_TIME.indexOf(parsedDate.day) * 1440 +
-        (parsedDate.hours + timezone - parsedDate.timezone) * 60 +
+    return TASK_TIME.indexOf(parsedDate.day) * MINUTES_IN_DAY +
+        (parsedDate.hours + timezone - parsedDate.timezone) * MINUTES_IN_HOUR +
         parsedDate.minutes;
 }
 
 function minutesToDate(dateInMinutes) {
-    let day = TASK_TIME[Math.floor(dateInMinutes / 1440)];
-    dateInMinutes = parseInt(dateInMinutes - TASK_TIME.indexOf(day) * 1440);
-    let hours = Math.floor(dateInMinutes / 60);
-    let minutes = dateInMinutes - hours * 60;
+    let day = TASK_TIME[Math.floor(dateInMinutes / MINUTES_IN_DAY)];
+    dateInMinutes = parseInt(dateInMinutes - TASK_TIME.indexOf(day) * MINUTES_IN_DAY);
+    let hours = Math.floor(dateInMinutes / MINUTES_IN_HOUR);
+    let minutes = dateInMinutes - hours * MINUTES_IN_HOUR;
 
     return {
         day,
