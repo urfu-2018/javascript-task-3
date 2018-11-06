@@ -20,6 +20,11 @@ class Time {
         this.offset = offset;
     }
 
+
+    /**
+     * @param {Number} timezone - Timezone offset
+     * @returns {Number} - timestamp in minutes that represents Time in target timezone
+     */
     getTimestamp(timezone) {
         return this.day * MINUTES_IN_DAY +
         this.hour * MINUTES_IN_HOUR +
@@ -27,10 +32,17 @@ class Time {
             (timezone - this.offset) * MINUTES_IN_HOUR;
     }
 
+    /**
+     * @returns {Number} - timestamp in minutes
+     */
     getLocalTimeOfDay() {
         return this.hour * MINUTES_IN_HOUR + this.minute;
     }
 
+    /**
+     * @param {String} s – a string containing time in 'ПН 23:59' format
+     * @returns {Object}
+     */
     static parse(s) {
         let parts = s.split(' ');
         let day = 0;
@@ -45,6 +57,11 @@ class Time {
         return Time.parseTime(day, timeStr);
     }
 
+    /**
+     * @param {String} day - a day string
+     * @param {String} s – a string containing time in '23:59' format
+     * @returns {Object}
+     */
     static parseTime(day, s) {
         const match = s.match(/^(\d+):(\d+)\+(\d+)$/);
 
@@ -160,18 +177,18 @@ function buildSchedule(rawSchedule, workingHours, bankTimeZone) {
 
     return (time) => {
         let timeOfDay = time % MINUTES_IN_DAY;
-        if (!(openTime <= timeOfDay && timeOfDay < closeTime)) {
+        if (openTime > timeOfDay || timeOfDay >= closeTime) {
             return false;
         }
 
-        return busyTimes.every(x => !(x.from <= time && time < x.to));
+        return busyTimes.every(x => x.from > time || time >= x.to);
     };
 }
 
 function *enumerateTimes(schedule) {
-    for (let prop in schedule) {
-        if (schedule.hasOwnProperty(prop)) {
-            yield* schedule[prop];
+    for (let key in schedule) {
+        if (schedule.hasOwnProperty(key)) {
+            yield* schedule[key];
         }
     }
 }
