@@ -5,7 +5,6 @@
  * Реализовано оба метода и tryLater
  */
 const isStar = false;
-const numToWeek = { 1: 'ПН', 2: 'ВТ', 3: 'СР', 4: 'ЧТ', 5: 'ПТ', 6: 'СБ', 7: 'ВС' };
 const weekToNum = { ПН: 1, ВТ: 2, СР: 3, ЧТ: 4, ПТ: 5, СБ: 6, ВС: 7 };
 const millisecondsInHour = 3600 * 1000;
 const millisecondsInMinute = 60000;
@@ -46,22 +45,21 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          */
         tryLater: function () {
             if (result) {
-                const start = new Date(result).getTime();
-                const end = new Date(result + 30 * millisecondsInMinute).getTime();
-                schedule.Danny.push({
-                    from: ticksToDate(start, '%DD %HH:%MM+' + 0, 0),
-                    to: ticksToDate(end, '%DD %HH:%MM+' + 0, 0)
-                });
-                const newMoment = getAppropriateMoment(schedule, duration, workingHours);
-                if (!newMoment.result) {
-                    oldResult = result;
-                }
-                result = newMoment.result;
-
-                return Boolean(result);
+                return false;
             }
 
-            return false;
+            const afterDelay = new Date(result + 30 * millisecondsInMinute).getTime();
+            schedule.Danny.push({
+                from: ticksToDate(result, '%DD %HH:%MM+' + 0, 0),
+                to: ticksToDate(afterDelay, '%DD %HH:%MM+' + 0, 0)
+            });
+            const newMoment = getAppropriateMoment(schedule, duration, workingHours);
+            if (!newMoment.result) {
+                oldResult = result;
+            }
+            result = newMoment.result;
+
+            return Boolean(result);
         },
         result
     };
@@ -82,14 +80,14 @@ function dateToTicks(date) {
  * @returns {[]}
  */
 function unionOfIntervals(intervals) {
-    intervals = intervals.sort((x, y) => x[0] - y[0]);
+    intervals = intervals.sort((x, y) => x.start - y.start);
     const result = [intervals[0]];
 
-    for (let interval of intervals.slice(1)) {
-        if (result[result.length - 1][1] < interval[0]) {
+    for (const interval of intervals.slice(1)) {
+        if (result[result.length - 1].end < interval.start) {
             result.push(interval);
-        } else if (result[result.length - 1][1] < interval[1]) {
-            result[result.length - 1][1] = interval[1];
+        } else if (result[result.length - 1].end < interval.end) {
+            result[result.length - 1].end = interval.end;
         }
     }
 
@@ -97,11 +95,13 @@ function unionOfIntervals(intervals) {
 }
 
 /**
- * @param {[]} intervals
- * @returns {[]}
+ * @param {[{start, end}, ]} intervals
+ * @returns {[{start, end},]} инвертированые интервалы по отрезку
  */
 function invertIntervals(intervals) {
-    intervals = intervals.sort((x, y) => x[0] > y[0]).reduce((a, b) => a.concat(b), []);
+    intervals = intervals
+        .sort((x, y) => x.start > y.start)
+        .reduce((a, b) => Object.values(a).concat(Object.values(b)), []);
     const minTime = dateToTicks('ПН 00:00+14');
     const maxTime = dateToTicks('СР 23:59+0');
 
@@ -116,13 +116,20 @@ function invertIntervals(intervals) {
         intervals.push(maxTime);
     }
 
-    return intervals.reduce((a, c, i) => a.concat(i % 2 ? [[intervals[i - 1], c]] : []), []);
+    return intervals.reduce(
+        (a, c, i) => a.concat(i % 2 ? [{ start: intervals[i - 1], end: c }] : []),
+        []
+    );
 }
 
+/**
+ * @param {[]} schedule - расписание грабителей
+ * @returns {[{start, end}, ]} - интервалы времени
+ */
 function scheduleToTimeIntervals(schedule) {
     const result = [];
-    for (let interval of schedule) {
-        result.push([dateToTicks(interval.from), dateToTicks(interval.to)]);
+    for (const interval of schedule) {
+        result.push({ start: dateToTicks(interval.from), end: dateToTicks(interval.to) });
     }
 
     return result;
@@ -135,7 +142,7 @@ function ticksToDate(ticks, format = '%DD %HH:%MM', timeZone = 5) {
     const date = new Date(ticks + timeZone * millisecondsInHour);
     const hours = date.getUTCHours().toString();
     const minutes = date.getUTCMinutes().toString();
-    const week = numToWeek[date.getUTCDay()];
+    const week = Object.keys(weekToNum)[date.getUTCDay() - 1];
 
     return format
         .replace(/%DD/gi, week)
@@ -159,9 +166,9 @@ function findGoodIntervals(schedule, workingHours) {
 
 function findRoberyTime(schedule, duration, workingHours) {
     const durationTicks = new Date(new Date(0).setMinutes(duration));
-    for (let interval of findGoodIntervals(schedule, workingHours)) {
-        if (interval[1] - interval[0] >= durationTicks) {
-            return interval[0];
+    for (const interval of findGoodIntervals(schedule, workingHours)) {
+        if (interval.end - interval.start >= durationTicks) {
+            return interval.start;
         }
     }
 
