@@ -1,25 +1,33 @@
 'use strict';
 
 const days = { 'ПН': 0, 'ВТ': 1, 'СР': 2, 'ЧТ': 3, 'ПТ': 4, 'СБ': 5, 'ВС': 6 };
+const MINUTES_IN_DAY = 24 * 60;
+const MINUTES_IN_HOUR = 60;
+const START_PRIORITY = 0;
+const FROM_PRIORITY = 1;
+const TO_PRIORITY = 2;
+const END_PRIORITY = 3;
 
 function timeToMinute(time) {
     const partsTime = time.split(':');
 
-    return parseInt(partsTime[0]) * 60 + parseInt(partsTime[1]);
+    return parseInt(partsTime[0], 10) * 60 + parseInt(partsTime[1], 10);
 }
 
 function getMinuteFromTimeStart(day, time, timeZone, workingHours) {
     let minute = 0;
-    minute += days[day] * 24 * 60;
+    minute += days[day] * MINUTES_IN_DAY;
     minute += timeToMinute(time);
-    minute -= parseInt(timeZone) * 60;
-    minute += parseInt(workingHours.from.slice(workingHours.from.length - 1)) * 60;
+    minute -= parseInt(timeZone, 10) * MINUTES_IN_HOUR;
+    minute += parseInt(workingHours.from.slice(workingHours.from.length - 1), 10) * MINUTES_IN_HOUR;
 
     return minute;
 }
 
 function parseDatetime(datetime) {
-    return datetime.split(new RegExp('[+ ]', 'g'));
+    const splitted = datetime.split(new RegExp('[+ ]', 'g'));
+
+    return { day: splitted[0], time: splitted[1], timeZone: splitted[2] };
 }
 
 function getTimePoints(schedule, workingHours) {
@@ -27,22 +35,22 @@ function getTimePoints(schedule, workingHours) {
     Object.keys(schedule)
         .forEach(name => {
             schedule[name].forEach(evnt => {
-                const timePartsFrom = parseDatetime(evnt.from);
-                const from = getMinuteFromTimeStart(timePartsFrom[0], timePartsFrom[1],
-                    timePartsFrom[2], workingHours);
-                const timePartsTo = parseDatetime(evnt.to);
-                const to = getMinuteFromTimeStart(timePartsTo[0], timePartsTo[1],
-                    timePartsTo[2], workingHours);
+                const datetimeFrom = parseDatetime(evnt.from);
+                const from = getMinuteFromTimeStart(datetimeFrom.day, datetimeFrom.time,
+                    datetimeFrom.timeZone, workingHours);
+                const datetimeTo = parseDatetime(evnt.to);
+                const to = getMinuteFromTimeStart(datetimeTo.day, datetimeTo.time,
+                    datetimeTo.timeZone, workingHours);
                 timePoints.push({
                     'name': name,
                     'minute': from,
-                    'priority': 1,
+                    'priority': FROM_PRIORITY,
                     'datetime': evnt.from
                 });
                 timePoints.push({
                     'name': name,
                     'minute': to,
-                    'priority': 2,
+                    'priority': TO_PRIORITY,
                     'datetime': evnt.to
                 });
             });
@@ -59,15 +67,17 @@ function addOpenCloseBankTime(workingHours, timePoints) {
             const partsTimeFrom = parseDatetime(datetimeFrom);
             timePoints.push({
                 'minute':
-                    getMinuteFromTimeStart(day, partsTimeFrom[1], partsTimeFrom[2], workingHours),
-                'priority': 0,
+                    getMinuteFromTimeStart(day, partsTimeFrom.time, partsTimeFrom.timeZone,
+                        workingHours),
+                'priority': START_PRIORITY,
                 'datetime': datetimeFrom
             });
             const datetimeTo = day + ' ' + workingHours.to;
             const partsTimeTo = parseDatetime(datetimeTo);
             timePoints.push({
-                'minute': getMinuteFromTimeStart(day, partsTimeTo[1], partsTimeTo[2], workingHours),
-                'priority': 3,
+                'minute': getMinuteFromTimeStart(day, partsTimeTo.time, partsTimeTo.timeZone,
+                    workingHours),
+                'priority': END_PRIORITY,
                 'datetime': datetimeTo
             });
         });
@@ -87,7 +97,7 @@ function updateIsWorking(isWorkingTime, point) {
 
 function find(timePoints, isFree, duration) {
     let isWorkingTime = false;
-    for (let i = 1; i < timePoints.length; ++i) {
+    for (let i = 1; timePoints && i < timePoints.length; ++i) {
         const first = timePoints[i - 1];
         const second = timePoints[i];
         isWorkingTime = updateIsWorking(isWorkingTime, first);

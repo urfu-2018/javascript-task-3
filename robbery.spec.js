@@ -28,6 +28,56 @@ describe('robbery.getAppropriateMoment()', () => {
         );
     }
 
+    function getMomentFor2(time) {
+        return robbery.getAppropriateMoment(
+            {
+                Danny: [
+                    { from: 'ПН 01:00+1', to: 'СР 23:00+1' }
+                ],
+                Rusty: [
+                ],
+                Linus: [
+                ]
+            },
+            time,
+            { from: '02:00+2', to: '23:59+2' }
+        );
+    }
+
+    function getMomentFor3(time) {
+        return robbery.getAppropriateMoment(
+            {
+                Danny: [
+                    { from: 'ПН 01:00+1', to: 'СР 23:00+1' }
+                ],
+                Rusty: [
+                ],
+                Linus: [
+                ]
+            },
+            time,
+            { from: '00:00+1', to: '23:59+1' }
+        );
+    }
+
+    function getMomentFor4(time) {
+        return robbery.getAppropriateMoment(
+            {
+                Danny: [
+                    { from: 'ПН 00:00+1', to: 'ПН 23:59+1' },
+                    { from: 'ВТ 00:00+1', to: 'ВТ 23:59+1' },
+                    { from: 'СР 00:00+1', to: 'СР 23:59+1' }
+                ],
+                Rusty: [
+                ],
+                Linus: [
+                ]
+            },
+            time,
+            { from: '00:00+1', to: '23:59+1' }
+        );
+    }
+
     it('должен форматировать существующий момент', () => {
         const moment = getMomentFor(90);
 
@@ -40,6 +90,36 @@ describe('robbery.getAppropriateMoment()', () => {
 
     it('должен вернуть пустую строку при форматировании несуществующего момента', () => {
         const moment = getMomentFor(121);
+
+        assert.ok(!moment.exists());
+        assert.strictEqual(
+            moment.format('Метим на %DD, старт в %HH:%MM!'),
+            ''
+        );
+    });
+
+    it('тест на сдвиг в часовом поясе', () => {
+        const moment = getMomentFor2(30);
+
+        assert.ok(!moment.exists());
+        assert.strictEqual(
+            moment.format('Метим на %DD, старт в %HH:%MM!'),
+            ''
+        );
+    });
+
+    it('тест на отсутствие тайм зоны', () => {
+        const moment = getMomentFor3(90);
+
+        assert.ok(!moment.exists());
+        assert.strictEqual(
+            moment.format('Метим на %DD, старт в %HH:%MM!'),
+            ''
+        );
+    });
+
+    it('тест на сорт', () => {
+        const moment = getMomentFor4(90);
 
         assert.ok(!moment.exists());
         assert.strictEqual(
