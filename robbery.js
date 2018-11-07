@@ -7,10 +7,11 @@
 const isStar = true;
 const minutesFromStart = {
     'ПН': 0,
-    'ВТ': 1440,
-    'СР': 2880,
-    'ЧТ': 4320
+    'ВТ': 1,
+    'СР': 2,
+    'ЧТ': 3
 };
+const minutesInDay = 1440;
 let intersections = [];
 
 /**
@@ -25,10 +26,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     intersections = formatBankWorkingHours(workingHours);
     const bankTimezone = workingHours.from.split('+')[1];
 
-    for (let member of Object.keys(schedule)) {
-        for (let daySchedule of schedule[member]) {
-            const tmp = daySchedule.from.replace(/[+:]/g, ' ').split(' ');
-            const memberTimezone = tmp[3];
+    for (const member of Object.keys(schedule)) {
+        for (const daySchedule of schedule[member]) {
+            const memberTimezone = Number(daySchedule.from.split('+')[1]);
             const timezoneDiff = (bankTimezone - memberTimezone) * 60;
             const workingDay = {
                 from: calculateInMinutes(daySchedule.from, timezoneDiff),
@@ -39,7 +39,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         }
     }
 
-    filterIntersictions(duration);
+    removeShortIntersections(duration);
 
     return {
 
@@ -109,13 +109,15 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 }
 
 function formatBankWorkingHours(workingHours) {
-    const fromTmp = workingHours.from.replace(/[+:]/g, ' ').split(' ');
-    const hoursFrom = Number(fromTmp[0]);
-    const minutesFrom = Number(fromTmp[1]);
+    const [hoursFrom, minutesFrom] = workingHours.from
+        .match(/(\d{2}):(\d{2})/)
+        .slice(1)
+        .map(Number);
 
-    const toTmp = workingHours.to.replace(/[+:]/g, ' ').split(' ');
-    const hoursTo = Number(toTmp[0]);
-    const minutesTo = Number(toTmp[1]);
+    const [hoursTo, minutesTo] = workingHours.to
+        .match(/(\d{2}):(\d{2})/)
+        .slice(1)
+        .map(Number);
 
     return [
         { from: hoursFrom * 60 + minutesFrom, to: hoursTo * 60 + minutesTo },
@@ -125,36 +127,33 @@ function formatBankWorkingHours(workingHours) {
 }
 
 function calculateInMinutes(time, timezoneDiff) {
-    const tmp = time.replace(/[+:]/g, ' ').split(' ');
-    const dayOfTheWeek = tmp[0];
-    const hours = Number(tmp[1]);
-    const minutes = Number(tmp[2]);
+    const timeParts = time.split(/\s|:|\+/);
+    const dayOfTheWeek = timeParts[0];
+    const hours = Number(timeParts[1]);
+    const minutes = Number(timeParts[2]);
 
     if (!Object.keys(minutesFromStart).includes(dayOfTheWeek)) {
-        return Number.MAX_VALUE;
+        return Infinity;
     }
 
-    return hours * 60 + minutes + timezoneDiff + minutesFromStart[dayOfTheWeek];
+    return hours * 60 + minutes + timezoneDiff + minutesFromStart[dayOfTheWeek] * minutesInDay;
 }
 
 function findIntersections(daySchedule) {
     let clone = intersections.slice();
-    // let clone = Object.assign([], intersections);
     for (const interval of clone) {
         intersect(interval, daySchedule);
     }
 }
 
 function intersect(interval, daySchedule) {
-    // const start = daySchedule.from;
-    // const end = daySchedule.to;
     if (daySchedule.from >= interval.to || daySchedule.to <= interval.from) {
         return;
     }
-    changeIntersections(interval, daySchedule);
+    updateIntersections(interval, daySchedule);
 }
 
-function changeIntersections(interval, daySchedule) {
+function updateIntersections(interval, daySchedule) {
     const index = intersections.indexOf(interval);
     if (daySchedule.from > interval.from) {
         if (daySchedule.to < interval.to) {
@@ -171,7 +170,7 @@ function changeIntersections(interval, daySchedule) {
     }
 }
 
-function filterIntersictions(duration) {
+function removeShortIntersections(duration) {
     intersections = intersections.filter(interval => interval.to - interval.from >= duration);
 }
 
