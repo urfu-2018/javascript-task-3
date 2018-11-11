@@ -17,7 +17,7 @@ function getPartInterval(partGap) {
     if (timeGap === null) {
         timeGap = getParsRegEx(partGap);
     }
-    
+
     return { day: timeGap[1], hours: Number(timeGap[2]),
         minutes: Number(timeGap[3]), timeZone: Number(timeGap[4]) };
 }
@@ -113,8 +113,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         intervalsGangs.push(getParseFullInterval(interval, banksZone));
     }
     let intervalsRobbers = [];
-   Object.keys(schedule).map((person) => {
-        schedule[person].map((interval) => {
+    Object.keys(schedule).map((person) => { return
+        schedule[person].map((interval) => { return
             intervalsRobbers.push(getParseFullInterval(getFullInterval(interval), banksZone));
         });
     });
