@@ -130,6 +130,18 @@ function fiilTheManProperties(man, array, start, end) {
     return man;
 }
 
+function filMiniMap(d, miniMap, day) {
+    if (d.firstDelta < miniMap[day].firstDelta) {
+        miniMap[day].firstDelta = d.firstDelta;
+        miniMap[day].first = d.first;
+    }
+    if (d.secondDelta < miniMap[day].secondDelta) {
+        miniMap[day].secondDelta = d.secondDelta;
+        miniMap[day].second = d.second;
+    }
+    return miniMap;
+}
+
 function findRoberyTime(schedule, duration, workingHours) {
     const bankTimeDelta = getDeltaTime(workingHours.from);
     var kek =  JSON.stringify(schedule);
@@ -152,7 +164,48 @@ function findRoberyTime(schedule, duration, workingHours) {
         wednesday:{}
     };
     dannyMap = fiilTheManProperties(dannyMap, kek.Danny, start, end);
-    console.info(dannyMap);
+    let rustyMap = {
+        monday:{},
+        tuesday:{},
+        wednesday:{}
+    };
+    rustyMap = fiilTheManProperties(rustyMap, kek.Rusty, start, end);
+    let linusMap = {
+        monday:{},
+        tuesday:{},
+        wednesday:{}
+    };
+    linusMap = fiilTheManProperties(dannyMap, kek.Linus, start, end);
+    let miniMap = {
+        monday:{
+            first: 1440,
+            second: 1440,
+            firstDelta: 1440,
+            secondDelta: 1440
+        },
+        tuesday:{
+            first: 1440,
+            second: 1440,
+            firstDelta: 1440,
+            secondDelta: 1440
+        },
+        wednesday:{
+            first: 1440,
+            second: 1440,
+            firstDelta: 1440,
+            secondDelta: 1440
+        }
+    };
+    miniMap = filMiniMap(dannyMap.monday, miniMap, 'monday');
+    miniMap = filMiniMap(dannyMap.tuesday, miniMap, 'tuesday');
+    miniMap = filMiniMap(dannyMap.wednesday, miniMap, 'wednesday');
+    miniMap = filMiniMap(rustyMap.monday, miniMap, 'monday');
+    miniMap = filMiniMap(rustyMap.tuesday, miniMap, 'tuesday');
+    miniMap = filMiniMap(rustyMap.wednesday, miniMap, 'wednesday');
+    miniMap = filMiniMap(linusMap.monday, miniMap, 'monday');
+    miniMap = filMiniMap(linusMap.tuesday, miniMap, 'tuesday');
+    miniMap = filMiniMap(linusMap.wednesday, miniMap, 'wednesday');
+    console.info(miniMap);
 }
 /**
  * @param {Object} schedule – Расписание Банды
