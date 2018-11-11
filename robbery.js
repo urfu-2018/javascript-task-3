@@ -8,15 +8,6 @@ const isStar = false;
 const DAYS_KEYS= { 'ПН': 0, 'ВТ': 1, 'СР': 2, 'ЧТ': 3, 'ПТ': 4, 'СБ': 5, 'ВС': 6 };
 const NUMBER_KEYS = { 0: 'ПН', 1: 'ВТ', 2: 'СР', 3: 'ЧТ', 4: 'ПТ', 5: 'СБ', 6: 'ВС' };
 
-function clone(obj) {
-    if (null == obj || "object" != typeof obj) return obj;
-    var copy = obj.constructor();
-    for (var attr in obj) {
-        if (obj.hasOwnProperty(attr)) copy[attr] = obj[attr];
-    }
-    return copy;
-}
-
 function getDeltaTime(str) {
     return parseInt(str.match(/[+]\d+/).toString().substr(1));
 }
@@ -113,13 +104,11 @@ function convertOccupiedSchedule(scheduleMan) {
 
 function findRoberyTime(schedule, duration, workingHours) {
     const bankTimeDelta = getDeltaTime(workingHours.from);
-    schedule.Danny = convertTimeZone(schedule.Danny, bankTimeDelta);
-    schedule.Rusty = convertTimeZone(schedule.Rusty, bankTimeDelta);
-    schedule.Linus = convertTimeZone(schedule.Linus, bankTimeDelta);
-    let kek = clone(schedule);
-    kek.Danny = convertOccupiedSchedule(schedule.Danny);
-    kek.Rusty = convertOccupiedSchedule(schedule.Rusty);
-    kek.Linus = convertOccupiedSchedule(schedule.Linus);
+    var kek =  JSON.stringify(schedule);
+    kek = JSON.parse(kek);
+    kek.Danny = convertTimeZone(kek.Danny, bankTimeDelta);
+    kek.Rusty = convertTimeZone(kek.Rusty, bankTimeDelta);
+    kek.Linus = convertTimeZone(kek.Linus, bankTimeDelta);
     console.info(kek);
 }
 /**
@@ -131,9 +120,9 @@ function findRoberyTime(schedule, duration, workingHours) {
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    console.info(schedule, duration, workingHours);
-    let kek = clone(schedule);
-    findRoberyTime(kek, duration, workingHours);
+    //console.info(schedule, duration, workingHours);
+    
+    findRoberyTime(schedule, duration, workingHours);
     return {
         /**
          * Найдено ли время
