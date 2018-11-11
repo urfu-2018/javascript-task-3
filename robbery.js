@@ -102,6 +102,34 @@ function convertOccupiedSchedule(scheduleMan) {
     return scheduleMan;
 }
 
+function fillTheDay(day, from, to, start, end, obj) {
+    if (getDayFromStr(from) === day) {
+        let num = parseInt(from.substring(3,from.length));
+        if (num > start && num < end) {
+            obj.first = start;
+            obj.firstDelta = num - start;
+        }
+        if (getDayFromStr(to) === day) {
+            let num = parseInt(to.substring(3,to.length));
+            if (num > start && num < end) {
+                obj.second = num;
+                obj.secondDelta = end - num;
+            }
+        }
+    }
+    
+    return obj;
+}
+
+function fiilTheManProperties(man, array, start, end) {
+    for (let i = 0; i<array.length; i++) {
+        man.monday = fillTheDay('ПН', array[i].from, array[i].to, start, end, man.monday);
+        man.tuesday = fillTheDay('ВТ', array[i].from, array[i].to, start, end, man.tuesday);
+        man.wednesday = fillTheDay('СР', array[i].from, array[i].to, start, end, man.wednesday);
+    }
+    return man;
+}
+
 function findRoberyTime(schedule, duration, workingHours) {
     const bankTimeDelta = getDeltaTime(workingHours.from);
     var kek =  JSON.stringify(schedule);
@@ -109,7 +137,22 @@ function findRoberyTime(schedule, duration, workingHours) {
     kek.Danny = convertTimeZone(kek.Danny, bankTimeDelta);
     kek.Rusty = convertTimeZone(kek.Rusty, bankTimeDelta);
     kek.Linus = convertTimeZone(kek.Linus, bankTimeDelta);
-    console.info(kek);
+    kek.Danny = convertOccupiedSchedule(kek.Danny);
+    kek.Rusty = convertOccupiedSchedule(kek.Rusty);
+    kek.Linus = convertOccupiedSchedule(kek.Linus);
+    let delta = {
+        from: getHoursFromStr(workingHours.from)*60 + getMinutesFromStr(workingHours.from),
+        to: getHoursFromStr(workingHours.to)*60 + getMinutesFromStr(workingHours.to)
+    };
+    let start = parseInt(delta.from);
+    let end = parseInt(delta.to);
+    let dannyMap = {
+        monday:{},
+        tuesday:{},
+        wednesday:{}
+    };
+    dannyMap = fiilTheManProperties(dannyMap, kek.Danny, start, end);
+    console.info(dannyMap);
 }
 /**
  * @param {Object} schedule – Расписание Банды
