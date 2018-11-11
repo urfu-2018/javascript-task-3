@@ -205,7 +205,33 @@ function findRoberyTime(schedule, duration, workingHours) {
     miniMap = filMiniMap(linusMap.monday, miniMap, 'monday');
     miniMap = filMiniMap(linusMap.tuesday, miniMap, 'tuesday');
     miniMap = filMiniMap(linusMap.wednesday, miniMap, 'wednesday');
-    console.info(miniMap);
+    let time = -1;
+    let day = 's';
+    if (miniMap.monday.firstDelta >= duration) {
+        time = miniMap.monday.first;
+        day = 'ПН';
+    }
+    if (miniMap.monday.secondDelta >= duration) {
+        time = miniMap.monday.second;
+        day = 'ПН';
+    }
+    if (miniMap.tuesday.firstDelta >= duration) {
+        time = miniMap.tuesday.first;
+        day = 'ВТ';
+    }
+    if (miniMap.tuesday.secondDelta >= duration) {
+        time = miniMap.tuesday.second;
+        day = 'ВТ';
+    }
+    if (miniMap.wednesday.firstDelta >= duration) {
+        time = miniMap.wednesday.first;
+        day = 'СР';
+    }
+    if (miniMap.wednesday.secondDelta >= duration) {
+        time = miniMap.wednesday.second;
+        day = 'СР';
+    }
+    console.info(day + " " + time);
 }
 /**
  * @param {Object} schedule – Расписание Банды
