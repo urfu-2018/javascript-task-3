@@ -116,7 +116,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     Object.keys(schedule).map(person => {
         return schedule[person].map(interval => {
             return intervalsRobbers.push(getParseFullInterval(
-                    getFullInterval(interval), banksZone));
+            getFullInterval(interval), banksZone));
         });
     });
     intervalsRobbers.forEach(robbersInterval => {
