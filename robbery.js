@@ -7,7 +7,9 @@
 const isStar = true;
 const days = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
 const gangMembers = ['Danny', 'Rusty', 'Linus'];
-const dayDurationInMinutes = 24 * 60;
+const minutesInHour = 60;
+const hoursInADay = 24;
+const dayDurationInMinutes = hoursInADay * minutesInHour;
 let startOfWeek;
 let endOfWeek;
 let robbingSchedule;
@@ -23,8 +25,7 @@ class TimeInterval {
     }
 
     doesNotIntersect(timeInterval) {
-        return this.from <= timeInterval.from && this.to <= timeInterval.from ||
-            this.from >= timeInterval.to && this.to >= timeInterval.to;
+        return this.to <= timeInterval.from || this.from >= timeInterval.to;
     }
 
     getIntersection(interval) {
@@ -43,7 +44,7 @@ class TimeInterval {
     }
 }
 
-function getRobbingSchedule(bankTimeZone) {
+function getRobbingDeadlines(bankTimeZone) {
     return days.slice(0, 3).map(day =>
         TimeInterval.fromStrings(`${day} 00:00+${bankTimeZone}`, `${day} 23:59+${bankTimeZone}`)
     );
@@ -59,15 +60,15 @@ function convertToMinutes(str) {
     const hours = parseInt(hh) - parseInt(timezone);
     const minutes = parseInt(mm);
 
-    return minutesFromWeekStart + hours * 60 + minutes;
+    return minutesFromWeekStart + hours * minutesInHour + minutes;
 }
 
 // Надеюсь, я смогу это отрефакторить, но пока пусть будет так.
 // eslint-disable-next-line max-statements
-function parseTimePoints(schedule) {
+function extractTimePoints(schedule) {
     let weekInterval = new TimeInterval(startOfWeek, endOfWeek);
 
-    let res = [];
+    let timePoints = [];
     for (let i = 0; i < schedule.length; i++) {
         const time = schedule[i];
         const busyTime = TimeInterval.fromStrings(time.from, time.to);
@@ -84,13 +85,13 @@ function parseTimePoints(schedule) {
             weekInterval.to = busyTime.from;
             continue;
         }
-        res.push(busyTime.from);
-        res.push(busyTime.to);
+        timePoints.push(busyTime.from);
+        timePoints.push(busyTime.to);
     }
-    res.unshift(weekInterval.from);
-    res.push(weekInterval.to);
+    timePoints.unshift(weekInterval.from);
+    timePoints.push(weekInterval.to);
 
-    return res;
+    return timePoints;
 }
 
 function combineTimePoints(timePoints) {
@@ -106,7 +107,7 @@ function getGangFreeTimeIntervals(schedule) {
     let freeIntervals = {};
 
     gangMembers.forEach(gangMember => {
-        freeIntervals[gangMember] = combineTimePoints(parseTimePoints(schedule[gangMember]));
+        freeIntervals[gangMember] = combineTimePoints(extractTimePoints(schedule[gangMember]));
     });
 
     return freeIntervals;
@@ -156,8 +157,8 @@ function extractDayHoursMinutes(timeInMinutes) {
     const dayIndex = Math.floor(timeInMinutes / dayDurationInMinutes);
     const day = days[dayIndex];
     const dayMinutes = timeInMinutes % dayDurationInMinutes;
-    const hours = Math.floor(dayMinutes / 60);
-    const minutes = dayMinutes - hours * 60;
+    const hours = Math.floor(dayMinutes / minutesInHour);
+    const minutes = dayMinutes - hours * minutesInHour;
 
     return [day, hours.toString(), minutes.toString()];
 }
@@ -169,13 +170,9 @@ function formatTemplate(template, day, hours, minutes) {
 }
 
 function fillBankSchedule(bankWorkingHours) {
-    let bankSchedule = [];
-    days.forEach(day =>
-        bankSchedule.push(
-            TimeInterval.fromStrings(`${day} ${bankWorkingHours.from}`,
-                `${day} ${bankWorkingHours.to}`)));
-
-    return bankSchedule;
+    return days.map(day =>
+        TimeInterval.fromStrings(`${day} ${bankWorkingHours.from}`, `${day} ${bankWorkingHours.to}`)
+    );
 }
 
 /**
@@ -187,11 +184,10 @@ function fillBankSchedule(bankWorkingHours) {
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    console.info(schedule, duration, workingHours);
     const bankTimezone = parseInt(workingHours.from.slice(6));
     startOfWeek = convertToMinutes(`ПН 00:00+${bankTimezone}`);
     endOfWeek = convertToMinutes(`СР 23:59+${bankTimezone}`);
-    robbingSchedule = getRobbingSchedule(bankTimezone);
+    robbingSchedule = getRobbingDeadlines(bankTimezone);
 
     const gangSchedule = getGangFreeTimeIntervals(schedule);
     const bankSchedule = fillBankSchedule(workingHours);
@@ -222,7 +218,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 return '';
             }
             const currentRobberyInterval = intersections[pointer];
-            const startTime = currentRobberyInterval.from + bankTimezone * 60;
+            const startTime = currentRobberyInterval.from + bankTimezone * minutesInHour;
 
             return formatTemplate(template, ...extractDayHoursMinutes(startTime));
         },
@@ -237,7 +233,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 return false;
             }
 
-            const halfOfAnHour = 30;
+            const halfOfAnHour = minutesInHour / 2;
             let currentDate = intersections[pointer];
 
             if (currentDate.from + halfOfAnHour + duration <= currentDate.to) {
