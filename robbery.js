@@ -14,7 +14,9 @@ function getParsRegEx(gap) {
 
 function getPartInterval(partGap) {
     let timeGap = getParsRegEx(partGap);
-
+        if (timeGap === null) {
+         timeGap = getParsRegEx(partGap);
+        }
     return { day: timeGap[1], hours: Number(timeGap[2]),
         minutes: Number(timeGap[3]), timeZone: Number(timeGap[4]) };
 }
@@ -32,7 +34,7 @@ function getParseFullInterval(fullInterval, timeZone) {
         (fullInterval.to.hours + mainTimeZone) * 60 +
         fullInterval.to.minutes;
 
-    return { start: start, end: end };
+    return { start, end };
 }
 
 function checkInclusion(firstInterval, secondInterval) {
@@ -102,19 +104,19 @@ function getBanks(banksHours) {
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    let banksHours = getFullInterval(workingHours);
-    let banksZone = banksHours.to.timeZone;
-    let banksInterval = getBanks(banksHours);
+    const banksHours = getFullInterval(workingHours);
+    const banksZone = banksHours.to.timeZone;
+    const banksInterval = getBanks(banksHours);
     let intervalsGangs = [];
     for (let interval of banksInterval) {
         intervalsGangs.push(getParseFullInterval(interval, banksZone));
     }
     let intervalsRobbers = [];
-    Object.keys(schedule).forEach((person) => {
-        schedule[person].forEach((interval) => {
+    Object.keys(schedule).forEach(person) => {
+        schedule[person].forEach(interval) => {
             intervalsRobbers.push(getParseFullInterval(getFullInterval(interval), banksZone));
-        });
-    });
+        };
+    };
     intervalsRobbers.forEach(robbersInterval => {
         intervalsGangs = allIntersect(intervalsGangs, robbersInterval);
     });
