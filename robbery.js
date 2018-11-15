@@ -9,25 +9,21 @@ const isStar = false;
 const MINUTES_IN_HOUR = 60;
 const HOURS_IN_DAY = 24;
 const MINUTES_IN_DAY = MINUTES_IN_HOUR * HOURS_IN_DAY;
-const THIRTY_MINUTES = 30;
-
 const DAYS_OF_WEEK = ['ПН', 'ВТ', 'СР'];
+const MINUTES_IN_ROBBERY_PERIOD = DAYS_OF_WEEK.length * MINUTES_IN_DAY;
 
 let robbery = {};
 
-function refreshRobbery() {
+function initRobbery() {
     robbery = {
-        possibility: {
-            isPossible: false
-        },
-        startMinute: '',
-        tryLater: false
+        isPossible: false,
+        startMinute: ''
     };
 }
 
-function getDataAndTimeFromMinute(startTime) {
-    let mod = startTime % MINUTES_IN_DAY;
-    let day = (startTime - mod) / MINUTES_IN_DAY;
+function dateTimeFromMinute(startTime) {
+    const mod = startTime % MINUTES_IN_DAY;
+    const day = (startTime - mod) / MINUTES_IN_DAY;
     let minute = mod % MINUTES_IN_HOUR;
     let hour = (mod - minute) / MINUTES_IN_HOUR;
     if (minute < 10) {
@@ -44,17 +40,21 @@ function getDataAndTimeFromMinute(startTime) {
     };
 }
 
-function intersectRobberAndBankSheduleInDayPeriod(day, robberSchedule, bankSchedule) {
+function intersectSchedules(day, robberSchedule, bankSchedule) {
     let intersections = [];
-    robberSchedule.filter(r => r.day === day).forEach(robberSchedulePoint => {
-        bankSchedule.filter(b => b.day === day).forEach(bankSchedulePoint => {
-            const intersection = intersectIntervals(robberSchedulePoint, bankSchedulePoint);
-            if (intersection) {
-                intersection.day = day;
-                intersections.push(intersection);
-            }
+    robberSchedule
+        .filter(point => point.day === day)
+        .forEach(robberSchedulePoint => {
+            bankSchedule
+                .filter(point => point.day === day)
+                .forEach(bankSchedulePoint => {
+                    const intersection = intersectIntervals(robberSchedulePoint, bankSchedulePoint);
+                    if (intersection) {
+                        intersection.day = day;
+                        intersections.push(intersection);
+                    }
+                });
         });
-    });
 
     return intersections;
 }
@@ -64,7 +64,7 @@ function intersectIntervals(interval1, interval2) {
     const minEnd = Math.min(interval1.end, interval2.end);
 
     if (maxStart >= minEnd) {
-        return undefined;
+        return null;
     }
 
     return {
@@ -73,71 +73,43 @@ function intersectIntervals(interval1, interval2) {
     };
 }
 
-function changeRobberyFields(currentInterval, duration) {
-    if (currentInterval.end - currentInterval.start < duration) {
-        return false;
-    }
-
-    robbery.possibility.isPossible = true;
-    Object.freeze(robbery.possibility);
-    robbery.startMinute = currentInterval.start;
-
-    return true;
-}
-
-function tryLaterInternal(currentInterval, duration) {
-    const start = Math.max(robbery.startMinute + THIRTY_MINUTES, currentInterval.start);
-    if (currentInterval.end - start < duration) {
-        return false;
-    }
-
-    robbery.startMinute = start;
-    robbery.tryLater = true;
-
-    return true;
-}
-
-function tryLater(intervalsForRobbery, duration) {
+function findIntervalForRobbery(intervalsForRobbery, duration) {
     for (let i = 0; i < intervalsForRobbery.length; i++) {
-        if (tryLaterInternal(intervalsForRobbery[i], duration)) {
+        const interval = intervalsForRobbery[i];
+        if (interval.end - interval.start >= duration) {
+            robbery.isPossible = true;
+            robbery.startMinute = interval.start;
             break;
         }
     }
 }
 
-function fillRobberyFields(intervalsForRobbery, duration) {
-    for (let i = 0; i < intervalsForRobbery.length; i++) {
-        if (changeRobberyFields(intervalsForRobbery[i], duration)) {
-            break;
-        }
-    }
-}
+function getIntervalsForRobbery(schedule, duration, workingHours) {
+    const bankSchedule = getBankSchedule(workingHours);
+    const bankTimeZone = bankSchedule.timezone;
+    let intervalsForRobbery = bankSchedule.schedule;
 
-function getTimesToRobbery(schedule, duration, workingHours) {
-    let informationAboutBank = getInformationAboutBank(workingHours);
-    const bankTimeZone = informationAboutBank.timezone;
-    let bankSchedule = informationAboutBank.schedule;
+    Object.keys(schedule)
+        .forEach(robber => {
+            const robberSchedule = schedule[robber].map(schedulePoint => {
+                return getRobberBusyTimeInterval(schedulePoint, bankTimeZone);
+            });
 
-    Object.keys(schedule).forEach(robber => {
-        let robberSchedule = schedule[robber].map(schedulePoint => {
-            return getRobberBusyTimeInterval(schedulePoint, bankTimeZone);
-        });
-
-        let splitByDaysSchedule =
-            getFreeTimeSchedule(robberSchedule)
+            const splitByDaysSchedule = getFreeTimeSchedule(robberSchedule)
                 .reduce(splitByDays, []);
 
-        let recalculatedBankSchedule = [];
+            let recalculatedIntervals = [];
 
-        getIndexesOfDays().forEach(day => {
-            recalculatedBankSchedule = recalculatedBankSchedule.concat(
-                intersectRobberAndBankSheduleInDayPeriod(day, splitByDaysSchedule, bankSchedule));
+            getIndexesOfDays()
+                .forEach(day => {
+                    recalculatedIntervals = recalculatedIntervals.concat(
+                        intersectSchedules(day, splitByDaysSchedule, intervalsForRobbery));
+                });
+
+            intervalsForRobbery = recalculatedIntervals;
         });
 
-        bankSchedule = recalculatedBankSchedule;
-    });
-
-    return bankSchedule;
+    return intervalsForRobbery;
 }
 
 /**
@@ -150,7 +122,7 @@ function getTimesToRobbery(schedule, duration, workingHours) {
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
     console.info(schedule, duration, workingHours);
-    let bankSchedule = getTimesToRobbery(schedule, duration, workingHours);
+    let intervalsForRobbery = getIntervalsForRobbery(schedule, duration, workingHours);
 
     return {
 
@@ -159,10 +131,10 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            refreshRobbery();
-            fillRobberyFields(bankSchedule, duration);
+            initRobbery();
+            findIntervalForRobbery(intervalsForRobbery, duration);
 
-            return robbery.possibility.isPossible;
+            return robbery.isPossible;
         },
 
         /**
@@ -172,15 +144,15 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            if (robbery.possibility.isPossible === false) {
+            if (!robbery.isPossible) {
                 return '';
             }
-            let data = getDataAndTimeFromMinute(robbery.startMinute);
-            let str = template.replace(/%HH/, String(data.hour))
-                .replace(/%MM/, String(data.minute))
-                .replace(/%DD/, DAYS_OF_WEEK[data.day]);
+            const dateTime = dateTimeFromMinute(robbery.startMinute);
+            const formattedDateTime = template.replace(/%HH/, String(dateTime.hour))
+                .replace(/%MM/, String(dateTime.minute))
+                .replace(/%DD/, DAYS_OF_WEEK[dateTime.day]);
 
-            return str;
+            return formattedDateTime;
         },
 
         /**
@@ -189,9 +161,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            tryLater(bankSchedule, duration);
-
-            return robbery.tryLater;
+            return false;
         }
     };
 }
@@ -208,11 +178,11 @@ function getRobberBusyTimeInterval(schedule, bankTimezone) {
 
     return {
         start: Math.max(0, start),
-        end: Math.min(DAYS_OF_WEEK.length * MINUTES_IN_DAY, end)
+        end: Math.min(MINUTES_IN_ROBBERY_PERIOD, end)
     };
 }
 
-function getInformationAboutBank(schedule) {
+function getBankSchedule(schedule) {
     let everyDaySchedule = parseScheduleString(schedule);
 
     const workingIntervals = getIndexesOfDays()
@@ -239,10 +209,14 @@ function parseScheduleString(workingHours) {
     const start = workingHours.from.match(SCHEDULE_STRING_REGEX);
     const end = workingHours.to.match(SCHEDULE_STRING_REGEX);
 
+    const startDayOfWeek = start[2];
+    const endDayOfWeek = end[2];
+    const timeZone = parseInt(start[5]);
+
     return {
-        startDay: DAYS_OF_WEEK.indexOf(start[2]),
-        endDay: DAYS_OF_WEEK.indexOf(end[2]),
-        timezone: parseInt(start[5]),
+        startDay: DAYS_OF_WEEK.indexOf(startDayOfWeek),
+        endDay: DAYS_OF_WEEK.indexOf(endDayOfWeek),
+        timezone: timeZone,
         start: getMinutes(start),
         end: getMinutes(end)
     };
@@ -256,11 +230,11 @@ function getFreeTimeSchedule(busyTimeSchedule) {
     if (busyTimeSchedule.length === 0) {
         return [{
             start: 0,
-            end: DAYS_OF_WEEK.length * MINUTES_IN_DAY
+            end: MINUTES_IN_ROBBERY_PERIOD
         }];
     }
 
-    let freeTimeSchedule = [];
+    const freeTimeSchedule = [];
     const firstStart = busyTimeSchedule[0].start;
     if (firstStart > 0) {
         freeTimeSchedule.push({
@@ -277,11 +251,10 @@ function getFreeTimeSchedule(busyTimeSchedule) {
 
     const lastEnd = busyTimeSchedule[busyTimeSchedule.length - 1].end;
 
-    if (lastEnd <
-        DAYS_OF_WEEK.length * MINUTES_IN_DAY) {
+    if (lastEnd < MINUTES_IN_ROBBERY_PERIOD) {
         freeTimeSchedule.push({
             start: lastEnd,
-            end: DAYS_OF_WEEK.length * MINUTES_IN_DAY
+            end: MINUTES_IN_ROBBERY_PERIOD
         });
     }
 
@@ -304,7 +277,7 @@ function splitByDays(splitByDaysSchedule, element) {
 
 
 function getIndexesOfDays() {
-    return Array.from(Array(DAYS_OF_WEEK.length).keys());
+    return DAYS_OF_WEEK.map((_day, index) => index);
 }
 
 
