@@ -22,10 +22,10 @@ function initRobbery() {
 }
 
 function dateTimeFromMinute(startTime) {
-    const mod = startTime % MINUTES_IN_DAY;
-    const day = (startTime - mod) / MINUTES_IN_DAY;
-    let minute = mod % MINUTES_IN_HOUR;
-    let hour = (mod - minute) / MINUTES_IN_HOUR;
+    const timeOfRobbery = startTime % MINUTES_IN_DAY;
+    const day = (startTime - timeOfRobbery) / MINUTES_IN_DAY;
+    let minute = timeOfRobbery % MINUTES_IN_HOUR;
+    let hour = (timeOfRobbery - minute) / MINUTES_IN_HOUR;
     if (minute < 10) {
         minute = '0' + String(minute);
     }
