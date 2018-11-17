@@ -6,17 +6,135 @@
  */
 const isStar = false;
 
-const DAYS = Object.freeze({
-    'ПН': 0, 'ВТ': 1, 'СР': 2, 'ЧТ': 3, 'ПТ': 4, 'СБ': 5, 'ВС': 6,
-    parseDay: function (dayNumber) {
-        const days = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
+const WEEK = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
 
-        return days[parseInt(dayNumber)];
-    },
-    addDays: function (day, daysCount) {
-        return this.parseDay(this[day] + daysCount);
+class WeekDay {
+    constructor(weekDay) {
+        this.day = weekDay;
+        this.number = WEEK.indexOf(this.day);
     }
-});
+
+    addDays(daysCount) {
+        this.number += daysCount;
+        this.number %= 7;
+        this.day = WEEK.indexOf(this.day);
+    }
+}
+
+class TimeStamp {
+    constructor(weekDay, hours, minutes, timeZone) {
+        this.weekDay = weekDay ? new WeekDay(weekDay) : weekDay;
+        this.hours = hours;
+        this.minutes = minutes;
+        this.timeZone = timeZone;
+    }
+
+    shift(timeShift) {
+        this.timeZone += timeShift;
+        this.hours += timeShift;
+        if (this.hours >= 24 || this.hours < 0) {
+            this.weekDay.addDays(this.hours < 0 ? -1 : 1);
+            this.hours %= 24;
+        }
+
+        return this;
+    }
+
+    static compare(time1, time2) {
+        let comparator = time1.weekDay.number - time2.weekDay.number;
+        comparator = comparator !== 0 ? comparator : time1.hours - time2.hours;
+        comparator = comparator !== 0 ? comparator : time1.minutes - time2.minutes;
+
+        return comparator;
+    }
+
+    static max(time1, time2) {
+        if (TimeStamp.compare(time1, time2) >= 0) {
+            return time1;
+        }
+
+        return time2;
+    }
+
+    static min(time1, time2) {
+        if (TimeStamp.compare(time1, time2) <= 0) {
+            return time1;
+        }
+
+        return time2;
+    }
+
+    static parse(timeStamp) {
+        const splitTimeStamp = timeStamp.split(/[ +:]/).reverse();
+
+        return new TimeStamp(
+            splitTimeStamp[3],
+            parseInt(splitTimeStamp[2]),
+            parseInt(splitTimeStamp[1]),
+            parseInt(splitTimeStamp[0])
+        );
+    }
+}
+
+class TimeInterval {
+    constructor(from, to) {
+        if (!(from instanceof TimeStamp && to instanceof TimeStamp)) {
+            throw new TypeError();
+        }
+        this.from = from;
+        this.to = to;
+    }
+
+    shift(timeShift) {
+        this.from.shift(timeShift);
+        this.to.shift(timeShift);
+
+        return this;
+    }
+
+    static areIntersected(time1, time2) {
+        return (TimeStamp.compare(time1.from, time2.from) >= 0 &&
+            TimeStamp.compare(time1.from, time2.to) < 0) ||
+            (TimeStamp.compare(time1.to, time2.from) > 0 &&
+            TimeStamp.compare(time1.to, time2.to) <= 0);
+    }
+
+    static parse(timeInterval) {
+        return new TimeInterval(
+            TimeStamp.parse(timeInterval.from),
+            TimeStamp.parse(timeInterval.to)
+        );
+    }
+}
+
+class GangSchedule {
+    constructor(schedule) {
+        for (let robber in schedule) {
+            if (schedule.hasOwnProperty(robber)) {
+                this[robber] = schedule[robber];
+            }
+        }
+    }
+
+    forEachRobber(func, ...args) {
+        for (let robber in this) {
+            if (this.hasOwnProperty(robber)) {
+                this[robber] = func(this[robber], ...args);
+            }
+        }
+    }
+
+    static parse(schedule) {
+        const gangSchedule = {};
+        for (const robber in schedule) {
+            if (schedule.hasOwnProperty(robber)) {
+                gangSchedule[robber] = schedule[robber].map(time => TimeInterval.parse(time));
+            }
+        }
+
+        return new GangSchedule(gangSchedule);
+    }
+}
 
 /**
  * @param {Object} schedule – Расписание Банды
@@ -27,16 +145,26 @@ const DAYS = Object.freeze({
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    console.info(schedule, duration, workingHours);
+    const bankSchedule = ['ПН', 'ВТ', 'СР'].map(day => new TimeInterval(
+        TimeStamp.parse(day + ' ' + workingHours.from),
+        TimeStamp.parse(day + ' ' + workingHours.to)
+    ));
+    const bankTimeZone = bankSchedule[0].from.timeZone;
 
-    const bankWorkingHours = changeTimeSpan(parseTimestamp, workingHours);
-    const bankTimeZone = bankWorkingHours.from.timeZone;
-    const robbersSchedule = copyAndParseTimeSpan(schedule);
-    forEachRobber(transferScheduleToTimeZone, robbersSchedule, bankTimeZone);
-    forEachRobber(trimByDays, robbersSchedule);
-    forEachRobber(trimByHours, robbersSchedule, bankWorkingHours);
-    const appropriateTimes = getAppropriateTimes(robbersSchedule);
-    const appropriateMoments = checkDuration(appropriateTimes, duration);
+    const gangSchedule = GangSchedule.parse(schedule);
+    gangSchedule.forEachRobber(translateScheduleToTimeZone, bankTimeZone);
+    gangSchedule.forEachRobber(findFreeTimeInPeriod, new TimeInterval(
+        new TimeStamp('ПН', 0, 0, bankTimeZone),
+        new TimeStamp('СР', 23, 59, bankTimeZone)
+    ));
+
+    const appropriateMoments = getAppropriateMoments(mergeSchedules(gangSchedule, bankSchedule))
+        .filter(moment => {
+            const currentDuration = moment.to.hours * 60 + moment.to.minutes -
+                (moment.from.hours * 60 + moment.from.minutes);
+
+            return currentDuration >= duration;
+        });
 
     return {
 
@@ -62,7 +190,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
             template = template.replace(/%HH/, start.hours.toString().padStart(2, '0'))
                 .replace(/%MM/, start.minutes.toString().padStart(2, '0'))
-                .replace(/%DD/, start.weekDay);
+                .replace(/%DD/, start.weekDay.day);
 
             return template;
         },
@@ -78,193 +206,72 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     };
 }
 
-function changeTimeSpan(changer, timeSpan) {
-    const args = [];
-    for (let i = 2; i < arguments.length; i++) {
-        args.push(arguments[i]);
-    }
-
-    return {
-        from: changer(timeSpan.from, args),
-        to: changer(timeSpan.to, args)
-    };
-}
-
-function forEachRobber(func, schedule) {
-    const robbers = Object.keys(schedule);
-    for (let i = 0; i < robbers.length; i++) {
-        const robber = robbers[i];
-        schedule[robber] = func(schedule[robber], arguments[2]);
-    }
-}
-
-function parseTimestamp(timestamp) {
-    const splitTimestamp = timestamp.split(/[ +:]/).reverse();
-
-    return getTimestamp(
-        splitTimestamp[3],
-        parseInt(splitTimestamp[2]),
-        parseInt(splitTimestamp[1]),
-        parseInt(splitTimestamp[0])
-    );
-}
-
-function getTimestamp(weekDay, hours, minutes, timeZone) {
-    return {
-        weekDay,
-        hours,
-        minutes,
-        timeZone
-    };
-}
-
-function copyAndParseTimeSpan(schedule) {
-    const robbers = Object.keys(schedule);
-    const newSchedule = {};
-    for (let i = 0; i < robbers.length; i++) {
-        const robber = robbers[i];
-        Object.defineProperty(newSchedule, robber, {
-            value: [],
-            configurable: false,
-            writable: true,
-            enumerable: true
-        });
-        for (let j = 0; j < schedule[robber].length; j++) {
-            newSchedule[robber].push(changeTimeSpan(parseTimestamp, schedule[robber][j]));
-        }
-    }
-
-    return newSchedule;
-}
-
-function transferScheduleToTimeZone(robberSchedule, targetTimeZone) {
-    targetTimeZone = parseInt(targetTimeZone);
-    const timeZone = robberSchedule[0].from.timeZone;
+function translateScheduleToTimeZone(schedule, targetTimeZone) {
+    const timeZone = schedule[0].from.timeZone;
     if (timeZone !== targetTimeZone) {
         const timeShift = targetTimeZone - timeZone;
 
-        return robberSchedule.map(
-            timeSpan => changeTimeSpan(shiftTimestamp, timeSpan, timeShift));
+        return schedule.map(timeInterval => timeInterval.shift(timeShift));
     }
 
-    return robberSchedule;
+    return schedule;
 }
 
-function shiftTimestamp(timestamp, timeShift) {
-    timeShift = parseInt(timeShift);
-    timestamp.timeZone += timeShift;
-    timestamp.hours += timeShift;
-    if (timestamp.hours >= 24 || timestamp.hours < 0) {
-        timestamp.weekDay = DAYS.addDays(timestamp.weekDay, timestamp.hours < 0 ? -1 : 1);
-        timestamp.hours %= 24;
-    }
+function findFreeTimeInPeriod(schedule, timePeriod) {
+    schedule.sort((a, b) => TimeStamp.compare(a.from, b.from));
+    const freeTimes = [];
+    freeTimes.push({ from: timePeriod.from });
+    schedule.forEach(timeInterval => {
+        freeTimes[freeTimes.length - 1].to = timeInterval.from;
+        freeTimes.push({ from: timeInterval.to });
+    });
+    freeTimes[freeTimes.length - 1].to = timePeriod.to;
 
-    return timestamp;
+    return freeTimes.map(interval => new TimeInterval(interval.from, interval.to));
 }
 
-function trimByDays(robberSchedule) {
-    const newSchedule = [];
-    for (let j = 0; j < robberSchedule.length; j++) {
-        const timeSpan = robberSchedule[j];
-        if (timeSpan.from.weekDay === timeSpan.to.weekDay) {
-            newSchedule.push(timeSpan);
-        } else {
-            newSchedule.push({
-                from: timeSpan.from,
-                to: getTimestamp(
-                    timeSpan.from.weekDay,
-                    23, 59,
-                    timeSpan.from.timeZone
-                )
-            });
-            newSchedule.push({
-                from: getTimestamp(
-                    timeSpan.to.weekDay,
-                    0, 0,
-                    timeSpan.to.timeZone
-                ),
-                to: timeSpan.to
-            });
+function mergeSchedules(gangSchedule, bankSchedule) {
+    return Object.keys(gangSchedule)
+        .map(robber => gangSchedule[robber])
+        .concat([bankSchedule]);
+}
+
+function getAppropriateMoments(schedule) {
+    let moments = schedule[0];
+    for (let i = 1; i < schedule.length; i++) {
+        const currentMoments = [];
+        const currentSchedule = schedule[i];
+        for (let j = 0; j < currentSchedule.length; j++) {
+            const timeInterval = currentSchedule[j];
+            currentMoments.push(...trimByHours(moments, timeInterval));
         }
+        moments = currentMoments;
     }
+    // let moments = bankSchedule;
+    // for (const robber in gangSchedule) {
+    //     if (gangSchedule.hasOwnProperty(robber)) {
+    //         const currentMoments = [];
+    //         gangSchedule[robber].forEach(timeInterval =>
+    //             currentMoments.push(...trimByHours(moments, timeInterval)));
+    //         moments = currentMoments;
+    //     }
+    // }
 
-    return newSchedule;
+    return moments;
 }
 
-function trimByHours(robberSchedule, trimmerHours) {
-    const newSchedule = [];
-    for (let i = 0; i < robberSchedule.length; i++) {
-        const timeSpan = robberSchedule[i];
-        if (trimmerHours.from.weekDay && trimmerHours.from.weekDay !== timeSpan.from.weekDay) {
-            newSchedule.push(timeSpan);
-            continue;
+function trimByHours(schedule, hours) {
+    const trimmedSchedule = [];
+    schedule.forEach(timeInterval => {
+        if (TimeInterval.areIntersected(timeInterval, hours)) {
+            trimmedSchedule.push(new TimeInterval(
+                TimeStamp.max(timeInterval.from, hours.from),
+                TimeStamp.min(timeInterval.to, hours.to)
+            ));
         }
-        const trimTimeSpan = getTrimTimeSpan(timeSpan, trimmerHours);
-        if (compareTime(trimTimeSpan.from, trimTimeSpan.to) !== 1) {
-            newSchedule.push(trimTimeSpan);
-        }
-    }
+    });
 
-    return newSchedule;
-}
-
-function compareTime(time1, time2) {
-    if (time1.hours < time2.hours) {
-        return -1;
-    } else if (time1.hours === time2.hours && time1.minutes === time2.minutes) {
-        return 0;
-    }
-
-    return 1;
-}
-
-function getTrimTimeSpan(timeSpan, trimmerHours) {
-    return {
-        from: getTimestamp(
-            timeSpan.from.weekDay,
-            Math.max(timeSpan.from.hours, trimmerHours.from.hours),
-            timeSpan.from.hours < trimmerHours.from.hours
-                ? trimmerHours.from.minutes
-                : timeSpan.from.minutes,
-            timeSpan.from.timeZone
-        ),
-        to: getTimestamp(
-            timeSpan.to.weekDay,
-            Math.min(timeSpan.to.hours, trimmerHours.to.hours),
-            timeSpan.to.hours < trimmerHours.to.hours
-                ? timeSpan.to.minutes
-                : trimmerHours.to.minutes,
-            timeSpan.to.timeZone
-        )
-    };
-}
-
-function getAppropriateTimes(schedule) {
-    const robbers = Object.keys(schedule);
-    let appropriateTimes = schedule[robbers[0]];
-    for (let i = 1; i < robbers.length; i++) {
-        const robber = robbers[i];
-        for (let j = 0; j < schedule[robber].length; j++) {
-            const trimmerTimeSpan = schedule[robber][j];
-            appropriateTimes = trimByHours(appropriateTimes, trimmerTimeSpan);
-        }
-    }
-
-    return appropriateTimes;
-}
-
-function checkDuration(moments, targetDuration) {
-    const appropriateMoments = [];
-    for (let i = 0; i < moments.length; i++) {
-        const moment = moments[i];
-        const duration = moment.to.hours * 60 + moment.to.minutes -
-            (moment.from.hours * 60 + moment.from.minutes);
-        if (duration >= targetDuration) {
-            appropriateMoments.push(moment);
-        }
-    }
-
-    return appropriateMoments;
+    return trimmedSchedule;
 }
 
 module.exports = {
