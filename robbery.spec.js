@@ -48,6 +48,26 @@ describe('robbery.getAppropriateMoment()', () => {
         );
     });
 
+    it('момента не существует вне зависимости от продрлжительности', () => {
+        const moment = robbery.getAppropriateMoment({
+            Danny: [
+                { from: 'ПН 10:00+5', to: 'ПН 17:00+5' }
+            ],
+            Rusty: [
+                { from: 'ПН 10:00+5', to: 'ПН 17:00+5' }
+            ],
+            Linus: [
+                { from: 'СР 10:00+5', to: 'СР 17:00+5' }
+            ]
+        }, 10, { from: '12:00+5', to: '14:00+5' });
+
+        assert.ok(moment.exists());
+        assert.strictEqual(
+            moment.format('Метим на %DD, старт в %HH:%MM!'),
+            'Метим на ВТ, старт в 12:00!'
+        );
+    });
+
     if (robbery.isStar) {
         it('должен перемещаться на более поздний момент [*]', () => {
             const moment = getMomentFor(90);

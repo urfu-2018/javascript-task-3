@@ -146,8 +146,8 @@ class GangSchedule {
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
     const bankSchedule = ['ПН', 'ВТ', 'СР'].map(day => new TimeInterval(
-        TimeStamp.parse(day + ' ' + workingHours.from),
-        TimeStamp.parse(day + ' ' + workingHours.to)
+        TimeStamp.parse(`${day} ${workingHours.from}`),
+        TimeStamp.parse(`${day} ${workingHours.to}`)
     ));
     const bankTimeZone = bankSchedule[0].from.timeZone;
 
@@ -158,7 +158,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         new TimeStamp('СР', 23, 59, bankTimeZone)
     ));
 
-    const appropriateMoments = getAppropriateMoments(mergeSchedules(gangSchedule, bankSchedule))
+    let appropriateMoments = getAppropriateMoments(mergeSchedules(gangSchedule, bankSchedule));
+    appropriateMoments = appropriateMoments
         .filter(moment => {
             const currentDuration = moment.to.hours * 60 + moment.to.minutes -
                 (moment.from.hours * 60 + moment.from.minutes);
@@ -247,15 +248,6 @@ function getAppropriateMoments(schedule) {
         }
         moments = currentMoments;
     }
-    // let moments = bankSchedule;
-    // for (const robber in gangSchedule) {
-    //     if (gangSchedule.hasOwnProperty(robber)) {
-    //         const currentMoments = [];
-    //         gangSchedule[robber].forEach(timeInterval =>
-    //             currentMoments.push(...trimByHours(moments, timeInterval)));
-    //         moments = currentMoments;
-    //     }
-    // }
 
     return moments;
 }
@@ -263,7 +255,8 @@ function getAppropriateMoments(schedule) {
 function trimByHours(schedule, hours) {
     const trimmedSchedule = [];
     schedule.forEach(timeInterval => {
-        if (TimeInterval.areIntersected(timeInterval, hours)) {
+        if (TimeInterval.areIntersected(timeInterval, hours) ||
+            TimeInterval.areIntersected(hours, timeInterval)) {
             trimmedSchedule.push(new TimeInterval(
                 TimeStamp.max(timeInterval.from, hours.from),
                 TimeStamp.min(timeInterval.to, hours.to)
