@@ -17,7 +17,7 @@ class WeekDay {
     addDays(daysCount) {
         this.number += daysCount;
         this.number %= 7;
-        this.day = WEEK.indexOf(this.day);
+        this.day = WEEK[this.number];
     }
 }
 
