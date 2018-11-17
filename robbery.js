@@ -41,10 +41,17 @@ class TimeStamp {
     }
 
     between(time1, time2) {
+        if (!(time1 instanceof TimeStamp && time2 instanceof TimeStamp)) {
+            throw new TypeError();
+        }
+
         return TimeStamp.compare(this, time1) >= 0 && TimeStamp.compare(this, time2) <= 0;
     }
 
     static compare(time1, time2) {
+        if (!(time1 instanceof TimeStamp && time2 instanceof TimeStamp)) {
+            throw new TypeError();
+        }
         let comparator = time1.weekDay.number - time2.weekDay.number;
         comparator = comparator !== 0 ? comparator : time1.hours - time2.hours;
         comparator = comparator !== 0 ? comparator : time1.minutes - time2.minutes;
@@ -53,6 +60,9 @@ class TimeStamp {
     }
 
     static max(time1, time2) {
+        if (!(time1 instanceof TimeStamp && time2 instanceof TimeStamp)) {
+            throw new TypeError();
+        }
         if (TimeStamp.compare(time1, time2) >= 0) {
             return time1;
         }
@@ -61,6 +71,9 @@ class TimeStamp {
     }
 
     static min(time1, time2) {
+        if (!(time1 instanceof TimeStamp && time2 instanceof TimeStamp)) {
+            throw new TypeError();
+        }
         if (TimeStamp.compare(time1, time2) <= 0) {
             return time1;
         }
@@ -96,7 +109,16 @@ class TimeInterval {
         return this;
     }
 
+    get duration() {
+        return ((this.to.weekDay.number * 24 + this.to.hours) * 60 + this.to.minutes) -
+        ((this.from.weekDay.number * 24 + this.from.hours) * 60 + this.from.minutes);
+    }
+
     static areIntersected(time1, time2) {
+        if (!(time1 instanceof TimeInterval && time2 instanceof TimeInterval)) {
+            throw new TypeError();
+        }
+
         return time1.from.between(time2.from, time2.to) || time1.to.between(time2.from, time2.to) ||
             time2.from.between(time1.from, time1.to) || time2.to.between(time1.from, time1.to);
     }
@@ -160,23 +182,18 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         new TimeStamp('СР', 23, 59, bankTimeZone)
     ));
 
-    let appropriateMoments = getAppropriateMoments(mergeSchedules(gangSchedule, bankSchedule));
-    appropriateMoments = appropriateMoments
-        .filter(moment => {
-            const currentDuration = moment.to.hours * 60 + moment.to.minutes -
-                (moment.from.hours * 60 + moment.from.minutes);
-
-            return currentDuration >= duration;
-        });
+    const appropriateMoments = getAppropriateMoments(mergeSchedules(gangSchedule, bankSchedule))
+        .filter(moment => moment.duration >= duration);
 
     return {
+        moments: appropriateMoments,
 
         /**
          * Найдено ли время
          * @returns {Boolean}
          */
         exists: function () {
-            return appropriateMoments.length !== 0;
+            return this.moments.length !== 0;
         },
 
         /**
@@ -189,13 +206,12 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (!this.exists()) {
                 return '';
             }
-            const start = appropriateMoments[0].from;
+            const start = this.moments[0].from;
 
-            template = template.replace(/%HH/, start.hours.toString().padStart(2, '0'))
+            return template
+                .replace(/%HH/, start.hours.toString().padStart(2, '0'))
                 .replace(/%MM/, start.minutes.toString().padStart(2, '0'))
                 .replace(/%DD/, start.weekDay.day);
-
-            return template;
         },
 
         /**
@@ -205,6 +221,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          */
         tryLater: function () {
             return false;
+            // if (!this.exists()) {
+            //     return false;
+            // }
         }
     };
 }
