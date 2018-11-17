@@ -40,6 +40,10 @@ class TimeStamp {
         return this;
     }
 
+    between(time1, time2) {
+        return TimeStamp.compare(this, time1) >= 0 && TimeStamp.compare(this, time2) <= 0;
+    }
+
     static compare(time1, time2) {
         let comparator = time1.weekDay.number - time2.weekDay.number;
         comparator = comparator !== 0 ? comparator : time1.hours - time2.hours;
@@ -93,10 +97,8 @@ class TimeInterval {
     }
 
     static areIntersected(time1, time2) {
-        return (TimeStamp.compare(time1.from, time2.from) >= 0 &&
-            TimeStamp.compare(time1.from, time2.to) < 0) ||
-            (TimeStamp.compare(time1.to, time2.from) > 0 &&
-            TimeStamp.compare(time1.to, time2.to) <= 0);
+        return time1.from.between(time2.from, time2.to) || time1.to.between(time2.from, time2.to) ||
+            time2.from.between(time1.from, time1.to) || time2.to.between(time1.from, time1.to);
     }
 
     static parse(timeInterval) {
@@ -255,8 +257,7 @@ function getAppropriateMoments(schedule) {
 function trimByHours(schedule, hours) {
     const trimmedSchedule = [];
     schedule.forEach(timeInterval => {
-        if (TimeInterval.areIntersected(timeInterval, hours) ||
-            TimeInterval.areIntersected(hours, timeInterval)) {
+        if (TimeInterval.areIntersected(timeInterval, hours)) {
             trimmedSchedule.push(new TimeInterval(
                 TimeStamp.max(timeInterval.from, hours.from),
                 TimeStamp.min(timeInterval.to, hours.to)

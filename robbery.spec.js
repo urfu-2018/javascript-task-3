@@ -48,7 +48,7 @@ describe('robbery.getAppropriateMoment()', () => {
         );
     });
 
-    it('момента не существует вне зависимости от продрлжительности', () => {
+    it('ВТ у всех свободен', () => {
         const moment = robbery.getAppropriateMoment({
             Danny: [
                 { from: 'ПН 10:00+5', to: 'ПН 17:00+5' }
@@ -59,7 +59,7 @@ describe('robbery.getAppropriateMoment()', () => {
             Linus: [
                 { from: 'СР 10:00+5', to: 'СР 17:00+5' }
             ]
-        }, 10, { from: '12:00+5', to: '14:00+5' });
+        }, 120, { from: '12:00+5', to: '14:00+5' });
 
         assert.ok(moment.exists());
         assert.strictEqual(
