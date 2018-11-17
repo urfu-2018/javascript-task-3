@@ -6,10 +6,8 @@
  */
 const isStar = true;
 
-function converting(timeStartOrEnd) {
+function converting(time) {
     let date = new Date();
-    date.setUTCFullYear(2018);
-    date.setUTCMonth(9);
     let daysToConvert = new Map();
     daysToConvert
         .set('ПН', 1)
@@ -19,13 +17,14 @@ function converting(timeStartOrEnd) {
         .set('ПТ', 5)
         .set('СБ', 6)
         .set('ВС', 7);
-    date.setUTCDate(daysToConvert.get(timeStartOrEnd.substr(0, 2)));
-    let timezone = timeStartOrEnd.substr(8, timeStartOrEnd.length - 8);
-    date.setUTCHours(timeStartOrEnd.substr(3, 2));
-    date.setUTCMinutes(timeStartOrEnd.substr(6, 2));
+    date.setUTCDate(daysToConvert.get(time.substr(0, 2)));
+    const timezone = time.substr(8, time.length - 8);
+    date.setUTCHours(time.substr(3, 2));
+    date.setUTCMinutes(time.substr(6, 2));
     date.setUTCSeconds(0);
     date.setUTCMilliseconds(0);
-    date = date.valueOf() - Number(timezone) * 3600000;
+    const millisecondsInHour = 60 * 60 * 1000;
+    date = date.valueOf() - Number(timezone) * millisecondsInHour;
 
     return date;
 }
@@ -35,27 +34,29 @@ function conversionToSpareTime(schedule) {
     const start = converting('ПН 00:00+5');
     const end = converting('ВС 23:59+5');
     for (const key in schedule) {
-        if (schedule.hasOwnProperty(key)) {
-            spareTime = spareTime.concat(schedule[key].reduce((acc, busyTime) => {
-                acc.push({
-                    from: start,
-                    to: converting(busyTime.from)
-                });
-                acc.push({
-                    from: converting(busyTime.to),
-                    to: end
-                });
-
-                return acc;
-            }, []));
+        if (!schedule.hasOwnProperty(key)) {
+            continue;
         }
+        const freeTimeOneRobber = schedule[key].reduce((acc, busyTime) => {
+            acc.push({
+                from: start,
+                to: converting(busyTime.from)
+            });
+            acc.push({
+                from: converting(busyTime.to),
+                to: end
+            });
+
+            return acc;
+        }, []);
+        spareTime = spareTime.concat(freeTimeOneRobber);
     }
 
     return spareTime;
 }
 
 function conversionToCommonSpareTime(schedule) {
-    let time = conversionToSpareTime(schedule);
+    const time = conversionToSpareTime(schedule);
     let commonSpareTime = [];
     for (let i = 0; i < time.length; i = i + 2) {
         if (i === 0) {
@@ -63,18 +64,17 @@ function conversionToCommonSpareTime(schedule) {
             commonSpareTime.push(time[i + 1]);
         }
         commonSpareTime.forEach(leisureInterval => {
-            if (firstEveryTimeInCommonTime(time, i, leisureInterval)) {
-                leisureInterval.to = time[i].to;
-            }
-            if (twoEveryTimeInCommonTime(time, i, leisureInterval)) {
+            if (time[i + 1].from > leisureInterval.to) {
+                leisureInterval.to = Math.min(leisureInterval.to, time[i].to);
+            } else if (time[i].to < leisureInterval.from) {
+                leisureInterval.from =
+                Math.max(leisureInterval.from, time[i + 1].from);
+            } else {
                 commonSpareTime.push({
                     from: time[i + 1].from,
                     to: leisureInterval.to
                 });
                 leisureInterval.to = time[i].to;
-            }
-            if (secondEveryTimeInCommonTime(time, i, leisureInterval)) {
-                leisureInterval.from = time[i + 1].from;
             }
         });
     }
@@ -82,126 +82,57 @@ function conversionToCommonSpareTime(schedule) {
     return commonSpareTime;
 }
 
-function firstEveryTimeInCommonTime(time, i, leisureInterval) {
-    return time[i].to <= leisureInterval.to &&
-    time[i].to > leisureInterval.from &&
-    time[i + 1].from > leisureInterval.to;
-}
-
-function twoEveryTimeInCommonTime(time, i, leisureInterval) {
-    return time[i].to < leisureInterval.to &&
-    time[i + 1].from <= leisureInterval.to &&
-    time[i].to < time[i + 1].from &&
-    leisureInterval.from <= time[i].to;
-}
-
-function secondEveryTimeInCommonTime(time, i, leisureInterval) {
-    return time[i].to < leisureInterval.from &&
-    time[i + 1].from >= leisureInterval.from &&
-    time[i + 1].from < leisureInterval.to;
-}
-
 function conversionToRobberyTime(workingHours, commonSpareTime) {
-    let days = bankWorkingDays(workingHours);
+    const days = bankWorkingDays(workingHours);
     let robberyTime = [];
     days.forEach(day => {
         commonSpareTime.forEach(robberyInterval => {
-            if (robberyLaterDay(robberyInterval, day)) {
-                robberyTime.push({
-                    from: robberyInterval.from,
-                    to: day.to
-                });
-            }
-            if (robberyEarlierDay(robberyInterval, day)) {
-                robberyTime.push({
-                    from: day.from,
-                    to: robberyInterval.to
-                });
-            }
-            if (dayInRobbery(robberyInterval, day)) {
-                robberyTime.push({
-                    from: day.from,
-                    to: day.to
-                });
-            }
-            if (robberyInDay(robberyInterval, day)) {
-                robberyTime.push({
-                    from: robberyInterval.from,
-                    to: robberyInterval.to
-                });
-            }
+            robberyTime.push({
+                from: Math.max(robberyInterval.from, day.from),
+                to: Math.min(robberyInterval.to, day.to)
+            });
         });
     });
 
     return robberyTime;
 }
 
-function robberyLaterDay(robberyInterval, day) {
-    return robberyInterval.from < day.to &&
-    robberyInterval.from > day.from &&
-    robberyInterval.to >= day.to;
-}
-
-function robberyEarlierDay(robberyInterval, day) {
-    return robberyInterval.to > day.from &&
-    robberyInterval.to < day.to &&
-    robberyInterval.from <= day.from;
-}
-function dayInRobbery(robberyInterval, day) {
-    return robberyInterval.to >= day.to &&
-    robberyInterval.from <= day.from;
-}
-
-function robberyInDay(robberyInterval, day) {
-    return robberyInterval.to < day.to &&
-    robberyInterval.from > day.from;
-}
-
 function bankWorkingDays(working) {
-    let bank = ['ПН ', 'ВТ ', 'СР '];
-    bank = bank.map(day => {
+    const bank = ['ПН ', 'ВТ ', 'СР '];
+
+    return bank.map(day => {
         return {
             from: converting(day + working.from),
             to: converting(day + working.to)
         };
     });
-
-    return bank;
 }
 
-function sorting(robberyInterval, index, arr) {
-    if (arr[index + 1] && robberyInterval.from > arr[index + 1].from) {
-        let temp1 = robberyInterval.from;
-        let temp2 = robberyInterval.to;
-        robberyInterval.from = arr[index + 1].from;
-        robberyInterval.to = arr[index + 1].to;
-        arr[index + 1].from = temp1;
-        arr[index + 1].to = temp2;
-    }
-}
-
-function converting2(ms) {
+function reverseConverting(ms) {
     ms = Number(ms) + 5 * 3600000;
     ms = new Date(ms);
     let DDHHMM = [];
-    let daysToConvert = new Map();
-    daysToConvert
+    let daysToReverseConvert = new Map();
+    daysToReverseConvert
         .set(1, 'ПН')
         .set(2, 'ВТ')
         .set(3, 'СР');
-    DDHHMM.push(daysToConvert.get(ms.getDate()));
-    let hours = ms.getUTCHours().toString();
-    if (hours < 10) {
-        hours = '0' + hours;
-    }
-    DDHHMM.push(hours);
-    let minutes = ms.getUTCMinutes().toString();
-    if (minutes < 10) {
-        minutes = '0' + minutes;
-    }
-    DDHHMM.push(minutes);
+    DDHHMM.push(daysToReverseConvert.get(ms.getDate()));
+    const hours = ms.getUTCHours().toString();
+    DDHHMM = addingZero(hours, DDHHMM);
+    const minutes = ms.getUTCMinutes().toString();
+    DDHHMM = addingZero(minutes, DDHHMM);
 
     return DDHHMM;
+}
+
+function addingZero(unit, arrDate) {
+    if (unit < 10) {
+        unit = '0' + unit;
+    }
+    arrDate.push(unit);
+
+    return arrDate;
 }
 
 /**
@@ -214,22 +145,24 @@ function converting2(ms) {
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
     console.info(schedule, duration, workingHours);
-    let commonSpareTime = conversionToCommonSpareTime(schedule);
+    const commonSpareTime = conversionToCommonSpareTime(schedule);
+    const millisecondsInMinute = 60000;
+    const halfHour = 30;
     let forTryLater = {
-        milliseconds: duration * 60000,
+        milliseconds: duration * millisecondsInMinute,
         intervals: conversionToRobberyTime(workingHours, commonSpareTime),
-        filterAndSorting: function () {
+        filter: function () {
             this.intervals = this.intervals.filter(robberyInterval =>
                 robberyInterval.to - robberyInterval.from >=
                 this.milliseconds);
-            this.intervals.forEach(sorting);
         },
         nextSuitableInterval: function () {
             forTryLater.intervals[0].from = forTryLater.intervals[0].from +
-            30 * 60000;
+            halfHour * millisecondsInMinute;
         }
     };
-    forTryLater.filterAndSorting();
+    forTryLater.filter();
+    forTryLater.intervals.sort((a, b) => a.from - b.from);
 
     return {
 
@@ -256,7 +189,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (!forTryLater.intervals[0]) {
                 return '';
             }
-            let DDHHMM = converting2(forTryLater.intervals[0].from);
+            const DDHHMM = reverseConverting(forTryLater.intervals[0].from);
             template = template.replace(/%DD/g, DDHHMM[0]);
             template = template.replace(/%HH/g, DDHHMM[1]);
             template = template.replace(/%MM/g, DDHHMM[2]);
@@ -274,10 +207,10 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
                 return false;
             }
-            let tempFrom = forTryLater.intervals[0].from;
-            let tempTo = forTryLater.intervals[0].from;
+            const tempFrom = forTryLater.intervals[0].from;
+            const tempTo = forTryLater.intervals[0].to;
             forTryLater.nextSuitableInterval();
-            forTryLater.filterAndSorting();
+            forTryLater.filter();
             if (!forTryLater.intervals[0]) {
                 forTryLater.intervals = [{
                     from: tempFrom,
