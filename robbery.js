@@ -6,6 +6,20 @@
  */
 const isStar = false;
 
+const DAYS = {
+    0: 'ПН',
+    1: 'ВТ',
+    2: 'СР'
+};
+
+const NUMBER_OF_MINUTES_IN_THREE_DAYS = 4320;
+
+function getKeyByValue(object, value) {
+    return Object
+        .keys(object)
+        .find(key => object[key] === value);
+}
+
 function parseTime(time) {
     const timePattern = /^(\d\d):(\d\d)\+(\d+)$/;
     const [, hours, minutes, timeZone] = time.match(timePattern);
@@ -14,31 +28,23 @@ function parseTime(time) {
 }
 
 function convertMinutesToTime(minutes) {
-    const days = {
-        0: 'ПН',
-        1: 'ВТ',
-        2: 'СР'
-    };
-
     const numberOfDay = Math.floor(minutes / (24 * 60));
-    const hours = Math.floor((minutes - numberOfDay * 24 * 60) / 60).toString()
+    const hours = Math
+        .floor((minutes - numberOfDay * 24 * 60) / 60)
+        .toString()
         .padStart(2, '0');
-    const minute = (minutes - numberOfDay * 24 * 60 - hours * 60).toString()
+    const minute = (minutes - numberOfDay * 24 * 60 - hours * 60)
+        .toString()
         .padStart(2, '0');
 
-    return [days[numberOfDay], hours, minute];
+    return [DAYS[numberOfDay], hours, minute];
 }
 
 function convertTimeToMinutes(day, timeIntervale, bankTimeZone) {
     let [hours, minutes, timeZone] = parseTime(timeIntervale);
     hours += bankTimeZone - timeZone;
-    const days = {
-        'ПН': 0,
-        'ВТ': 24 * 60,
-        'СР': 48 * 60
-    };
 
-    return days[day] + hours * 60 + minutes;
+    return getKeyByValue(DAYS, day) * 24 * 60 + hours * 60 + minutes;
 }
 
 function getBankTimeZone(bankWorkingTime) {
@@ -47,29 +53,24 @@ function getBankTimeZone(bankWorkingTime) {
 }
 
 function bankScheduleToMinutesIntrvales(shedule, bankTimeZone) {
-    const resultArray = [];
-    const days = ['ПН', 'ВТ', 'СР'];
-    days.forEach(day => {
-        resultArray.push({ start: convertTimeToMinutes(day, shedule.from, bankTimeZone),
-            end: convertTimeToMinutes(day, shedule.to, bankTimeZone) });
+    return Object.values(DAYS).map(day => {
+        return {
+            start: convertTimeToMinutes(day, shedule.from, bankTimeZone),
+            end: convertTimeToMinutes(day, shedule.to, bankTimeZone)
+        };
     });
-
-    return resultArray;
 }
 
 function scheduleToMinutesIntervales(personSchedule, bankTimeZone) {
-    const resultArray = [];
-    personSchedule.forEach(timeIntervale => {
-        const splittedFromTimeIntrvale = timeIntervale.from.split(' ');
-        const splittedToTimeIntrvale = timeIntervale.to.split(' ');
-        resultArray.push(
-            { start: convertTimeToMinutes(splittedFromTimeIntrvale[0],
-                splittedFromTimeIntrvale[1], bankTimeZone),
-            end: convertTimeToMinutes(splittedToTimeIntrvale[0],
-                splittedToTimeIntrvale[1], bankTimeZone) });
-    });
+    return personSchedule.map(timeIntervale => {
+        const [fromDay, fromHours] = timeIntervale.from.split(' ');
+        const [toDay, toHours] = timeIntervale.to.split(' ');
 
-    return resultArray;
+        return {
+            start: convertTimeToMinutes(fromDay, fromHours, bankTimeZone),
+            end: convertTimeToMinutes(toDay, toHours, bankTimeZone)
+        };
+    });
 }
 
 class TimeLine {
@@ -84,54 +85,59 @@ class TimeLine {
 
     unionLines(anotherLine) {
         let unionSchediles = this.scheduleInMinutes.concat(anotherLine.getScheduleInMinutes);
+
         unionSchediles.sort((firstInterval, secondInterval) => {
             return firstInterval.start - secondInterval.start;
         });
+
         let currentStart = unionSchediles[0].start;
         let currentEnd = unionSchediles[0].end;
-        const resultUnion = unionSchediles.map((intervale, index) => {
-            if (intervale.start > currentEnd && index !== 0) {
-                const returnStatement = { start: currentStart, end: currentEnd };
-                currentStart = intervale.start;
-                currentEnd = intervale.end;
 
-                return returnStatement;
-            } else if (intervale.end > currentEnd) {
-                currentEnd = intervale.end;
-            }
+        const resultUnion = unionSchediles
+            .map((interval, index) => {
+                if (interval.start > currentEnd && index !== 0) {
+                    const returnStatement = { start: currentStart, end: currentEnd };
+                    currentStart = interval.start;
+                    currentEnd = interval.end;
 
-            return undefined;
-        }).filter(intervale => {
+                    return returnStatement;
+                } else if (interval.end > currentEnd) {
+                    currentEnd = interval.end;
+                }
 
-            return typeof intervale !== 'undefined';
-        });
+                return null;
+            })
+            .filter(Boolean);
         resultUnion.push({ start: currentStart, end: currentEnd });
 
         return new TimeLine(resultUnion);
     }
 
-    intersectionLines(anotherLine) {
+    getIntersectionLines(anotherLine) {
         let unionSchediles = this.scheduleInMinutes.concat(anotherLine.getScheduleInMinutes);
+
         unionSchediles.sort((firstInterval, secondInterval) => {
             return firstInterval.start - secondInterval.start;
         });
+
         const intersectionIntervales = [];
         let start;
         let end;
-        let foundFlag = false;
-        for (let minute = 0; minute <= 4321; minute++) {
-            const numberOfIntervalsForMinute = unionSchediles.reduce((acc, intervale) => {
-                if (intervale.start <= minute && intervale.end >= minute) {
+        let isFound = false;
+
+        for (let minute = 0; minute <= NUMBER_OF_MINUTES_IN_THREE_DAYS + 1; minute++) {
+            const numberOfIntervalsForMinute = unionSchediles.reduce((acc, interval) => {
+                if (interval.start <= minute && interval.end >= minute) {
                     acc++;
                 }
 
                 return acc;
             }, 0);
-            if (numberOfIntervalsForMinute > 1 && !foundFlag) {
-                foundFlag = true;
+            if (numberOfIntervalsForMinute > 1 && !isFound) {
+                isFound = true;
                 start = minute;
-            } else if (numberOfIntervalsForMinute <= 1 && foundFlag) {
-                foundFlag = false;
+            } else if (numberOfIntervalsForMinute <= 1 && isFound) {
+                isFound = false;
                 end = minute - 1;
                 intersectionIntervales.push({ start, end });
             }
@@ -144,22 +150,28 @@ class TimeLine {
 
     invertIntervalesOnLine() {
         let currentStart = 0;
-        const invertedIntervaleLines = this.scheduleInMinutes.map(intervale => {
-            const returnStatement = { start: currentStart, end: intervale.start };
-            currentStart = intervale.end;
+        const invertedIntervaleLines = this.scheduleInMinutes
+            .map(interval => {
+                const returnStatement = { start: currentStart, end: interval.start };
+                currentStart = interval.end;
 
-            return returnStatement;
-        }).filter(intervale => {
+                return returnStatement;
+            })
+            .filter(interval => {
 
-            return typeof intervale !== 'undefined';
+                return typeof interval !== 'undefined';
+            });
+
+        invertedIntervaleLines.push({
+            start: currentStart,
+            end: NUMBER_OF_MINUTES_IN_THREE_DAYS
         });
-        invertedIntervaleLines.push({ start: currentStart, end: 4320 });
         this.scheduleInMinutes = invertedIntervaleLines;
     }
 
-    getfIntervalesMoreOrEqualConst(number) {
-        return this.scheduleInMinutes.filter(intervale => {
-            return intervale.end - intervale.start >= number;
+    getIfIntervalesMoreOrEqualConst(number) {
+        return this.scheduleInMinutes.filter(interval => {
+            return interval.end - interval.start >= number;
         });
     }
 
@@ -185,8 +197,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     const unionTimeLine = firstTimeLine.unionLines(secondTimeLine).unionLines(thirdTimeLine);
     unionTimeLine.invertIntervalesOnLine();
 
-    const foundTime = unionTimeLine.intersectionLines(bankTimeLine)
-        .getfIntervalesMoreOrEqualConst(duration);
+    const foundTime = unionTimeLine
+        .getIntersectionLines(bankTimeLine)
+        .getIfIntervalesMoreOrEqualConst(duration);
 
     return {
 
@@ -218,7 +231,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             const returningIntervale = foundTime[0];
             const [day, hours, minutes] = convertMinutesToTime(returningIntervale.start);
 
-            const newTemplate = template.replace('%DD', day).replace('%HH', hours)
+            const newTemplate = template
+                .replace('%DD', day)
+                .replace('%HH', hours)
                 .replace('%MM', minutes);
 
             return newTemplate;
