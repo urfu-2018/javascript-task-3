@@ -102,44 +102,35 @@ function convertOccupiedSchedule(scheduleMan) {
     return scheduleMan;
 }
 
-function fillTheDay(day, from, to, start, end, obj) {
-    if (getDayFromStr(from) === day) {
-        let num = parseInt(from.substring(3,from.length));
-        if (num > start && num < end) {
-            obj.first = start;
-            obj.firstDelta = num - start;
-        }
-        if (getDayFromStr(to) === day) {
-            let num = parseInt(to.substring(3,to.length));
-            if (num > start && num < end) {
-                obj.second = num;
-                obj.secondDelta = end - num;
+function fillTheDayArray(man, dayArr, dayStr) {
+    for (let property of man) {
+        let from = property.from;
+        let to = property.to;
+        if (getDayFromStr(from) === dayStr) {
+            if (getDayFromStr(to) === dayStr) {
+                let start = from.substring(3, from.length);
+                let end = to.substring(3, to.length);
+                for (let i = start; i <= end; i++) {
+                    dayArr[i]--;
+                }
+            } else {
+                let start = from.substring(3, from.length);
+                for (let i = start; i <= 1440; i++) {
+                    dayArr[i]--;
+                }
             }
         }
     }
-    
-    return obj;
 }
 
-function fiilTheManProperties(man, array, start, end) {
-    for (let i = 0; i<array.length; i++) {
-        man.monday = fillTheDay('ПН', array[i].from, array[i].to, start, end, man.monday);
-        man.tuesday = fillTheDay('ВТ', array[i].from, array[i].to, start, end, man.tuesday);
-        man.wednesday = fillTheDay('СР', array[i].from, array[i].to, start, end, man.wednesday);
+function findTimeEnd(dayArray, dayStr, duration) {
+    for (let i = 0; i < dayArray.length; i++) {
+        let flag = true;
+        if (dayArray[i] === 4 && dayArray[i + duration] === 4) {
+            return i + ' ' + dayStr;
+        }
     }
-    return man;
-}
-
-function filMiniMap(d, miniMap, day) {
-    if (d.firstDelta < miniMap[day].firstDelta) {
-        miniMap[day].firstDelta = d.firstDelta;
-        miniMap[day].first = d.first;
-    }
-    if (d.secondDelta < miniMap[day].secondDelta) {
-        miniMap[day].secondDelta = d.secondDelta;
-        miniMap[day].second = d.second;
-    }
-    return miniMap;
+    return 'kek';
 }
 
 function findRoberyTime(schedule, duration, workingHours) {
@@ -152,86 +143,54 @@ function findRoberyTime(schedule, duration, workingHours) {
     kek.Danny = convertOccupiedSchedule(kek.Danny);
     kek.Rusty = convertOccupiedSchedule(kek.Rusty);
     kek.Linus = convertOccupiedSchedule(kek.Linus);
-    let delta = {
-        from: getHoursFromStr(workingHours.from)*60 + getMinutesFromStr(workingHours.from),
-        to: getHoursFromStr(workingHours.to)*60 + getMinutesFromStr(workingHours.to)
-    };
-    let start = parseInt(delta.from);
-    let end = parseInt(delta.to);
-    let dannyMap = {
-        monday:{},
-        tuesday:{},
-        wednesday:{}
-    };
-    dannyMap = fiilTheManProperties(dannyMap, kek.Danny, start, end);
-    let rustyMap = {
-        monday:{},
-        tuesday:{},
-        wednesday:{}
-    };
-    rustyMap = fiilTheManProperties(rustyMap, kek.Rusty, start, end);
-    let linusMap = {
-        monday:{},
-        tuesday:{},
-        wednesday:{}
-    };
-    linusMap = fiilTheManProperties(dannyMap, kek.Linus, start, end);
-    let miniMap = {
-        monday:{
-            first: 1440,
-            second: 1440,
-            firstDelta: 1440,
-            secondDelta: 1440
-        },
-        tuesday:{
-            first: 1440,
-            second: 1440,
-            firstDelta: 1440,
-            secondDelta: 1440
-        },
-        wednesday:{
-            first: 1440,
-            second: 1440,
-            firstDelta: 1440,
-            secondDelta: 1440
-        }
-    };
-    miniMap = filMiniMap(dannyMap.monday, miniMap, 'monday');
-    miniMap = filMiniMap(dannyMap.tuesday, miniMap, 'tuesday');
-    miniMap = filMiniMap(dannyMap.wednesday, miniMap, 'wednesday');
-    miniMap = filMiniMap(rustyMap.monday, miniMap, 'monday');
-    miniMap = filMiniMap(rustyMap.tuesday, miniMap, 'tuesday');
-    miniMap = filMiniMap(rustyMap.wednesday, miniMap, 'wednesday');
-    miniMap = filMiniMap(linusMap.monday, miniMap, 'monday');
-    miniMap = filMiniMap(linusMap.tuesday, miniMap, 'tuesday');
-    miniMap = filMiniMap(linusMap.wednesday, miniMap, 'wednesday');
-    let time = -1;
-    let day = 's';
-    if (miniMap.monday.firstDelta >= duration) {
-        time = miniMap.monday.first;
-        day = 'ПН';
+    let monday = [];
+    let tuesday = [];
+    let wednesday = [];
+    for (let i = 0; i < 1440; i++) {
+        monday.push(3);
     }
-    if (miniMap.monday.secondDelta >= duration) {
-        time = miniMap.monday.second;
-        day = 'ПН';
+    for (let i = 0; i < 1440; i++) {
+        tuesday.push(3);
     }
-    if (miniMap.tuesday.firstDelta >= duration) {
-        time = miniMap.tuesday.first;
-        day = 'ВТ';
+    for (let i = 0; i < 1440; i++) {
+        wednesday.push(3)
     }
-    if (miniMap.tuesday.secondDelta >= duration) {
-        time = miniMap.tuesday.second;
-        day = 'ВТ';
+    fillTheDayArray(kek.Danny, monday, 'ПН');
+    fillTheDayArray(kek.Rusty, monday, 'ПН');
+    fillTheDayArray(kek.Linus, monday, 'ПН');
+    fillTheDayArray(kek.Danny, tuesday, 'ВТ');
+    fillTheDayArray(kek.Rusty, tuesday, 'ВТ');
+    fillTheDayArray(kek.Linus, tuesday, 'ВТ');
+    fillTheDayArray(kek.Danny, wednesday, 'СР');
+    fillTheDayArray(kek.Rusty, wednesday, 'СР');
+    fillTheDayArray(kek.Linus, wednesday, 'СР');
+    
+    let fromStr = workingHours.from;
+    let toStr = workingHours.to;
+    let fromHour = getHoursFromStr(fromStr);
+    let toHour = getHoursFromStr(toStr);
+    let fromMinutes = getMinutesFromStr(fromStr);
+    let toMinutes = getMinutesFromStr(toStr);
+    let startTime = fromHour*60 + fromMinutes;
+    let endTime = toHour*60 + toMinutes;
+
+    for (let i = startTime; i <= endTime; i++) {
+        monday[i]++;
     }
-    if (miniMap.wednesday.firstDelta >= duration) {
-        time = miniMap.wednesday.first;
-        day = 'СР';
+    for (let i = startTime; i <= endTime; i++) {
+        tuesday[i]++;
     }
-    if (miniMap.wednesday.secondDelta >= duration) {
-        time = miniMap.wednesday.second;
-        day = 'СР';
+    for (let i = startTime; i <= endTime; i++) {
+        wednesday[i]++;
     }
-    console.info(day + " " + time);
+    let answer = findTimeEnd(monday, 'ПН', duration);
+    if (answer === 'kek') {
+        answer = findTimeEnd(tuesday, 'ВТ', duration);
+    }
+    if (answer === 'kek') {
+        answer = findTimeEnd(wednesday, 'СР', duration);
+    }
+    console.info(answer);
 }
 /**
  * @param {Object} schedule – Расписание Банды
