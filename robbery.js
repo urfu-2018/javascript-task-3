@@ -19,23 +19,23 @@ const minutesInDay = 24 * minutesInHour;
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    const datesWhenTheyBusy = []; // Когда заняты
+    const robbersBusyDates = []; // Когда заняты
 
     for (let key of Object.keys(schedule)) {
         schedule[key].forEach(busyDate => {
-            datesWhenTheyBusy.push(convertToMinutes(busyDate, workingHours));
+            robbersBusyDates.push(convertToMinutes(busyDate, workingHours));
         });
     }
 
     const workingHoursInMinute = convertToMinutes(workingHours, workingHours);
     const combinedBusyDates = [];
 
-    datesWhenTheyBusy.sort((a, b) => {
+    robbersBusyDates.sort((a, b) => {
         return a.from - b.from;
     });
 
-    datesWhenTheyBusy.forEach(busySectorOfTime => {
-        const combinedBusySector = mergeIntersectingDates(busySectorOfTime, datesWhenTheyBusy);
+    robbersBusyDates.forEach(busySectorOfTime => {
+        const combinedBusySector = mergeIntersectingDates(busySectorOfTime, robbersBusyDates);
 
         if (combinedBusySector.length !== 0) {
             combinedBusyDates.push(combinedBusySector);
@@ -170,52 +170,52 @@ function getTimeZoneShift(timeZone, workingHours) {
     return bankTimeZone - timeZone;
 }
 
-function mergeIntersectingDates(busySectorOfTime, datesWhenTheyBusy) {
+function mergeIntersectingDates(busySectorOfTime, robbersBusyDates) {
     let intersection = true;
 
-    for (let index = datesWhenTheyBusy.indexOf(busySectorOfTime);
-        index < datesWhenTheyBusy.length; index++) {
+    for (let index = robbersBusyDates.indexOf(busySectorOfTime);
+        index < robbersBusyDates.length; index++) {
 
-        if (busySectorOfTime.from === datesWhenTheyBusy[index].from &&
-            busySectorOfTime.to === datesWhenTheyBusy[index].to) {
+        if (busySectorOfTime.from === robbersBusyDates[index].from &&
+            busySectorOfTime.to === robbersBusyDates[index].to) {
             continue;
         }
 
         [busySectorOfTime, intersection] = combineBusySectors(busySectorOfTime,
-            datesWhenTheyBusy[index], intersection);
+            robbersBusyDates[index], intersection);
 
         if (!intersection) {
             break;
         }
-        delete datesWhenTheyBusy[index];
+        delete robbersBusyDates[index];
     }
 
     return busySectorOfTime;
 }
 
-const checkIntersection = (busySectorOfTime, busySectorOfTime1) => {
-    return busySectorOfTime.from <= busySectorOfTime1.from &&
-        busySectorOfTime1.from <= busySectorOfTime.to;
+const fromSecondInFirst = (sector, sector1) => {
+    return sector.from <= sector1.from &&
+    sector1.from <= sector.to;
 };
-const checkIntersection1 = (busySectorOfTime, busySectorOfTime1) => {
-    return busySectorOfTime.from <= busySectorOfTime1.to &&
-        busySectorOfTime1.to <= busySectorOfTime.to;
+const toSecondInFirst = (sector, sector1) => {
+    return sector.from <= sector1.to &&
+    sector1.to <= sector.to;
 };
-const checkIntersection2 = (freeSector, workingTime) => {
-    return workingTime.from <= freeSector.from && freeSector.to <= workingTime.to;
+const firstInSecond = (sector, sector1) => {
+    return sector1.from <= sector.from && sector.to <= sector1.to;
 };
-const checkIntersection3 = (freeSector, workingTime) => {
-    return workingTime.from >= freeSector.from && workingTime.to <= freeSector.to;
+const secondInFirst = (sector, sector1) => {
+    return sector1.from >= sector.from && sector1.to <= sector.to;
 };
-const checkIntersection4 = (freeSector, workingTime) => {
-    return workingTime.from <= freeSector.from && workingTime.to >= freeSector.from;
+const fromFirstInSecond = (sector, sector1) => {
+    return sector1.from <= sector.from && sector1.to >= sector.from;
 };
-const checkIntersection5 = (freeSector, workingTime) => {
-    return workingTime.from >= freeSector.from && workingTime.to >= freeSector.to;
+const partlyInEachOther = (sector, sector1) => {
+    return sector1.from >= sector.from && sector1.to >= sector.to;
 };
 
 function combineBusySectors(busySectorOfTime, busySectorOfTime1, intersection) {
-    if (checkIntersection(busySectorOfTime, busySectorOfTime1)) {
+    if (fromSecondInFirst(busySectorOfTime, busySectorOfTime1)) {
         if (busySectorOfTime1.to > busySectorOfTime.to) {
             busySectorOfTime.to = busySectorOfTime1.to;
         }
@@ -223,7 +223,7 @@ function combineBusySectors(busySectorOfTime, busySectorOfTime1, intersection) {
         return [busySectorOfTime, intersection];
     }
 
-    if (checkIntersection1(busySectorOfTime, busySectorOfTime1)) {
+    if (toSecondInFirst(busySectorOfTime, busySectorOfTime1)) {
         busySectorOfTime.from = busySectorOfTime1.from;
 
         return [busySectorOfTime, intersection];
@@ -297,11 +297,11 @@ function getGoodDates(freeDates, workingHoursInMinute, duration) {
 
 function getIntersectionOrNull(freeSector, workingTime, goodSector) {
 
-    if (checkIntersection2(freeSector, workingTime)) {
+    if (firstInSecond(freeSector, workingTime)) {
         goodSector = { from: freeSector.from, to: freeSector.to };
     }
 
-    if (checkIntersection3(freeSector, workingTime)) {
+    if (secondInFirst(freeSector, workingTime)) {
         goodSector = { from: workingTime.from, to: workingTime.to };
     }
 
@@ -310,11 +310,11 @@ function getIntersectionOrNull(freeSector, workingTime, goodSector) {
 
 function getIntersectionOrNull1(freeSector, workingTime, goodSector) {
 
-    if (checkIntersection4(freeSector, workingTime)) {
+    if (fromFirstInSecond(freeSector, workingTime)) {
         goodSector = { from: freeSector.from, to: workingTime.to };
     }
 
-    if (checkIntersection5(freeSector, workingTime)) {
+    if (partlyInEachOther(freeSector, workingTime)) {
         goodSector = { from: workingTime.from, to: freeSector.to };
     }
 
