@@ -205,14 +205,17 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 return '';
             }
             const timeZone = Number(workingHours.from.slice(6));
-            let daysOfWeek = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
+            const daysOfWeek = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
             const minutesInDay = 24 * 60;
             let day = daysOfWeek[Math.floor(time / (24 * 60))];
             let hours = Math.floor((time - daysOfWeek.indexOf(day) * minutesInDay) / 60) + timeZone;
             let minutes = (time - daysOfWeek.indexOf(day) * minutesInDay) % 60;
-            day = convertNumbeForOutput(day);
             hours = convertNumbeForOutput(hours);
             minutes = convertNumbeForOutput(minutes);
+            if (hours === 24) {
+                day = daysOfWeek[daysOfWeek.indexOf(day) + 1];
+                hours = '00';
+            }
 
             return template
                 .replace(/%DD/g, day)
