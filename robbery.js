@@ -1,66 +1,77 @@
 'use strict';
 
 const isStar = true;
-const TimeRegex = /([А-Я]{2})? ?(\d{2}):(\d{2})\+(\d)/;
+const TIME_REGEX = /([А-Я]{2})? ?(\d{2}):(\d{2})\+(\d)/;
 const Days = { 'ВТ': 1, 'СР': 2, 0: 'ПН', 1: 'ВТ', 2: 'СР' };
-const MinutesInDay = 24 * 60;
-const HoursInDay = 24;
-const MinutesInHour = 60;
-const MaxMinutesValue = 3 * MinutesInDay - 1;
-const SkipMinutes = 30;
-
-let toOneDimArray = threeDimArray => [].concat(...[].concat(...threeDimArray));
+const MINUTES_IN_DAY = 24 * 60;
+const HOURS_IN_DAY = 24;
+const MINUTES_IN_HOUR = 60;
+const MAX_MINUTES_VALUE = 3 * MINUTES_IN_DAY - 1;
+const NEXT_TRY_MINUTES = 30;
 
 let getPoint = (type, time, timezone) => ({ type: type, time: getMinutes(time, timezone) });
 
 let getBankInterval = (hours, timezone) =>
     ({ from: getMinutes(hours.from, timezone), to: getMinutes(hours.to, timezone) });
 
-let getIntervalPoints = (schedule, timezone) =>
-    Object.values(schedule).map(
-        person => person.map(
-            interval => Object.entries(interval).map(
-                point => getPoint(point[0], point[1], timezone))));
-
 let getSortedTimePoints = (schedule, timezone) =>
-    toOneDimArray(getIntervalPoints(schedule, timezone))
+    getIntervalPoints(schedule, timezone)
         .sort((a, b) => a.time - b.time);
+
+function getIntervalPoints(schedule, timezone) {
+    let points = [];
+
+    Object.values(schedule).forEach(personSchedule => {
+        personSchedule.forEach(interval => {
+            points.push(getPoint('from', interval.from, timezone));
+            points.push(getPoint('to', interval.to, timezone));
+        });
+    });
+
+    return points;
+}
 
 function getFreeIntervals(points) {
     let intervals = [];
     let start = 0;
     let busy = 0;
 
-    points.forEach(p => {
+    points.forEach(point => {
         if (!busy) {
-            if (p.time % (MinutesInDay) < start % (MinutesInDay)) {
-                intervals.push({ from: start, to: p.time - p.time % (MinutesInDay) - 1 });
-                intervals.push({ from: p.time - p.time % (MinutesInDay), to: p.time });
+            if (point.time % (MINUTES_IN_DAY) < start % (MINUTES_IN_DAY)) {
+                intervals.push({
+                    from: start, to:
+                    point.time - point.time % (MINUTES_IN_DAY) - 1
+                });
+                intervals.push({
+                    from: point.time - point.time % (MINUTES_IN_DAY),
+                    to: point.time
+                });
             } else {
-                intervals.push({ from: start, to: p.time });
+                intervals.push({ from: start, to: point.time });
             }
         }
-        busy += p.type === 'from' ? 1 : -1;
-        start = p.time;
+        busy += point.type === 'from' ? 1 : -1;
+        start = point.time;
     });
-    intervals.push({ from: start, to: MaxMinutesValue });
+    intervals.push({ from: start, to: MAX_MINUTES_VALUE });
 
     return intervals;
 }
 
-let getDay = (minutes) => Math.floor(minutes / (MinutesInDay));
-let getHour = (minutes) => Math.floor(minutes / MinutesInHour) % HoursInDay;
-let getMinute = (minutes) => minutes % MinutesInHour;
+let getDay = (minutes) => Math.floor(minutes / (MINUTES_IN_DAY));
+let getHour = (minutes) => Math.floor(minutes / MINUTES_IN_HOUR) % HOURS_IN_DAY;
+let getMinute = (minutes) => minutes % MINUTES_IN_HOUR;
 let twoDigit = (int) => int > 9 ? int : '0' + int;
 
 function getAppropriateIntervals(freeIntervals, bankInterval, duration) {
     let intervals = [];
 
     freeIntervals.forEach(interval => {
-        let start = bankInterval.from <= interval.from % MinutesInDay
-            ? interval.from : getDay(interval.from) * MinutesInDay + bankInterval.from;
-        let end = bankInterval.to >= interval.to % MinutesInDay
-            ? interval.to : getDay(interval.to) * MinutesInDay + bankInterval.to;
+        let start = bankInterval.from <= interval.from % MINUTES_IN_DAY
+            ? interval.from : getDay(interval.from) * MINUTES_IN_DAY + bankInterval.from;
+        let end = bankInterval.to >= interval.to % MINUTES_IN_DAY
+            ? interval.to : getDay(interval.to) * MINUTES_IN_DAY + bankInterval.to;
         if (end - start >= duration) {
             intervals.push({
                 from: start,
@@ -73,13 +84,13 @@ function getAppropriateIntervals(freeIntervals, bankInterval, duration) {
 }
 
 function getMinutes(time, timezone) {
-    let match = time.match(TimeRegex);
+    let match = time.match(TIME_REGEX);
     let day = Days[match[1]] ? Days[match[1]] : 0;
-    let hours = parseInt(match[2]);
-    let minutes = parseInt(match[3]);
-    let localzone = parseInt(match[4]);
+    let parts = match
+        .slice(2)
+        .map(str => parseInt(str));
 
-    return day * MinutesInDay + (hours - localzone + timezone) * MinutesInHour + minutes;
+    return day * MINUTES_IN_DAY + (parts[0] - parts[2] + timezone) * MINUTES_IN_HOUR + parts[1];
 }
 
 /**
@@ -91,7 +102,7 @@ function getMinutes(time, timezone) {
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    let timezone = parseInt(workingHours.from.match(TimeRegex)[4]);
+    let timezone = parseInt(workingHours.from.match(TIME_REGEX)[4]);
     let points = getSortedTimePoints(schedule, timezone);
     let bankInterval = getBankInterval(workingHours, timezone);
     let freeIntervals = getFreeIntervals(points);
@@ -100,7 +111,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     return {
         duration: duration,
         intervals: robIntervals,
-        currentIndex: 0,
+        index: 0,
         currentTime: robIntervals[0] ? robIntervals[0].from : NaN,
 
         /**
@@ -133,14 +144,14 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (!this.exists()) {
                 return false;
             }
-            if (this.currentTime + SkipMinutes + duration <= this.intervals[this.currentIndex].to) {
-                this.currentTime += SkipMinutes;
+            if (this.currentTime + NEXT_TRY_MINUTES + duration <= this.intervals[this.index].to) {
+                this.currentTime += NEXT_TRY_MINUTES;
 
                 return true;
             }
-            if (this.currentIndex + 1 < this.intervals.length) {
-                this.currentIndex++;
-                this.currentTime = this.intervals[this.currentIndex].from;
+            if (this.index + 1 < this.intervals.length) {
+                this.index++;
+                this.currentTime = this.intervals[this.index].from;
 
                 return true;
             }
