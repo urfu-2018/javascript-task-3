@@ -61,7 +61,7 @@ function refinementTime(start, end, timeRobbery) {
 
 function convertTime(time) {
     let minute = time % 60;
-    let hour = (time % 1440 - minute) / 60;
+    let hour = (time % DAY_DURATION - minute) / 60;
     if (minute < 10) {
         minute = '0' + minute;
     }
@@ -82,9 +82,11 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     const openBank = translateTimeBank(workingHours.from);
     const closeBank = translateTimeBank(workingHours.to);
     const timezoneBank = Number(workingHours.from.slice(6, 8));
-    let timeRobbery = [[openBank, closeBank],
-        [1440 + openBank, 1440 + closeBank],
-        [2880 + openBank, 2880 + closeBank]];
+    let timeRobbery = [
+        [openBank, closeBank],
+        [DAY_DURATION + openBank, DAY_DURATION + closeBank],
+        [DAY_DURATION * 2 + openBank, DAY_DURATION * 2 + closeBank]
+    ];
     for (const guy of Object.keys(schedule)) {
         for (const workingGuy of schedule[guy]) {
             const timezoneGuy = Number(workingGuy.from.slice(9, 11));
