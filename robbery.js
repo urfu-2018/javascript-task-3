@@ -82,21 +82,21 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     };
 }
 
-const weekDays = {
+const WEEK_DAYS = {
     'ПН': 0,
     'ВТ': 1,
     'СР': 2
 };
-const minutesInHour = 60;
-const hoursInDay = 24;
-const minutesInDay = minutesInHour * hoursInDay;
+const MINUTES_TO_HOUR = 60;
+const HOURS_IN_DAY = 24;
+const MINUTES_IN_DAY = MINUTES_TO_HOUR * HOURS_IN_DAY;
 
 function minutesToDateTime(timeRangeInMinutes) {
-    let indexOfDay = Math.floor(timeRangeInMinutes / minutesInDay);
-    let dayName = Object.keys(weekDays)
-        .filter(key => weekDays[key] === indexOfDay)[0];
-    let hours = Math.floor((timeRangeInMinutes - indexOfDay * minutesInDay) / minutesInHour);
-    let minutes = timeRangeInMinutes - indexOfDay * minutesInDay - hours * minutesInHour;
+    let indexOfDay = Math.floor(timeRangeInMinutes / MINUTES_IN_DAY);
+    let [dayName] = Object.keys(WEEK_DAYS)
+        .filter(key => WEEK_DAYS[key] === indexOfDay);
+    let hours = Math.floor((timeRangeInMinutes - indexOfDay * MINUTES_IN_DAY) / MINUTES_TO_HOUR);
+    let minutes = timeRangeInMinutes - indexOfDay * MINUTES_IN_DAY - hours * MINUTES_TO_HOUR;
 
     return { day: dayName, hours, minutes };
 }
@@ -110,15 +110,15 @@ function timeToMinutesFromWeekStart(time, timeZone) {
     let hours = parseInt(time.substr(0, 2));
     let minutes = parseInt(time.substr(3, 2));
 
-    return (hours + timeZone - zone) * minutesInHour + minutes;
+    return (hours + timeZone - zone) * MINUTES_TO_HOUR + minutes;
 }
 
 function dateTimeToMinutesFromWeekStart(dateTime, timeZone) {
     let parts = dateTime.split(' ');
-    let dayIndex = weekDays[parts[0]];
+    let dayIndex = WEEK_DAYS[parts[0]];
     let minutes = timeToMinutesFromWeekStart(parts[1], timeZone);
 
-    return dayIndex * hoursInDay * minutesInHour + minutes;
+    return dayIndex * HOURS_IN_DAY * MINUTES_TO_HOUR + minutes;
 }
 
 function timeRangeToMinutes(timeRange, timeZone) {
@@ -138,8 +138,8 @@ function dateTimeRangeToMinutes(dateTimeRange, timeZone) {
 function getIntervalsIntersection(a, b) {
     let result = [];
 
-    a.forEach(function (first) {
-        b.forEach(function (second) {
+    a.forEach(first => {
+        b.forEach(second => {
             let intersection = getIntersection(first, second);
             if (intersection.from !== 0 || intersection.to !== 0) {
                 result.push(intersection);
@@ -153,7 +153,7 @@ function getIntervalsIntersection(a, b) {
 function getRoberyTime(allFreeTime, bankWorkingTime, duration) {
     let robberyTime = [{
         from: 0,
-        to: 4 * hoursInDay * minutesInHour
+        to: 4 * HOURS_IN_DAY * MINUTES_TO_HOUR
     }];
     robberyTime = allFreeTime
         .concat([bankWorkingTime])
@@ -184,7 +184,7 @@ function getFreeTime(scheduleWhenBusy, bankTimeZone) {
 
             return acc;
         }, points);
-    points.push(4 * hoursInDay * minutesInHour);
+    points.push(4 * HOURS_IN_DAY * MINUTES_TO_HOUR);
 
     points = points.sort((a, b) => a - b);
 
@@ -215,14 +215,14 @@ function getRobbersFreeTime(schedule, bankTimeZone) {
 
 function getBankWorkingTime(bankSchedule) {
     let workingTime = [];
-    Object.keys(weekDays)
-        .map(dayName => weekDays[dayName] * hoursInDay * minutesInHour)
-        .map(function (dayInMinutes) {
-            return {
+    Object.keys(WEEK_DAYS)
+        .map(dayName => WEEK_DAYS[dayName] * HOURS_IN_DAY * MINUTES_TO_HOUR)
+        .map(dayInMinutes => (
+            {
                 from: bankSchedule.from + dayInMinutes,
                 to: bankSchedule.to + dayInMinutes
-            };
-        })
+            }
+        ))
         .reduce(function (acc, timeRange) {
             acc.push(timeRange);
 
