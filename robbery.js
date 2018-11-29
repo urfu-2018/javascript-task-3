@@ -32,14 +32,10 @@ function getDataAndTimeFromMinute(startTime) {
         hour = '0' + String(hour);
     }
 
-    return {
-        day: day,
-        hour: hour,
-        minute: minute
-    };
+    return { day, hour, minute };
 }
 function intersectRobberAndBankSheduleInDayPeriod(day, robberSchedule, bankSchedule) {
-    let intersections = [];
+    const intersections = [];
     robberSchedule.filter(r => r.day === day).forEach(robberSchedulePoint => {
         bankSchedule.filter(b => b.day === day).forEach(bankSchedulePoint => {
             const intersection = intersectIntervals(robberSchedulePoint, bankSchedulePoint);
@@ -274,6 +270,5 @@ function getIndexesOfDays() {
 }
 module.exports = {
     getAppropriateMoment,
-
     isStar
 };
