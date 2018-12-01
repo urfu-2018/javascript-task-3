@@ -25,15 +25,15 @@ function parseToBankZone(inputStr) {
 }
 
 function getTimeRanges(robberSchedule) {
-    let leftBorder = 0;
+    let leftEdge = 0;
     const result = robberSchedule.map(x => {
-        const value = { from: leftBorder, to: x.from };
-        leftBorder = x.to;
+        const value = { from: leftEdge, to: x.from };
+        leftEdge = x.to;
 
         return value;
     });
 
-    result.push({ from: leftBorder, to: MINUTES_IN_DAY * DAYS.length - 1 });
+    result.push({ from: leftEdge, to: MINUTES_IN_DAY * DAYS.length - 1 });
 
     return result;
 }
@@ -46,21 +46,21 @@ function getWorkingHours(workingHours) {
     const toMinutes = parseInt(workingHours.to.slice(3, 5));
 
     return {
-        shift: shift,
+        shift,
         from: fromHour * MINUTES_IN_HOUR + fromMinutes,
         to: toHour * MINUTES_IN_HOUR + toMinutes
     };
 }
 
-function getIntersect(firstSchedule, secondSchedule) {
-    return firstSchedule.map(first => {
-        return secondSchedule.filter(second => first.to > second.from && first.from < second.to)
-            .map(second => {
-                return {
-                    from: Math.max(first.from, second.from), to: Math.min(first.to, second.to)
-                };
-            });
-    })
+function getIntersection(firstSchedule, secondSchedule) {
+    return firstSchedule
+        .map(first =>
+            secondSchedule
+                .filter(second => first.to > second.from && first.from < second.to)
+                .map(second => ({
+                    from: Math.max(first.from, second.from),
+                    to: Math.min(first.to, second.to)
+                })))
         .reduce((x, y) => x.concat(y));
 }
 
@@ -86,15 +86,15 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             .sort((x, y) => x.from - y.from))
         .map(x => getTimeRanges(x));
 
-    appropriateMoments.push([0, 1, 2].map(x => {
-        return {
-            from: bankWorkingHours.from + x * MINUTES_IN_DAY,
-            to: bankWorkingHours.to + x * MINUTES_IN_DAY
-        };
-    }));
+    appropriateMoments
+        .push([0, 1, 2]
+            .map(x => ({
+                from: bankWorkingHours.from + x * MINUTES_IN_DAY,
+                to: bankWorkingHours.to + x * MINUTES_IN_DAY
+            })));
 
     appropriateMoments = appropriateMoments
-        .reduce((x, y) => getIntersect(x, y))
+        .reduce((x, y) => getIntersection(x, y))
         .filter(x => x.to - x.from >= duration);
 
     return {
@@ -118,13 +118,18 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 return '';
             }
 
-            return template.replace(
-                '%HH', Math.floor(appropriateMoments[0].from % MINUTES_IN_DAY / MINUTES_IN_HOUR)
+            const hoursString =
+                Math.floor(appropriateMoments[0].from % MINUTES_IN_DAY / MINUTES_IN_HOUR)
                     .toString()
-                    .padStart(2, '0'))
-                .replace('%MM', (appropriateMoments[0].from % MINUTES_IN_HOUR).toString()
-                    .padStart(2, '0'))
-                .replace('%DD', DAYS[Math.floor(appropriateMoments[0].from / MINUTES_IN_DAY)]);
+                    .padStart(2, '0');
+            const minutesString = (appropriateMoments[0].from % MINUTES_IN_HOUR).toString()
+                .padStart(2, '0');
+            const daysString = DAYS[Math.floor(appropriateMoments[0].from / MINUTES_IN_DAY)];
+
+            return template
+                .replace('%HH', hoursString)
+                .replace('%MM', minutesString)
+                .replace('%DD', daysString);
         },
 
         /**
