@@ -24,7 +24,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         mergedSchedule = merge(newSchedule[key], mergedSchedule);
     });
     const rightTimes = (mergedSchedule
-        .filter(t => t.to - t.from >= duration))
+        .filter(({ to, from }) => to - from >= duration))
         .map(t => parseMinutesToDate(t.from));
 
     return {
@@ -53,12 +53,13 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 }
 
 function dayToMinutes(day) {
+    const MINUTES_IN_DAY = 24 * 60;
     if (day === 'ПН') {
         return 0;
     } else if (day === 'ВТ') {
-        return 24 * 60;
+        return MINUTES_IN_DAY;
     } else if (day === 'СР') {
-        return 24 * 2 * 60;
+        return MINUTES_IN_DAY * 2;
     }
 
     return 10000;
@@ -170,19 +171,21 @@ function getRevertSchedule(schedule) {
     return freeTimeSchedule;
 }
 
-function getNewScheduleRowFormat(r, bankTimeZone) {
-    const newFrom = dayToMinutes(r.from.substring(0, 2)) +
-        parseTimeToMinutes(r.from.substring(3), bankTimeZone);
-    const newTo = dayToMinutes(r.to.substring(0, 2)) +
-        parseTimeToMinutes(r.to.substring(3), bankTimeZone);
+function getNewScheduleRowFormat({ from, to }, bankTimeZone) {
+    const newFrom = dayToMinutes(from.substring(0, 2)) +
+        parseTimeToMinutes(from.substring(3), bankTimeZone);
+    const newTo = dayToMinutes(to.substring(0, 2)) +
+        parseTimeToMinutes(to.substring(3), bankTimeZone);
 
     return { from: newFrom, to: newTo };
 }
 
 function parseTimeToMinutes(time, bankTimeZone) {
-    return parseInt(time.substring(0, 2)) * 60 +
-        parseInt(time.substring(3, 5)) +
-        (bankTimeZone - parseInt(time.substring(6))) * 60;
+    const hours = parseInt(time.substring(0, 2));
+    const minutes = parseInt(time.substring(3, 5));
+    const timeZona = parseInt(time.substring(6));
+
+    return hours * 60 + minutes + (bankTimeZone - timeZona) * 60;
 }
 
 module.exports = {
