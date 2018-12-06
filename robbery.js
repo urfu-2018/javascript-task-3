@@ -1,8 +1,8 @@
 'use strict';
 
-var WEEK = ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
-var MINUTES_IN_DAY = 60 * 24;
-var MINUTES_IN_HOUR = 60;
+const WEEK = ['ПН', 'ВТ', 'СР'];
+const MINUTES_IN_DAY = 60 * 24;
+const MINUTES_IN_HOUR = 60;
 
 function addZero(num) {
     var str = String(num);
@@ -10,8 +10,8 @@ function addZero(num) {
     return str.length === 2 ? str : `0${str}`;
 }
 
-function timeStrToMinutes(d, bankTimeZone) {
-    var arr = d.split(' ');
+function timeStrToMinutes(schedule, bankTimeZone) {
+    var arr = schedule.split(' ');
     var weekDay = WEEK.indexOf(arr[0]);
     var timeArr = arr[1].split('+');
     var hoursMinutes = timeArr[0].split(':');
@@ -28,7 +28,7 @@ function cutLimits(obj, limit) {
 }
 
 function invertTimesArray(arr, limit) {
-    if (arr.length === 0) {
+    if (!arr.length) {
         return [];
     }
 
@@ -87,11 +87,49 @@ function findIntersections(first, second) {
     return intersections;
 }
 
+function findAppropriate(limit, workingHours, schedule, duration) {
+    var bankTimeZone = Number(workingHours.to.split('+')[1]);
+
+    var daysForRobbery = WEEK;
+    var bankWorkingTime = daysForRobbery.map(function (day) {
+        return {
+            from: day + ' ' + workingHours.from,
+            to: day + ' ' + workingHours.to
+        };
+    });
+    var bankWorkingMinutes = bankWorkingTime.map((obj) => timeObjToMinutes(obj, bankTimeZone));
+
+    var busyTimes = Object.entries(schedule).map(function (obj) {
+        return obj[1].map((busyObj) => timeObjToMinutes(busyObj, bankTimeZone));
+    });
+
+    var freeTimes = busyTimes.map((interval) => {
+        return invertTimesArray(interval, limit);
+    });
+    freeTimes.push(bankWorkingMinutes);
+
+    var united = freeTimes[0];
+    for (var key = 1; key < freeTimes.length; key++) {
+        united = findIntersections(united, freeTimes[key]);
+    }
+
+    return united.filter((interval) => {
+        return interval.to - interval.from >= duration;
+    })[0];
+}
+
 /**
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
 const isStar = true;
+
+function timeObjToMinutes(obj, bankTimeZone) {
+    return {
+        from: timeStrToMinutes(obj.from, bankTimeZone),
+        to: timeStrToMinutes(obj.to, bankTimeZone)
+    };
+}
 
 /**
  * @param {Object} schedule – Расписание Банды
@@ -103,47 +141,10 @@ const isStar = true;
  */
 
 function getAppropriateMoment(schedule, duration, workingHours) {
-    var bankTimeZone = Number(workingHours.to.split('+')[1]);
-    function timeObjToMinutes(obj) {
-        return {
-            from: timeStrToMinutes(obj.from, bankTimeZone),
-            to: timeStrToMinutes(obj.to, bankTimeZone)
-        };
-    }
-
-    function findAppropriate(limit) {
-
-        var daysForRobbery = WEEK.slice(0, 3);
-        var bankWorkingTime = daysForRobbery.map(function (day) {
-            return {
-                from: day + ' ' + workingHours.from,
-                to: day + ' ' + workingHours.to
-            };
-        });
-        var bankWorkingMinutes = bankWorkingTime.map(timeObjToMinutes);
-
-        var busyTimes = Object.entries(schedule).map(function (obj) {
-            return obj[1].map(timeObjToMinutes);
-        });
-
-        var freeTimes = busyTimes.map((interval) => {
-            return invertTimesArray(interval, limit);
-        });
-        freeTimes.push(bankWorkingMinutes);
-
-        var united = freeTimes[0];
-        for (var key = 1; key < freeTimes.length; key++) {
-            united = findIntersections(united, freeTimes[key]);
-        }
-
-        return united.filter((interval) => {
-            return interval.to - interval.from >= duration;
-        })[0];
-    }
     var appropriate = findAppropriate({
         from: 0,
-        to: 3 * MINUTES_IN_DAY
-    });
+        to: WEEK.length * MINUTES_IN_DAY
+    }, workingHours, schedule, duration);
 
     return {
 
@@ -192,10 +193,10 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             }
 
             var newLimit = {
-                from: appropriate.from + 30,
-                to: 3 * MINUTES_IN_DAY
+                from: appropriate.from + (MINUTES_IN_HOUR / 2),
+                to: WEEK.length * MINUTES_IN_DAY
             };
-            var newAppropriate = findAppropriate(newLimit);
+            var newAppropriate = findAppropriate(newLimit, workingHours, schedule, duration);
 
             if (newAppropriate) {
                 appropriate = newAppropriate;
