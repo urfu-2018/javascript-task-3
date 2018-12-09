@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = true;
+const isStar = false;
 const datePattern = new RegExp('(.*?)?\\s?(\\d{2}):(\\d{2})\\+(\\d+)');
 const minutesInDay = 24 * 60;
 const minutesInHour = 60;
