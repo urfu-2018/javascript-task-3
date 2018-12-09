@@ -65,7 +65,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            if (!this.current) {
+            if (!this.current || !Object.keys(this.current)) {
                 return '';
             }
             let interval = this.current;
