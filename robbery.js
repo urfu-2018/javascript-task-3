@@ -43,10 +43,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     return {
         intervals,
         shift: 30,
-        current: {
-            from: 0,
-            to: 0
-        },
+        current: undefined,
 
         /**
          * Найдено ли время
