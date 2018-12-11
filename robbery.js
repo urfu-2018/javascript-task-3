@@ -7,6 +7,7 @@
 const isStar = false;
 const DAYS_KEYS= { 'ПН': 0, 'ВТ': 1, 'СР': 2, 'ЧТ': 3, 'ПТ': 4, 'СБ': 5, 'ВС': 6 };
 const NUMBER_KEYS = { 0: 'ПН', 1: 'ВТ', 2: 'СР', 3: 'ЧТ', 4: 'ПТ', 5: 'СБ', 6: 'ВС' };
+const minutesInDay = 24*60;
 
 function getDeltaTime(str) {
     return parseInt(str.match(/[+]\d+/).toString().substr(1));
@@ -51,57 +52,66 @@ function caseMinusDeltaTime(time, day, delta) {
     return day + " " + time;
 }
 
-function convertTimeZone(manSchedule, bankTimeDelta) {
+function convertTimeZone(manSchedule, bankTimeDelta) { //Привести к одному часовому поясу
     let deltaMan = getDeltaTime(manSchedule[0].from);
-    if (deltaMan == bankTimeDelta) {
-        for (let i = 0; i < manSchedule.length; i++) {
-            let fromStr = manSchedule[i].from;
-            let toStr = manSchedule[i].to;
-            manSchedule[i].from = getDayFromStr(fromStr) + ' ' + getHoursFromStr(fromStr) + ':' + getMinutesFromStr(fromStr) + '+' + bankTimeDelta;
-            manSchedule[i].to = getDayFromStr(toStr) + ' ' + getHoursFromStr(toStr) + ':' + getMinutesFromStr(toStr) + '+' + bankTimeDelta;
+    let result = [];
+    let delta = bankTimeDelta - deltaMan;
+    for (let i = 0; i < manSchedule.length; i++) {
+        let fromStr = manSchedule[i].from;
+        let toStr = manSchedule[i].to;
+
+        let fromStrEnd = ':' + getMinutesFromStr(fromStr) + '+' + bankTimeDelta;
+        let toStrEnd = ':' + getMinutesFromStr(toStr) + '+' + bankTimeDelta;
+        let hoursStrFrom = getHoursFromStr(fromStr);
+        let dayStrFrom = getDayFromStr(fromStr);
+        let hoursStrTo = getHoursFromStr(toStr);
+        let dayStrTo = getDayFromStr(toStr);
+        let param = {from: "", to: ""};
+        if (deltaMan < bankTimeDelta) {
+            param.from = casePlusDeltaTime(hoursStrFrom, dayStrFrom, delta) + fromStrEnd;
+            param.to = casePlusDeltaTime(hoursStrTo, dayStrTo, delta) + toStrEnd;
         }
-        return manSchedule;
-    }
-    if (deltaMan < bankTimeDelta) {
-        let delta = bankTimeDelta - deltaMan;
-        for (let i = 0; i < manSchedule.length; i++) {
-            let fromStr = manSchedule[i].from;
-            let toStr = manSchedule[i].to;
-            manSchedule[i].from = casePlusDeltaTime(getHoursFromStr(fromStr), getDayFromStr(fromStr), delta) + ':' + getMinutesFromStr(fromStr) + '+' + bankTimeDelta;
-            manSchedule[i].to = casePlusDeltaTime(getHoursFromStr(toStr), getDayFromStr(toStr), delta) + ':' + getMinutesFromStr(toStr) + '+' + bankTimeDelta;
+        else if (deltaMan == bankTimeDelta) {
+            param.from = dayStrFrom + ' ' + hoursStrFrom + fromStrEnd;
+            param.to = dayStrTo + ' ' + hoursStrTo + toStrEnd;
         }
-        return manSchedule;
-    }
-    if (deltaMan > bankTimeDelta) {
-        let delta = deltaMan - bankTimeDelta;
-        for (let i = 0; i < manSchedule.length; i++) {
-            let fromStr = manSchedule[i].from;
-            let toStr = manSchedule[i].to;
-            manSchedule[i].from = caseMinusDeltaTime(getHoursFromStr(fromStr), getDayFromStr(fromStr), delta) + ':' + getMinutesFromStr(fromStr) + '+' + bankTimeDelta;
-            manSchedule[i].to = caseMinusDeltaTime(getHoursFromStr(toStr), getDayFromStr(toStr), delta) + ':' + getMinutesFromStr(toStr) + '+' + bankTimeDelta;
+        else if (deltaMan > bankTimeDelta) {
+            param.from = caseMinusDeltaTime(hoursStrFrom, dayStrFrom, delta) +  + fromStrEnd;
+            param.to = caseMinusDeltaTime(hoursStrTo, dayStrTo, delta) + toStrEnd;
         }
-        return manSchedule;
+        result.push(param);
     }
+
+    return result;
 }
 
-function convertOccupiedSchedule(scheduleMan) {
+function convertOccupiedSchedule(scheduleMan) { //Привести к минутам
     for (let i = 0; i < scheduleMan.length; i++) {
         let fromStr = scheduleMan[i].from;
         let toStr = scheduleMan[i].to;
-        let fromDay = getDayFromStr(fromStr);
-        let toDay = getDayFromStr(toStr);
-        let fromHour = getHoursFromStr(fromStr);
-        let toHour = getHoursFromStr(toStr);
-        let fromMinutes = getMinutesFromStr(fromStr);
-        let toMinutes = getMinutesFromStr(toStr);
-        let fromTime = fromHour*60 + fromMinutes;
-        let toTime = toHour*60 + toMinutes;
-        scheduleMan[i].from = fromDay + ' ' + fromTime;
-        scheduleMan[i].to = toDay + ' ' + toTime;
+        scheduleMan[i].from = getDayFromStr(fromStr) + ' ' + getHoursFromStr(fromStr)*60 + getMinutesFromStr(fromStr);
+        scheduleMan[i].to = getDayFromStr(toStr) + ' ' + getHoursFromStr(toStr)*60 + getMinutesFromStr(toStr);
     }
     return scheduleMan;
 }
 
+<<<<<<< HEAD
+class DeltaTime {
+    constructor(from, to) {
+        this.from = from;
+        this.to = to;
+    }
+}
+
+function calculateTime(str) {
+    let minute = parseInt(str.match(/\d+/).toString());
+    return DAYS_KEYS[getDayFromStr(str)] * minutesInDay + minute;
+}
+
+function convertToDeltaTime(man) {
+    console.info(man);
+    return new DeltaTime(calculateTime(man.from), calculateTime(man.to));
+=======
 function fillTheDayArray(man, dayArr, dayStr) {
     for (let property of man) {
         let from = property.from;
@@ -131,18 +141,64 @@ function findTimeEnd(dayArray, dayStr, duration) {
         }
     }
     return 'kek';
+>>>>>>> 0f9c7459d53ce9923155a777912e1bb0ab798165
 }
 
 function findRoberyTime(schedule, duration, workingHours) {
+    let intervals = [];
     const bankTimeDelta = getDeltaTime(workingHours.from);
-    var kek =  JSON.stringify(schedule);
-    kek = JSON.parse(kek);
+    for (let human in schedule) {
+        let humanSchedule = convertTimeZone(schedule[human], bankTimeDelta);
+        humanSchedule = convertOccupiedSchedule(humanSchedule);
+        //console.info(humanSchedule);
+        for (let param of humanSchedule) {
+            intervals.push(convertToDeltaTime(param));
+        }
+    }
+    console.info(intervals);
+    /*console.info(arrayOfMen);
     kek.Danny = convertTimeZone(kek.Danny, bankTimeDelta);
     kek.Rusty = convertTimeZone(kek.Rusty, bankTimeDelta);
     kek.Linus = convertTimeZone(kek.Linus, bankTimeDelta);
     kek.Danny = convertOccupiedSchedule(kek.Danny);
     kek.Rusty = convertOccupiedSchedule(kek.Rusty);
     kek.Linus = convertOccupiedSchedule(kek.Linus);
+<<<<<<< HEAD
+    console.info(kek);
+    arrayOfMen.push(convertToDeltaTime(kek.Danny));
+    arrayOfMen.push(convertToDeltaTime(kek.Rusty));
+    arrayOfMen.push(convertToDeltaTime(kek.Linus));*/
+    
+    /*var bankMinutes = convertOccupiedSchedule(workingHours);
+    var array = [minutesInDay*3];
+    for (let i = 0; i < array.length; i++) {
+        array[i] = 3;
+    }
+    for (let i = getMinutesFromStr(bankMinutes.from); i < getMinutesFromStr(bankMinutes.to); i++) {
+        array[i]++;
+    }
+    for (let men in kek) {
+        for (let param of men) {
+            let from = param.from;
+            let to = param.to;
+            console.info(men);
+            let indexFrom = DAYS_KEYS(getDayFromStr(from));
+            let indexTo = DAYS_KEYS(getDayFromStr(to));
+            let start = indexFrom * minutesInDay + getMinutesFromStr(from);
+            let end = indexTo * minutesInDay + getMinutesFromStr(to);
+            for (let i = start; i < end; i++) {
+                array[i]--;
+            }
+        }
+    }
+    var count = 0;
+    for (let i = 0; i < array.length; i++) {
+        if(array[i] == 4)
+            count++;
+        else if (count >= workingHours)
+            console.info(i);
+    }*/
+=======
     let monday = [];
     let tuesday = [];
     let wednesday = [];
@@ -191,6 +247,7 @@ function findRoberyTime(schedule, duration, workingHours) {
         answer = findTimeEnd(wednesday, 'СР', duration);
     }
     console.info(answer);
+>>>>>>> 0f9c7459d53ce9923155a777912e1bb0ab798165
 }
 /**
  * @param {Object} schedule – Расписание Банды
