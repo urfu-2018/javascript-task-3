@@ -115,12 +115,18 @@ function convertStrToDeltaTime(param, bankTimeZone) {
     return new Interval(timeFrom, timeTo);
 }
 
+function niceRofl(obj, intervals, bankTimeZone) {
+    for (let param of obj) {
+        let deltaTime = convertStrToDeltaTime(param, bankTimeZone);
+        intervals.push(deltaTime);
+    }
+}
+
 function getIntervalsFromSchedlue(schedule, bankTimeZone) {
     let intervals = [];
     for (let human in schedule) {
-        for (let param of schedule[human]) {
-            let deltaTime = convertStrToDeltaTime(param, bankTimeZone);
-            intervals.push(deltaTime);
+        if (schedule.hasOwnProperty(human)) {
+            niceRofl(schedule[human], intervals, bankTimeZone);
         }
     }
 
