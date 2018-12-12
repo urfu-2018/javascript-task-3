@@ -105,7 +105,7 @@ function calculateInversia(freeIntervals, interval) {
         for (let j = 0; j < temp.length; j++) {
             freeIntervals.splice(i + j, 0, temp[j]);
         }
-        i += temp.length + 1;
+        i += temp.length;
     }
 }
 
