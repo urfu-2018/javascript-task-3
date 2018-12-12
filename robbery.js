@@ -74,11 +74,12 @@ function getArrayOfIntervals(freeInterval, interval) {
     let intersectLeft = freeInterval.isIntersecPoint(interval.from);
     let intersectRight = freeInterval.isIntersecPoint(interval.to);
 
-    if (intersectLeft && intersectRight) {
-        return [new Interval(freeInterval.from, interval.from),
-            new Interval(interval.to, freeInterval.to)];
-    }
-    if (intersectLeft && !intersectRight) {
+    if (intersectLeft) {
+        if (intersectRight) {
+            return [new Interval(freeInterval.from, interval.from),
+                new Interval(interval.to, freeInterval.to)];
+        }
+
         return [new Interval(freeInterval.from, interval.from)];
     }
     if (!intersectLeft && intersectRight) {
