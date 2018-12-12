@@ -1,5 +1,5 @@
 'use strict';
-
+ 
 /**
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
@@ -7,28 +7,80 @@
 const isStar = false;
 const DAYS_KEYS= { 'ПН': 0, 'ВТ': 1, 'СР': 2, 'ЧТ': 3, 'ПТ': 4, 'СБ': 5, 'ВС': 6 };
 const NUMBER_KEYS = { 0: 'ПН', 1: 'ВТ', 2: 'СР', 3: 'ЧТ', 4: 'ПТ', 5: 'СБ', 6: 'ВС' };
-const hoursInDays = 24;
-const minutesInHour = 60;
-const minutesInDay = hoursInDays * minutesInHour;
-
+const HOURS_IN_DAYS = 24;
+const MINUTES_IN_HOUR = 60;
+const MINUTES_IN_DAY = HOURS_IN_DAYS * MINUTES_IN_HOUR;
+ 
 function getTimeZone(str) {
     return parseInt(str.match(/[+]\d+/).toString().substr(1));
 }
-
+ 
 function getHoursFromStr(str) {
     let hour = str.match(/\d+:/).toString();
     return parseInt(hour.substring(0,hour.length-1));
 }
-
+ 
 function getDayFromStr(str) {
-    return str.match(/[А-Я]{2}/).toString();
+    let day = str.match(/[А-Я]{2}/);
+    if (day === null)
+        return NUMBER_KEYS[0];
+ 
+    return day.toString();
 }
-
+ 
 function getMinutesFromStr(str) {
     let minute = str.match(/:\d+/).toString();
     return parseInt(minute.substr(1));
 }
+ 
+function getArrayOfIntervals(freeInterval, interval) {
+    let intersectLeft = freeInterval.isIntersecPoint(interval.from);
+    let intersectRight = freeInterval.isIntersecPoint(interval.to);
 
+    /*console.info('rofl');
+    console.info(interval);
+    console.info(freeInterval);*/
+
+    if(intersectLeft && intersectRight) {//([])
+        //console.info("right and left");
+        return [new Interval(freeInterval.from, interval.from),
+            new Interval(interval.to, freeInterval.to)];
+    }
+    if(intersectLeft && !intersectRight) {//([)]
+        //console.info("left");
+        return [new Interval(freeInterval.from, interval.from)];
+    }
+    if(!intersectLeft && intersectRight) {//[(])
+        //console.info("right");
+        return [new Interval(interval.to, freeInterval.to)];
+    }
+    if(freeInterval.isInInterval(interval)) {//[()]
+        //console.info("full");
+        return [];
+    }
+    //console.info("none");
+    return [freeInterval];
+}
+ 
+function calculateInterval(freeIntervals, intervals) {
+    for (let interval of intervals) {
+        calculateInversia(freeIntervals, interval);
+    }
+}
+ 
+function calculateInversia(freeIntervals, interval) {
+    //console.info(freeIntervals);
+    for (let i = 0; i < freeIntervals.length;) {
+        let temp = getArrayOfIntervals(freeIntervals[i], interval);
+        //console.info(temp);
+        freeIntervals.splice(i, 1);
+        for (let j = 0; j < temp.length; j++) {
+            freeIntervals.splice(i + j, 0, temp[j]);
+        }
+        i += temp.length + 1;
+    }
+}
+ 
 class Time {
     constructor(currentString) {
         this.currentString = currentString;
@@ -40,34 +92,86 @@ class Time {
     }
 
     convertStringToMinutes(bankTimeZone) {
-        return this.dayIndex * minutesInDay
-        + this.hours * minutesInHour
+        return this.dayIndex * MINUTES_IN_DAY
+        + this.hours * MINUTES_IN_HOUR
         + this.minutes
-        + (bankTimeZone - this.delta) * minutesInHour;
+        + (bankTimeZone - this.delta) * MINUTES_IN_HOUR;
     }
 }
-
-class DeltaTime {
+ 
+class Interval {
     constructor(from, to) {
         this.from = from;
         this.to = to;
     }
-}
 
-function findRoberyTime(schedule, duration, workingHours) {
+    isIntersecPoint(point) {
+        return point >= this.from && point <= this.to;
+    }
+
+    isInInterval(interval) {
+        return this.from >= interval.from && this.to <= interval.to;
+    }
+}
+ 
+function convertStrToDeltaTime(param, bankTimeZone) {
+    let timeFrom = (new Time(param.from)).convertStringToMinutes(bankTimeZone);
+    let timeTo = (new Time(param.to)).convertStringToMinutes(bankTimeZone);
+    return new Interval(timeFrom, timeTo);
+}
+ 
+function getIntervalsFromSchedlue(schedule, bankTimeZone) {
     let intervals = [];
-    const bankTimeZone = getTimeZone(workingHours.from);
     for (let human in schedule) {
         for (let param of schedule[human]) {
-            console.info(param);
-            let timeFrom = (new Time(param.from)).convertStringToMinutes(bankTimeZone);
-            let timeTo = (new Time(param.to)).convertStringToMinutes(bankTimeZone);
-            let deltaTime = new DeltaTime(timeFrom, timeTo);
+            let deltaTime = convertStrToDeltaTime(param, bankTimeZone);
             intervals.push(deltaTime);
         }
     }
-    console.info(intervals);
+ 
+    return intervals;
 }
+
+function checkFreeIntervals(freeIntervals, duration) {
+    for (let freeInterval of freeIntervals) {
+        let delta = freeInterval.to - freeInterval.from;
+        if (delta >= duration) {
+            return freeInterval;
+        }
+    }
+    return false;
+}
+ 
+function findRoberyTime(schedule, duration, workingHours) {
+    const bankTimeZone = getTimeZone(workingHours.from);
+    let intervals = getIntervalsFromSchedlue(schedule, bankTimeZone);
+    let bankInterval = convertStrToDeltaTime(workingHours, bankTimeZone); 
+    let freeIntervals = [];
+    for (let i = 0; i < 3; i++) {
+        freeIntervals.push(new Interval(bankInterval.from + i * MINUTES_IN_DAY, bankInterval.to + i * MINUTES_IN_DAY));
+    }
+    //console.info(intervals);
+    //console.info(freeIntervals);
+    calculateInterval(freeIntervals, intervals);
+    //console.info(freeIntervals);
+    //console.info('roflando');
+    //console.info(checkFreeIntervals(freeIntervals, duration));
+    return checkFreeIntervals(freeIntervals, duration);
+}
+
+function convertToResultAnswer(time, template) {
+    let dayIndex = Math.floor(time / MINUTES_IN_DAY);
+    let day = NUMBER_KEYS[dayIndex];
+    let hour = Math.floor((time - MINUTES_IN_DAY * dayIndex) / MINUTES_IN_HOUR);
+    let minutes = time - MINUTES_IN_DAY * dayIndex - hour * MINUTES_IN_HOUR;
+    minutes = minutes > 10 ? minutes : '0' + minutes.toString();
+    template = template
+        .replace('%DD', day)
+        .replace('%HH', hour)
+        .replace('%MM', minutes);
+    return template;
+}
+
 /**
  * @param {Object} schedule – Расписание Банды
  * @param {Number} duration - Время на ограбление в минутах
@@ -78,17 +182,18 @@ function findRoberyTime(schedule, duration, workingHours) {
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
     //console.info(schedule, duration, workingHours);
-    
-    findRoberyTime(schedule, duration, workingHours);
+   
+    let resultOfFunction = findRoberyTime(schedule, duration, workingHours);
     return {
         /**
          * Найдено ли время
          * @returns {Boolean}
          */
         exists: function () {
-            return false;
+            //return false;
+            return (resultOfFunction) ? true : false;
         },
-
+ 
         /**
          * Возвращает отформатированную строку с часами для ограбления
          * Например, "Начинаем в %HH:%MM (%DD)" -> "Начинаем в 14:59 (СР)"
@@ -96,9 +201,13 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            return template;
+            if (!resultOfFunction) {
+                return '';
+            }
+            return convertToResultAnswer(resultOfFunction.from, template);
+            //return template;
         },
-
+ 
         /**
          * Попробовать найти часы для ограбления позже [*]
          * @star
@@ -109,9 +218,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         }
     };
 }
-
+ 
 module.exports = {
     getAppropriateMoment,
-
+ 
     isStar
 };
