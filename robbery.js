@@ -153,6 +153,7 @@ function findRoberyTime(schedule, duration, workingHours) {
     for (let i = 0; i < 3; i++) {
         freeIntervals.push(new Interval(bankInterval.from +
             i * MINUTES_IN_DAY, bankInterval.to + i * MINUTES_IN_DAY));
+        intervals.push(new Interval(i * MINUTES_IN_DAY, i * MINUTES_IN_DAY));
     }
     calculateInterval(freeIntervals, intervals);
 
