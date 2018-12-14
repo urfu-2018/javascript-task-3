@@ -43,14 +43,13 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
     return {
         shift: 30,
-        current: 0,
 
         /**
          * Найдено ли время
          * @returns {Boolean}
          */
         exists: function () {
-            return intervals !== null && intervals.length > 0;
+            return intervals.length > 0;
         },
 
         /**
@@ -63,8 +62,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (!this.exists()) {
                 return '';
             }
-            // console.info(intervals);
-            let interval = intervals[this.current];
+            let interval = intervals[0];
             let day = Math.floor(interval.from / (24 * 60));
             let weekDay = numberToDay[day];
             let hours = Math.floor((interval.from / 60)) % 24;
@@ -87,27 +85,19 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (!this.exists()) {
                 return false;
             }
-            let laterIndex = -1;
-            let later = intervals
-                .find(interval => {
-                    if (interval === intervals[this.current]) {
-                        interval.from += this.shift;
-                    }
-                    laterIndex += 1;
 
-                    return interval.to - interval.from >= duration;
-                });
-            if (!later) {
-                intervals[this.current].from -= this.shift;
-            } else {
-                this.current = laterIndex;
+            if (intervals[0].to - intervals[0].from >= duration + this.shift) {
+                intervals[0].from += this.shift;
+
+                return true;
             }
-            // console.info(laterIndex);
-            if (!this.exists()) {
+            if (intervals.length === 1) {
                 return false;
             }
 
-            return later !== undefined;
+            intervals.shift();
+
+            return true;
         }
     };
 }
