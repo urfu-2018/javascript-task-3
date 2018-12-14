@@ -4,7 +4,7 @@
  * Сделано задание на звездочку
  * Реализовано оба метода и tryLater
  */
-const isStar = false;
+const isStar = true;
 const datePattern = new RegExp('(.*?)?\\s?(\\d{2}):(\\d{2})\\+(\\d+)');
 const minutesInDay = 24 * 60;
 const minutesInHour = 60;
@@ -33,29 +33,24 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     // console.info('timezone', bankTimeZone)
     const scheduleDate = covnvertScheduleToMinutes(schedule, bankTimeZone);
     const bankSchedule = getWorkingHours(workingHours, bankTimeZone);
-    console.info('bank schedule', bankSchedule);
+    // console.info('bank schedule', bankSchedule);
     const freeSchedule = getFreeTimeSchedule(scheduleDate);
-    console.info('freeschedule', freeSchedule);
+    // console.info('freeschedule', freeSchedule);
     let intervals = getScheduleIntersection(freeSchedule, bankSchedule)
         .filter(interval =>
             interval.to - interval.from >= duration);
+    // console.info(intervals);
 
     return {
-        intervals,
         shift: 30,
-        current: undefined,
+        current: 0,
 
         /**
          * Найдено ли время
          * @returns {Boolean}
          */
         exists: function () {
-            this.current = intervals
-                .find(interval =>
-                    interval.to - interval.from >= duration
-                );
-
-            return this.current !== undefined;
+            return intervals !== null && intervals.length > 0;
         },
 
         /**
@@ -65,10 +60,11 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            if (!this.current || !Object.keys(this.current)) {
+            if (!this.exists()) {
                 return '';
             }
-            let interval = this.current;
+            // console.info(intervals);
+            let interval = intervals[this.current];
             let day = Math.floor(interval.from / (24 * 60));
             let weekDay = numberToDay[day];
             let hours = Math.floor((interval.from / 60)) % 24;
@@ -88,20 +84,27 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         tryLater: function () {
-            console.info(intervals, this.current);
-            this.exists();
-            let later = this.intervals
+            if (!this.exists()) {
+                return false;
+            }
+            let laterIndex = -1;
+            let later = intervals
                 .find(interval => {
-                    if (interval === this.current) {
+                    if (interval === intervals[this.current]) {
                         interval.from += this.shift;
                     }
+                    laterIndex += 1;
 
                     return interval.to - interval.from >= duration;
                 });
             if (!later) {
-                this.current.from -= this.shift;
+                intervals[this.current].from -= this.shift;
             } else {
-                this.current = later;
+                this.current = laterIndex;
+            }
+            // console.info(laterIndex);
+            if (!this.exists()) {
+                return false;
             }
 
             return later !== undefined;
