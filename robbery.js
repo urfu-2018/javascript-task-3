@@ -66,8 +66,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             let day = Math.floor(interval.from / (24 * 60));
             let weekDay = numberToDay[day];
             let hours = Math.floor((interval.from / 60)) % 24;
+            hours = hours < 10 ? `0${hours}` : hours;
             let minutes = interval.from % 60;
-            minutes = minutes > 10 ? minutes : '0' + minutes.toString();
+            minutes = minutes < 10 ? `0${minutes}` : minutes;
             template = template
                 .replace('%DD', weekDay)
                 .replace('%HH', hours)
