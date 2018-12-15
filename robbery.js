@@ -11,6 +11,7 @@ const MINUTES_IN_DAY = MINUTES_IN_HOUR * HOURS_IN_DAY;
 const HALF_AN_HOUR = 30;
 const DAYS_OF_WEEK = ['ПН', 'ВТ', 'СР'];
 let robbery = {};
+
 function tryAgain() {
     robbery = {
         possibility: {
@@ -20,9 +21,10 @@ function tryAgain() {
         tryLater: false
     };
 }
+
 function getDataAndTimeFromMinute(startTime) {
-    let mod = startTime % MINUTES_IN_DAY;
-    let day = (startTime - mod) / MINUTES_IN_DAY;
+    const mod = startTime % MINUTES_IN_DAY;
+    const day = (startTime - mod) / MINUTES_IN_DAY;
     let minute = mod % MINUTES_IN_HOUR;
     let hour = (mod - minute) / MINUTES_IN_HOUR;
     if (minute < 10) {
@@ -34,6 +36,7 @@ function getDataAndTimeFromMinute(startTime) {
 
     return { day, hour, minute };
 }
+
 function intersectRobberAndBankSheduleInDayPeriod(day, robberSchedule, bankSchedule) {
     const intersections = [];
     robberSchedule.filter(r => r.day === day).forEach(robberSchedulePoint => {
@@ -48,6 +51,7 @@ function intersectRobberAndBankSheduleInDayPeriod(day, robberSchedule, bankSched
 
     return intersections;
 }
+
 function intersectIntervals(interval1, interval2) {
     const maxStart = Math.max(interval1.start, interval2.start);
     const minEnd = Math.min(interval1.end, interval2.end);
@@ -60,6 +64,7 @@ function intersectIntervals(interval1, interval2) {
         end: minEnd
     };
 }
+
 function changeRobberyFields(currentInterval, duration) {
     if (currentInterval.end - currentInterval.start < duration) {
         return false;
@@ -70,6 +75,7 @@ function changeRobberyFields(currentInterval, duration) {
 
     return true;
 }
+
 function tryLaterInternal(currentInterval, duration) {
     const start = Math.max(robbery.startMinute + HALF_AN_HOUR, currentInterval.start);
     if (currentInterval.end - start < duration) {
@@ -80,6 +86,7 @@ function tryLaterInternal(currentInterval, duration) {
 
     return true;
 }
+
 function tryLater(intervalsForRobbery, duration) {
     for (let i = 0; i < intervalsForRobbery.length; i++) {
         if (tryLaterInternal(intervalsForRobbery[i], duration)) {
@@ -87,6 +94,7 @@ function tryLater(intervalsForRobbery, duration) {
         }
     }
 }
+
 function fillRobberyFields(intervalsForRobbery, duration) {
     for (let i = 0; i < intervalsForRobbery.length; i++) {
         if (changeRobberyFields(intervalsForRobbery[i], duration)) {
@@ -94,15 +102,16 @@ function fillRobberyFields(intervalsForRobbery, duration) {
         }
     }
 }
+
 function getTimesToRobbery(schedule, duration, workingHours) {
-    let informationAboutBank = getInformationAboutBank(workingHours);
+    const informationAboutBank = getInformationAboutBank(workingHours);
     const bankTimeZone = informationAboutBank.timezone;
     let bankSchedule = informationAboutBank.schedule;
     Object.keys(schedule).forEach(robber => {
-        let robberSchedule = schedule[robber].map(schedulePoint => {
+        const robberSchedule = schedule[robber].map(schedulePoint => {
             return getRobberBusyTimeInterval(schedulePoint, bankTimeZone);
         });
-        let splitByDaysSchedule =
+        const splitByDaysSchedule =
             getFreeTimeSchedule(robberSchedule)
                 .reduce(splitByDays, []);
         let recalculatedBankSchedule = [];
@@ -124,9 +133,10 @@ function getTimesToRobbery(schedule, duration, workingHours) {
  * @param {String} workingHours.to – Время закрытия, например, "18:00+5"
  * @returns {Object}
  */
+
 function getAppropriateMoment(schedule, duration, workingHours) {
     console.info(schedule, duration, workingHours);
-    let bankSchedule = getTimesToRobbery(schedule, duration, workingHours);
+    const bankSchedule = getTimesToRobbery(schedule, duration, workingHours);
 
     return {
 
@@ -151,7 +161,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (robbery.possibility.isPossible === false) {
                 return '';
             }
-            let data = getDataAndTimeFromMinute(robbery.startMinute);
+            const data = getDataAndTimeFromMinute(robbery.startMinute);
             let str = template.replace(/%HH/, String(data.hour))
                 .replace(/%MM/, String(data.minute))
                 .replace(/%DD/, DAYS_OF_WEEK[data.day]);
@@ -171,13 +181,14 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         }
     };
 }
+
 function getRobberBusyTimeInterval(schedule, bankTimezone) {
-    let robberSchedule = parseScheduleString(schedule);
+    const robberSchedule = parseScheduleString(schedule);
     const differenceInHours = bankTimezone - robberSchedule.timezone;
     const differenceInMinutes = differenceInHours * MINUTES_IN_HOUR;
-    let start = robberSchedule.start + differenceInMinutes +
+    const start = robberSchedule.start + differenceInMinutes +
         robberSchedule.startDay * MINUTES_IN_DAY;
-    let end = robberSchedule.end + differenceInMinutes +
+    const end = robberSchedule.end + differenceInMinutes +
         robberSchedule.endDay * MINUTES_IN_DAY;
 
     return {
@@ -185,11 +196,12 @@ function getRobberBusyTimeInterval(schedule, bankTimezone) {
         end: Math.min(DAYS_OF_WEEK.length * MINUTES_IN_DAY, end)
     };
 }
+
 function getInformationAboutBank(schedule) {
-    let everyDaySchedule = parseScheduleString(schedule);
+    const everyDaySchedule = parseScheduleString(schedule);
     const workingIntervals = getIndexesOfDays()
         .map((value, index) => {
-            let diffFromFirstDayInMinutes = value * MINUTES_IN_DAY;
+            const diffFromFirstDayInMinutes = value * MINUTES_IN_DAY;
 
             return {
                 day: index,
@@ -204,6 +216,7 @@ function getInformationAboutBank(schedule) {
 
     return bankSchedule;
 }
+
 function parseScheduleString(workingHours) {
     const SCHEDULE_STRING_REGEX = /^((.{2}) )?(\d+):(\d+)\+(\d+)$/;
     const start = workingHours.from.match(SCHEDULE_STRING_REGEX);
@@ -220,6 +233,7 @@ function parseScheduleString(workingHours) {
         return parseInt(match[3]) * MINUTES_IN_HOUR + parseInt(match[4]);
     }
 }
+
 function getFreeTimeSchedule(busyTimeSchedule) {
     if (busyTimeSchedule.length === 0) {
         return [{
@@ -227,7 +241,7 @@ function getFreeTimeSchedule(busyTimeSchedule) {
             end: DAYS_OF_WEEK.length * MINUTES_IN_DAY
         }];
     }
-    let freeTimeSchedule = [];
+    const freeTimeSchedule = [];
     const firstStart = busyTimeSchedule[0].start;
     if (firstStart > 0) {
         freeTimeSchedule.push({
@@ -252,9 +266,10 @@ function getFreeTimeSchedule(busyTimeSchedule) {
 
     return freeTimeSchedule;
 }
+
 function splitByDays(splitByDaysSchedule, element) {
-    let startDay = Math.trunc(element.start / MINUTES_IN_DAY);
-    let endDay = Math.trunc((element.end - 1) / MINUTES_IN_DAY);
+    const startDay = Math.trunc(element.start / MINUTES_IN_DAY);
+    const endDay = Math.trunc((element.end - 1) / MINUTES_IN_DAY);
     for (let day = startDay; day <= endDay; day++) {
         splitByDaysSchedule.push({
             day: day,
@@ -265,6 +280,7 @@ function splitByDays(splitByDaysSchedule, element) {
 
     return splitByDaysSchedule;
 }
+
 function getIndexesOfDays() {
     return Array.from(Array(DAYS_OF_WEEK.length).keys());
 }
