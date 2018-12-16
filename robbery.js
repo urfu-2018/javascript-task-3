@@ -28,30 +28,46 @@ function cutLimits(obj, limit) {
 }
 
 function invertTimesArray(arr, limit) {
-    if (!arr.length) {
-        return [];
+    var cutArray = arr.map(function (obj) {
+        return cutLimits(obj, limit);
+    });
+
+    var filteredArray = cutArray.filter(function (obj) {
+        return (obj.to - obj.from) > 0;
+    });
+
+    if (!filteredArray.length) {
+        return [limit];
     }
 
-    var result = [{
-        from: limit.from,
-        to: arr[0].from
-    }];
+    filteredArray.sort(function (a, b) {
+        return a.from - b.from;
+    });
 
-    for (var key = 0; key < arr.length - 1; key++) {
+    var result = [];
+
+    if (filteredArray[0].from > limit.from) {
         result.push({
-            from: arr[key].to,
-            to: arr[key + 1].from
+            from: limit.from,
+            to: filteredArray[0].from
         });
     }
 
-    result.push({
-        from: arr[arr.length - 1].to,
-        to: limit.to
-    });
+    for (var key = 0; key < filteredArray.length - 1; key++) {
+        result.push({
+            from: filteredArray[key].to,
+            to: filteredArray[key + 1].from
+        });
+    }
 
-    return result.map(function (obj) {
-        return cutLimits(obj, limit);
-    });
+    if (filteredArray[filteredArray.length - 1].to < limit.to) {
+        result.push({
+            from: filteredArray[filteredArray.length - 1].to,
+            to: limit.to
+        });
+    }
+
+    return result;
 }
 
 function findIntersection(firstInterval, secondInterval) {
