@@ -36,12 +36,12 @@ const timePattern = /^(\d{2}):(\d{2})(\+\d{1,2})?$/;
  * @returns {Object}
  */
 function parseTime(timeline) {
-    const [hours, minutes, tZ] = timeline.match(timePattern);
-    const timeZone = tZ ? parseInt(tZ) : 0;
+    const tokens = timeline.match(timePattern);
+    const timeZone = tokens[3] ? parseInt(tokens[3]) : 0;
 
     return {
-        hours: Number.parseInt(hours),
-        minutes: Number.parseInt(minutes),
+        hours: Number.parseInt(tokens[1]),
+        minutes: Number.parseInt(tokens[2]),
         timeZone: timeZone
     };
 }
