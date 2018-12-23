@@ -14,6 +14,11 @@ const minutesInAHour = 60;
 const hoursInDay = 24;
 const minutesInADay = minutesInAHour * hoursInDay;
 
+/**
+ * Парсит момент
+ * @param {String} momentString
+ * @returns {Object}
+ */
 function parseMoment(momentString) {
     const tokens = momentString.match(momentPattern);
     const day = weekDays.indexOf(tokens[1]);
@@ -25,17 +30,28 @@ function parseMoment(momentString) {
 
 const timePattern = /^(\d{2}):(\d{2})(\+\d{1,2})?$/;
 
+/**
+ * Парсит время
+ * @param {String} timeline
+ * @returns {Object}
+ */
 function parseTime(timeline) {
     const tokens = timeline.match(timePattern);
     const timeZone = tokens[3] ? parseInt(tokens[3]) : 0;
 
     return {
-        hours: parseInt(tokens[1]),
+        hours: Number.parseInt(tokens[1]),
         minutes: Number.parseInt(tokens[2]),
         timeZone: timeZone
     };
 }
 
+/**
+ * Переводит момент в минуты с учетом часового пояса банка
+ * @param {Number} time
+ * @param {Number} bankTimeZone
+ * @returns {Number}
+ */
 function momentToMinutes(time, bankTimeZone = 0) {
     const result = (time.day ? time.day : 0) * minutesInADay +
         (time.hours - time.timeZone + bankTimeZone) * minutesInAHour +
@@ -44,14 +60,29 @@ function momentToMinutes(time, bankTimeZone = 0) {
     return result;
 }
 
+/**
+ * По минутам отдает только день
+ * @param {Number} minutes
+ * @returns {Number}
+ */
 function getTheDay(minutes) {
     return Math.trunc(Math.trunc(minutes / minutesInAHour) / hoursInDay);
 }
 
+/**
+ * По минутам отдает часы и минуты
+ * @param {Number} minutes
+ * @returns {Number}
+ */
 function getHoursAndMinutes(minutes) {
     return minutes - getTheDay(minutes) * hoursInDay * minutesInAHour;
 }
 
+/**
+ * Переводит из минут в момент
+ * @param {Number} minutes
+ * @returns {Object}
+ */
 function minutesToMoment(minutes) {
     const hoursAndMinutes = getHoursAndMinutes(minutes);
 
@@ -62,23 +93,42 @@ function minutesToMoment(minutes) {
     };
 }
 
+/**
+ * Пару с-до переводит в интервал времени
+ * @param {Object} pair
+ * @param {Function} parser
+ * @param {String} bankTimeZone
+ * @returns {Object}
+ */
 function pairToInterval(pair, parser, bankTimeZone) {
     return [pair.from, pair.to]
         .map(parser)
         .map(time => momentToMinutes(time, bankTimeZone));
 }
 
-function intersect(a, b) {
-    if (!a || !b) {
+/**
+ * Проверяет пересечения
+ * @param {String} time1
+ * @param {String} time2
+ * @returns {Boolean}
+ */
+function intersect(time1, time2) {
+    if (!time1 || !time2) {
         return undefined;
     }
 
-    const left = Math.max(a[0], b[0]);
-    const right = Math.min(a[1], b[1]);
+    const left = Math.max(time1[0], time2[0]);
+    const right = Math.min(time1[1], time2[1]);
 
     return left < right ? [left, right] : undefined;
 }
 
+/**
+ * Изменяет формат даты
+ * @param {String} pattern
+ * @param {Object} moment
+ * @returns {String}
+ */
 function newFormatOfDate(pattern, moment) {
     return pattern.replace('%HH', (moment.hours < 10 ? '0' : '') + moment.hours)
         .replace('%MM', (moment.minutes < 10 ? '0' : '') + moment.minutes)
@@ -172,7 +222,6 @@ function getAppropriateMoment(schedule, duration, HoursOfWork) {
     };
 }
 
-// noinspection JSUnresolvedVariable
 module.exports = {
     getAppropriateMoment,
 
