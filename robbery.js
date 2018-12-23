@@ -36,12 +36,12 @@ const timePattern = /^(\d{2}):(\d{2})(\+\d{1,2})?$/;
  * @returns {Object}
  */
 function parseTime(timeline) {
-    const tokens = timeline.match(timePattern);
-    const timeZone = tokens[3] ? parseInt(tokens[3]) : 0;
+    const [hours, minutes, tZ] = timeline.match(timePattern);
+    const timeZone = tZ ? parseInt(tZ) : 0;
 
     return {
-        hours: Number.parseInt(tokens[1]),
-        minutes: Number.parseInt(tokens[2]),
+        hours: Number.parseInt(hours),
+        minutes: Number.parseInt(minutes),
         timeZone: timeZone
     };
 }
@@ -102,8 +102,7 @@ function minutesToMoment(minutes) {
  */
 function pairToInterval(pair, parser, bankTimeZone) {
     return [pair.from, pair.to]
-        .map(parser)
-        .map(time => momentToMinutes(time, bankTimeZone));
+        .map(time => momentToMinutes(parser(time), bankTimeZone));
 }
 
 /**
@@ -129,7 +128,7 @@ function intersect(time1, time2) {
  * @param {Object} moment
  * @returns {String}
  */
-function newFormatOfDate(pattern, moment) {
+function formatDate(pattern, moment) {
     return pattern.replace('%HH', (moment.hours < 10 ? '0' : '') + moment.hours)
         .replace('%MM', (moment.minutes < 10 ? '0' : '') + moment.minutes)
         .replace('%DD', weekDays[moment.day]);
@@ -144,7 +143,7 @@ function newFormatOfDate(pattern, moment) {
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, HoursOfWork) {
-    console.info(schedule, duration, HoursOfWork);
+    // console.info(schedule, duration, HoursOfWork);
     const bankTimeZone = parseTime(HoursOfWork.from).timeZone;
     const bankWorkInterval = pairToInterval(HoursOfWork, parseTime, bankTimeZone);
     const impossibleTimes = Object.keys(schedule)
@@ -159,7 +158,7 @@ function getAppropriateMoment(schedule, duration, HoursOfWork) {
         let start = day * minutesInADay + bankWorkInterval[0];
         let end = day * minutesInADay + bankWorkInterval[1];
         possibleTimes = possibleTimes.concat(
-            [...new Set(borders.filter(b => b >= start && b <= end))]
+            [...new Set(borders.filter(border => border >= start && border <= end))]
                 .concat([start, end])
                 .sort((x, y) => x - y)
                 .map((_, index, array) => index > 0 ? [array[index - 1], array[index]] : null)
@@ -193,7 +192,7 @@ function getAppropriateMoment(schedule, duration, HoursOfWork) {
             }
             const firstPossible = minutesToMoment(possibleTimes[0][0]);
 
-            return newFormatOfDate(template, firstPossible);
+            return formatDate(template, firstPossible);
         },
 
         /**
