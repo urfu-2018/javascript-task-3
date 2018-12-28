@@ -2,7 +2,8 @@
   "main": "robbery.js",
   "scripts": {
     "lint": "eslint .",
-    "test": "npm run lint && mocha *.spec.js --exit"
+    "test": "npm run lint && mocha *.spec.js --exit",
+    "start": "node index.js"
   },
   "dependencies": {
     "eslint": "5.7.0",
