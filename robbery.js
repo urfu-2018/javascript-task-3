@@ -26,7 +26,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            return Boolean(findedTime);
+            return findedTime !== null;
         },
 
         /**
@@ -36,12 +36,12 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {String}
          */
         format: function (template) {
-            if (!findedTime) {
+            if (findedTime === null) {
                 return '';
             }
-            let day = days[Math.floor(findedTime.time / (24 * 60))];
-            let hours = Math.floor((findedTime.time % (24 * 60)) / 60);
-            let minutes = findedTime.time % 60;
+            let day = days[Math.floor(findedTime / (24 * 60))];
+            let hours = Math.floor((findedTime % (24 * 60)) / 60);
+            let minutes = findedTime % 60;
 
             return template
                 .replace('%HH', hours < 10 ? '0' + hours : hours)
@@ -65,11 +65,11 @@ function findTime(schedule, workingHours, duration) {
 
     for (let i = 0; i < times.length; i++) {
         if (times[i].to >= times[i].from + duration) {
-            return { time: times[i].from };
+            return times[i].from;
         }
     }
 
-    return false;
+    return null;
 }
 
 function findTotalJointSchedule(schedule, workingHours) {
