@@ -26,7 +26,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
          * @returns {Boolean}
          */
         exists: function () {
-            return findedTime;
+            return Boolean(findedTime);
         },
 
         /**
@@ -62,7 +62,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
 function findTime(schedule, workingHours, duration) {
     let times = findTotalJointSchedule(schedule, workingHours);
-    console.info(times);
+
     for (let i = 0; i < times.length; i++) {
         if (times[i].to >= times[i].from + duration) {
             return times[i].from;
