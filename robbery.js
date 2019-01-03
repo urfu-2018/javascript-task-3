@@ -44,8 +44,8 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             let minutes = findedTime % 60;
 
             return template
-                .replace('%HH', hours || '00')
-                .replace('%MM', minutes || '00')
+                .replace('%HH', hours < 10 ? '0' + hours : hours)
+                .replace('%MM', minutes < 10 ? '0' + minutes : minutes)
                 .replace('%DD', day);
         },
 
