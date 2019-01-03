@@ -139,7 +139,7 @@ function freeTimeSchedule(workSchedule) {
         freeTimes.push({ from, to: time.from });
         from = time.to;
     });
-    freeTimes.push({ from: workSchedule[workSchedule.length - 1].to, to: 3 * 24 * 60 });
+    freeTimes.push({ from: workSchedule[workSchedule.length - 1].to, to: 3 * 24 * 60 - 1 });
 
     return freeTimes;
 }
