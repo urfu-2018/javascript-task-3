@@ -136,6 +136,7 @@ function intersectTimes(firstSchedule, secondSchedule) {
 function freeTimeSchedule(workSchedule) {
     let from = 0;
     let freeTimes = [];
+
     workSchedule.forEach((time, i) => {
         freeTimes[i] = { from, to: time.from };
         from = time.to;
