@@ -39,9 +39,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (!findedTime) {
                 return '';
             }
-            let day = days[Math.floor(findedTime / (24 * 60))];
-            let hours = Math.floor((findedTime % (24 * 60)) / 60);
-            let minutes = findedTime % 60;
+            let day = days[Math.floor(findedTime.time / (24 * 60))];
+            let hours = Math.floor((findedTime.time % (24 * 60)) / 60);
+            let minutes = findedTime.time % 60;
 
             return template
                 .replace('%HH', hours < 10 ? '0' + hours : hours)
@@ -65,7 +65,7 @@ function findTime(schedule, workingHours, duration) {
 
     for (let i = 0; i < times.length; i++) {
         if (times[i].to >= times[i].from + duration) {
-            return times[i].from;
+            return { time: times[i].from };
         }
     }
 
