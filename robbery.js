@@ -40,7 +40,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
                 return '';
             }
             let day = days[Math.floor(findedTime / (24 * 60))];
-            let hours = Math.floor(findedTime % (24 * 60) / 60);
+            let hours = Math.floor((findedTime % (24 * 60)) / 60);
             let minutes = findedTime % 60;
 
             return template
@@ -62,6 +62,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
 function findTime(schedule, workingHours, duration) {
     let times = findTotalJointSchedule(schedule, workingHours);
+    console.info(times);
     for (let i = 0; i < times.length; i++) {
         if (times[i].to >= times[i].from + duration) {
             return times[i].from;
@@ -135,12 +136,12 @@ function intersectTimes(firstSchedule, secondSchedule) {
 function freeTimeSchedule(workSchedule) {
     let from = 0;
     let freeTimes = [];
-    workSchedule.forEach(time => {
-        freeTimes.push({ from, to: time.from });
+    workSchedule.forEach((time, i) => {
+        freeTimes[i] = { from, to: time.from };
         from = time.to;
     });
-    freeTimes.push({ from: workSchedule[workSchedule.length - 1]
-        ? workSchedule[workSchedule.length - 1].to : from, to: 3 * 24 * 60 - 1 });
+    freeTimes[workSchedule.length] = { from: workSchedule.length !== 0
+        ? workSchedule[workSchedule.length - 1].to : from, to: 3 * 24 * 60 - 1 };
 
     return freeTimes;
 }
