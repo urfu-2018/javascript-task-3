@@ -1,13 +1,12 @@
 'use strict';
 
-/**
- * Сделано задание на звездочку
- * Реализовано оба метода и tryLater
- */
 const isStar = false;
 
-const daysToMinutes = { 'ПН': 0, 'ВТ': 24 * 60, 'СР': 48 * 60 };
 const numberToDay = { 0: 'ПН', 1: 'ВТ', 2: 'СР' };
+const minutesInHour = 60;
+const minutesInDay = minutesInHour * 24;
+const daysToMinutes = { 'ПН': 0, 'ВТ': 24 * 60, 'СР': 2 * 24 * 60 };
+
 
 function getTime(stringTime, bankTimeZone) {
     let timeZone = parseInt(stringTime.split('+')[1]);
@@ -100,61 +99,8 @@ function getBankTime(workingHours) {
     return sections;
 }
 
-function allIsUndefined(schedule) {
-
-    return typeof schedule.Danny === undefined ||
-    typeof schedule.Rusty === undefined ||
-    typeof schedule.Linus === undefined;
-}
-
-function correctSchedule(schedule, bankTimezone) {
-    if (allIsUndefined(schedule)) {
-
-        return false;
-    }
-    if (!correctSections(schedule.Danny, bankTimezone) ||
-    !correctSections(schedule.Rusty, bankTimezone) ||
-    !correctSections(schedule.Linus, bankTimezone)) {
-        return false;
-    }
-
-    return true;
-}
-
-function correctSections(sections, bankTimeZone) {
-    for (let s of sections) {
-        if (isNaN(getTime(s.from, bankTimeZone)) || isNaN(getTime(s.to, bankTimeZone))) {
-
-            return false;
-        }
-    }
-
-    return true;
-}
-
-function correctWorkingHours(workingHours) {
-    if (typeof workingHours !== 'object') {
-
-        return false;
-    }
-    if (typeof workingHours.from !== 'string' || typeof workingHours.to !== 'string') {
-
-        return false;
-    }
-    if (isNaN(getTimeForBank(workingHours.from)) || isNaN(getTimeForBank(workingHours.to))) {
-
-        return false;
-    }
-
-    return true;
-}
-
 function fillFreeTime(schedule, workingHours) {
     const bankTimezone = parseInt(workingHours.from.split('+')[1]);
-    if (!correctWorkingHours(workingHours) || !correctSchedule(schedule, bankTimezone)) {
-
-        return [];
-    }
     let dannyFreeTime = getTimeSections(schedule.Danny, bankTimezone);
     let rustyFreeTime = getTimeSections(schedule.Rusty, bankTimezone);
     let linusFreeTime = getTimeSections(schedule.Linus, bankTimezone);
@@ -206,13 +152,14 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (time === -1) {
                 return '';
             }
-            let day = numberToDay[Math.floor(time / (24 * 60))];
+            let day = numberToDay[Math.floor(time / (minutesInDay))];
             let hour = Math.floor((time - daysToMinutes[day]) / 60);
-            let minute = time % 60;
+            let minute = time % minutesInHour;
 
-            template = template.replace('%DD', day);
-            template = template.replace('%HH', hour);
-            template = template.replace('%MM', minute < 10 ? '0' + String(minute) : String(minute));
+            template = template
+                .replace('%DD', day)
+                .replace('%HH', hour)
+                .replace('%MM', minute < 10 ? '0' + String(minute) : String(minute));
 
             return template;
         },
