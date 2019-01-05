@@ -1,6 +1,6 @@
 'use strict';
 
-const isStar = false;
+const isStar = true;
 
 const numberToDay = { 0: 'ПН', 1: 'ВТ', 2: 'СР' };
 const minutesInHour = 60;
@@ -118,9 +118,9 @@ function fillFreeTime(schedule, workingHours) {
 function getAppropriateMoment(schedule, duration, workingHours) {
     const times = fillFreeTime(schedule, workingHours);
     let time = -1;
-    for (let s of times) {
-        if (typeof duration === 'number' && s.to - s.from >= duration) {
-            time = s.from;
+    for (const freeTime of times) {
+        if (typeof duration === 'number' && freeTime.to - freeTime.from >= duration) {
+            time = freeTime.from;
             break;
         }
     }
@@ -157,12 +157,26 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             return template;
         },
 
-        /**
+        /*
          * Попробовать найти часы для ограбления позже [*]
          * @star
          * @returns {Boolean}
          */
         tryLater: function () {
+            if (time === -1) {
+                return false;
+            }
+            time += 30;
+            for (const freeTime of times) {
+                if (freeTime.to - freeTime.from >= duration &&
+                    freeTime.to - time >= duration) {
+                    time = time < freeTime.from ? freeTime.from : time;
+
+                    return true;
+                }
+            }
+            time -= 30;
+
             return false;
         }
     };
