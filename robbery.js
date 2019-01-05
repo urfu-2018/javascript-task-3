@@ -71,7 +71,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
  * @param {Object} schedule – Расписание банды
  * @param {Number} duration - Время на ограбление в минутах
  * @param {Array} bankSchedule – Расписание банка
- * @returns {Number|null}
+ * @returns {Number|null} - null, если нет подходящего времени
  */
 function findTime(schedule, duration, bankSchedule) {
     const times = joinGangAndBankSchedules(schedule, bankSchedule);
@@ -140,7 +140,7 @@ function intersectSchedule(firstSchedule, secondSchedule) {
  * @param {Object} secondSchedule - Второй отрезок времени
  * @param {Object} secondSchedule.from – Начало второго отрезка
  * @param {Object} secondSchedule.to – Конец второго отрезка
- * @returns {Object}
+ * @returns {Object|null} - null, если не пересекаются
  */
 function intersectTimes(firstSchedule, secondSchedule) {
     if (firstSchedule.from > secondSchedule.from) {
@@ -222,9 +222,10 @@ function timeToTimezone(formattedTime, bankTimeZone) {
  */
 function timeToMinutes(dayAndTime) {
     return {
-        day: dayAndTime.slice(0, 2),
-        minutes: parseInt(dayAndTime.slice(3, 5)) * 60 + parseInt(dayAndTime.slice(6, 8)),
-        timezone: parseInt(dayAndTime.slice(9))
+        day: dayAndTime.split(/\s|:|\+/)[0],
+        minutes: parseInt(dayAndTime.split(/\s|:|\+/)[1]) * 60 +
+            parseInt(dayAndTime.split(/\s|:|\+/)[2]),
+        timezone: parseInt(dayAndTime.split(/\s|:|\+/)[3])
     };
 }
 
