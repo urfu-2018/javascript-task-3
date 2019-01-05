@@ -158,7 +158,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
 
             template = template
                 .replace('%DD', day)
-                .replace('%HH', hour)
+                .replace('%HH', hour < 10 ? '0' + String(hour) : String(hour))
                 .replace('%MM', minute < 10 ? '0' + String(minute) : String(minute));
 
             return template;
