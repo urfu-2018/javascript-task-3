@@ -45,9 +45,9 @@ function getAppropriateMoment(schedule, duration, workingHours) {
             if (findedTime === null) {
                 return '';
             }
-            let day = days[Math.floor(findedTime / (24 * 60))];
-            let hours = Math.floor((findedTime % (24 * 60)) / 60);
-            let minutes = findedTime % 60;
+            const day = days[Math.floor(findedTime / (24 * 60))];
+            const hours = Math.floor((findedTime % (24 * 60)) / 60);
+            const minutes = findedTime % 60;
 
             return template
                 .replace('%HH', hours < 10 ? '0' + hours : hours)
@@ -105,7 +105,7 @@ function joinGangAndBankSchedules(schedule, bankSchedule) {
     let jointSchedule = [];
     const DannyJointRusty = intersectSchedule(gangSchedules[0], gangSchedules[1]);
     const LinusJointBank = intersectSchedule(gangSchedules[2], formattedBankSchedule);
-    if (DannyJointRusty.length !== 0 && LinusJointBank.length !== 0) {
+    if (DannyJointRusty.length && LinusJointBank.length) {
         jointSchedule = intersectSchedule(DannyJointRusty, LinusJointBank);
     }
 
@@ -119,7 +119,7 @@ function joinGangAndBankSchedules(schedule, bankSchedule) {
  * @returns {Array}
  */
 function intersectSchedule(firstSchedule, secondSchedule) {
-    let intersectedSchedule = [];
+    const intersectedSchedule = [];
     firstSchedule.forEach(firstElem => {
         secondSchedule.forEach(secondElem => {
             const currentSchedule = intersectTimes(firstElem, secondElem);
@@ -168,13 +168,13 @@ function intersectTimes(firstSchedule, secondSchedule) {
  */
 function freeTimeSchedule(workSchedule) {
     let from = 0;
-    let freeTimes = [];
+    const freeTimes = [];
 
     workSchedule.forEach((time, i) => {
         freeTimes[i] = { from, to: time.from };
         from = time.to;
     });
-    freeTimes[workSchedule.length] = { from: workSchedule.length !== 0
+    freeTimes[workSchedule.length] = { from: workSchedule.length
         ? workSchedule[workSchedule.length - 1].to : from, to: 3 * 24 * 60 - 1 };
 
     return freeTimes;
@@ -211,7 +211,7 @@ function timeToTimezone(formattedTime, bankTimeZone) {
         minutes += 48 * 60;
     }
 
-    minutes = minutes + formattedTime.minutes + difference;
+    minutes += formattedTime.minutes + difference;
 
     return minutes;
 }
