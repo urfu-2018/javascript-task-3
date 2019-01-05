@@ -71,7 +71,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
  * @param {Object} schedule – Расписание банды
  * @param {Number} duration - Время на ограбление в минутах
  * @param {Array} bankSchedule – Расписание банка
- * @returns {Number}
+ * @returns {Number|null}
  */
 function findTime(schedule, duration, bankSchedule) {
     const times = joinGangAndBankSchedules(schedule, bankSchedule);
@@ -164,7 +164,7 @@ function intersectTimes(firstSchedule, secondSchedule) {
 /**
  * Возвращает свободное время члена банды
  * @param {Array} workSchedule - Рабочее время члена банды
- * @returns {Object}
+ * @returns {Array}
  */
 function freeTimeSchedule(workSchedule) {
     let from = 0;
@@ -184,7 +184,7 @@ function freeTimeSchedule(workSchedule) {
  * Переводит расписание в часовой пояс банка
  * @param {Array} schedule – Расписание одного объекта
  * @param {Number} bankTimeZone - Часовой пояс банка
- * @returns {Object}
+ * @returns {Array}
  */
 function formatSchedule(schedule, bankTimeZone) {
     return schedule.map(element => {
@@ -199,7 +199,7 @@ function formatSchedule(schedule, bankTimeZone) {
  * @param {Number} formattedTime.minutes - Время дня в минутах
  * @param {Number} formattedTime.timezone - Часовой пояс форматируемого времени
  * @param {Number} bankTimeZone - Часовой пояс банка
- * @returns {Object}
+ * @returns {Number}
  */
 function timeToTimezone(formattedTime, bankTimeZone) {
     const difference = (bankTimeZone - formattedTime.timezone) * 60;
