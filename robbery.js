@@ -6,15 +6,15 @@ const numberToDay = { 0: 'ПН', 1: 'ВТ', 2: 'СР' };
 const minutesInHour = 60;
 const minutesInDay = minutesInHour * 24;
 const daysToMinutes = { 'ПН': 0, 'ВТ': 24 * 60, 'СР': 2 * 24 * 60 };
+const wednesdayEnd = 4 * 24 * 60 - 1;
 
 
-function getTime(stringTime, bankTimeZone) {
-    let timeZone = parseInt(stringTime.split('+')[1]);
-    let day = stringTime.split(' ')[0];
-    let hour = parseInt(stringTime.split(' ')[1].split(':')[0]) + (bankTimeZone - timeZone);
-    let minute = parseInt(stringTime.split(' ')[1].split(':')[1]);
+function timeString(stringTime, bankTimeZone) {
+    const [day, time] = stringTime.split(' ');
+    const [hour, minute, timeZone] = time.split(/\+|:/);
 
-    return daysToMinutes[day] + hour * 60 + minute;
+    return daysToMinutes[day] + (parseInt(hour) + bankTimeZone - parseInt(timeZone)) * 60 +
+        parseInt(minute);
 }
 
 function sortByFrom(a, b) {
@@ -23,42 +23,41 @@ function sortByFrom(a, b) {
 
 function getTimeSections(sections, bankTimeZone) {
     sections.sort(sortByFrom);
-    let newSections = [];
+    const newSections = [];
     let lastBorder = 0;
     for (let s = 0; s < sections.length; s++) {
-        let from = getTime(sections[s].from, bankTimeZone);
-        let to = getTime(sections[s].to, bankTimeZone);
+        let from = timeString(sections[s].from, bankTimeZone);
+        let to = timeString(sections[s].to, bankTimeZone);
         newSections.push({ from: lastBorder, to: from });
         lastBorder = to;
         if (s === sections.length - 1) {
-            newSections.push({ from: lastBorder, to: 4 * 24 * 60 - 1 });
+            newSections.push({ from: lastBorder, to: wednesdayEnd });
         }
     }
     if (newSections.length === 0) {
-        newSections.push({ from: 0, to: 4 * 24 * 60 - 1 });
+        newSections.push({ from: 0, to: wednesdayEnd });
     }
 
     return newSections;
 }
 
 function sortByModule(a, b) {
-
     return Math.abs(a) - Math.abs(b);
 }
 
-function getBorders(first, second) {
-    let borders = [];
-    for (let f of first) {
-        borders.push(f.from);
-        borders.push(-f.to);
-    }
-    for (let s of second) {
-        borders.push(s.from);
-        borders.push(-s.to);
-    }
-    borders.sort(sortByModule);
+function selectMany(f) {
+    return function (acc, b) {
+        return acc.concat(f(b));
+    };
+}
 
-    return borders;
+function getBorders(first, second) {
+    return first
+        .reduce(selectMany(x => [x.from, -x.to]), [])
+        .concat(
+            second.reduce(selectMany(x => [x.from, -x.to]), [])
+        )
+        .sort(sortByModule);
 }
 
 function getCommonTimeSections(first, second) {
@@ -82,10 +81,9 @@ function getCommonTimeSections(first, second) {
 }
 
 function getTimeForBank(time) {
-    let hour = parseInt(time.split(':')[0]);
-    let minute = parseInt(time.split(':')[1].split('+')[0]);
+    const [hour, minute] = time.split(/\+|:/);
 
-    return minute + hour * 60;
+    return parseInt(minute) + parseInt(hour) * 60;
 }
 
 function getBankTime(workingHours) {
@@ -101,10 +99,10 @@ function getBankTime(workingHours) {
 
 function fillFreeTime(schedule, workingHours) {
     const bankTimezone = parseInt(workingHours.from.split('+')[1]);
-    let dannyFreeTime = getTimeSections(schedule.Danny, bankTimezone);
-    let rustyFreeTime = getTimeSections(schedule.Rusty, bankTimezone);
-    let linusFreeTime = getTimeSections(schedule.Linus, bankTimezone);
-    let bankTime = getBankTime(workingHours);
+    const dannyFreeTime = getTimeSections(schedule.Danny, bankTimezone);
+    const rustyFreeTime = getTimeSections(schedule.Rusty, bankTimezone);
+    const linusFreeTime = getTimeSections(schedule.Linus, bankTimezone);
+    const bankTime = getBankTime(workingHours);
 
     let commonSections = getCommonTimeSections(dannyFreeTime, rustyFreeTime);
     commonSections = getCommonTimeSections(commonSections, linusFreeTime);
@@ -122,8 +120,7 @@ function fillFreeTime(schedule, workingHours) {
  * @returns {Object}
  */
 function getAppropriateMoment(schedule, duration, workingHours) {
-    console.info(schedule, duration, workingHours);
-    let times = fillFreeTime(schedule, workingHours);
+    const times = fillFreeTime(schedule, workingHours);
     let time = -1;
     for (let s of times) {
         if (typeof duration === 'number' && s.to - s.from >= duration) {
