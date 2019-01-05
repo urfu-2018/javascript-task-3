@@ -17,7 +17,13 @@ const isStar = false;
 function getAppropriateMoment(schedule, duration, workingHours) {
     const days = ['ПН', 'ВТ', 'СР'];
 
-    let findedTime = findTime(schedule, workingHours, duration);
+    const bankSchedule = [
+        { from: 'ПН ' + workingHours.from, to: 'ПН ' + workingHours.to },
+        { from: 'ВТ ' + workingHours.from, to: 'ВТ ' + workingHours.to },
+        { from: 'СР ' + workingHours.from, to: 'СР ' + workingHours.to }
+    ];
+
+    let findedTime = findTime(schedule, duration, bankSchedule);
 
     return {
 
@@ -60,8 +66,15 @@ function getAppropriateMoment(schedule, duration, workingHours) {
     };
 }
 
-function findTime(schedule, workingHours, duration) {
-    let times = findTotalJointSchedule(schedule, workingHours);
+/**
+ * Возвращает подходящее для ограбления время
+ * @param {Object} schedule – Расписание банды
+ * @param {Number} duration - Время на ограбление в минутах
+ * @param {Array} bankSchedule – Расписание банка
+ * @returns {Number}
+ */
+function findTime(schedule, duration, bankSchedule) {
+    let times = joinGangAndBankSchedules(schedule, bankSchedule);
 
     for (let i = 0; i < times.length; i++) {
         if (times[i].to >= times[i].from + duration) {
@@ -72,52 +85,67 @@ function findTime(schedule, workingHours, duration) {
     return null;
 }
 
-function findTotalJointSchedule(schedule, workingHours) {
-    let bankTimezone = parseInt(workingHours.from.slice(6));
-    let bankSchedule = formatSchedule([
-        { from: 'ПН ' + workingHours.from, to: 'ПН ' + workingHours.to },
-        { from: 'ВТ ' + workingHours.from, to: 'ВТ ' + workingHours.to },
-        { from: 'СР ' + workingHours.from, to: 'СР ' + workingHours.to }
-    ], bankTimezone);
-    let DannyTime = freeTimeSchedule(formatSchedule(schedule.Danny, bankTimezone));
-    let RustyTime = freeTimeSchedule(formatSchedule(schedule.Rusty, bankTimezone));
-    let LinusTime = freeTimeSchedule(formatSchedule(schedule.Linus, bankTimezone));
+/**
+ * Возвращает расписание свободного времени для всех членов банды в рабочие часы банка
+ * @param {Object} schedule – Расписание банды
+ * @param {Array} bankSchedule – Расписание банка
+ * @returns {Array}
+ */
+function joinGangAndBankSchedules(schedule, bankSchedule) {
+    let bankTimeZone = parseInt(bankSchedule[0].from.split('+')[1]);
 
-    let jointSchedule = findJointSchedule([DannyTime, RustyTime, LinusTime, bankSchedule]);
+    const gangSchedules = ['Danny', 'Rusty', 'Linus'].map(name => {
+        const scheduleOfGangMember = formatSchedule(schedule[name], bankTimeZone);
 
-    return jointSchedule;
-}
+        return freeTimeSchedule(scheduleOfGangMember);
+    });
 
-function findJointSchedule(formattedSchedule) {
+    let formattedBankSchedule = formatSchedule(bankSchedule, bankTimeZone);
+
     let jointSchedule = [];
-    let firstJointSecond = intersectSchedule(formattedSchedule[0], formattedSchedule[1]);
-    let thirdJointBank = intersectSchedule(formattedSchedule[2], formattedSchedule[3]);
-    if (firstJointSecond.length !== 0 && thirdJointBank.length !== 0) {
-        jointSchedule = intersectSchedule(firstJointSecond, thirdJointBank);
+    let DannyJointRusty = intersectSchedule(gangSchedules[0], gangSchedules[1]);
+    let LinusJointBank = intersectSchedule(gangSchedules[2], formattedBankSchedule);
+    if (DannyJointRusty.length !== 0 && LinusJointBank.length !== 0) {
+        jointSchedule = intersectSchedule(DannyJointRusty, LinusJointBank);
     }
 
     return jointSchedule;
 }
 
+/**
+ * Возвращает пересечение расписаний двух объектов
+ * @param {Array} firstSchedule – Расписание первого объекта
+ * @param {Array} secondSchedule - Расписание второго объекта
+ * @returns {Array}
+ */
 function intersectSchedule(firstSchedule, secondSchedule) {
-    let jointSchedule = [];
+    let intersectedSchedule = [];
     firstSchedule.forEach(firstElem => {
         secondSchedule.forEach(secondElem => {
             let currentSchedule = intersectTimes(firstElem, secondElem);
             if (currentSchedule) {
-                jointSchedule.push(currentSchedule);
+                intersectedSchedule.push(currentSchedule);
             }
         });
     });
 
-    return jointSchedule;
+    return intersectedSchedule;
 }
 
-// return пересечение временных отрезков или false
+/**
+ * Возвращает пересечение двух отрезков времени
+ * @param {Object} firstSchedule – Первый отрезок времени
+ * @param {Object} firstSchedule.from – Начало первого отрезка
+ * @param {Object} firstSchedule.to – Конец первого отрезка
+ * @param {Object} secondSchedule - Второй отрезок времени
+ * @param {Object} secondSchedule.from – Начало второго отрезка
+ * @param {Object} secondSchedule.to – Конец второго отрезка
+ * @returns {Object}
+ */
 function intersectTimes(firstSchedule, secondSchedule) {
     if (firstSchedule.from > secondSchedule.from) {
         if (firstSchedule.from > secondSchedule.to) {
-            return false;
+            return null;
         }
 
         return firstSchedule.to > secondSchedule.to
@@ -125,7 +153,7 @@ function intersectTimes(firstSchedule, secondSchedule) {
             : firstSchedule;
     }
     if (secondSchedule.from > firstSchedule.to) {
-        return false;
+        return null;
     }
 
     return secondSchedule.to > firstSchedule.to
@@ -133,6 +161,11 @@ function intersectTimes(firstSchedule, secondSchedule) {
         : secondSchedule;
 }
 
+/**
+ * Возвращает свободное время члена банды
+ * @param {Array} workSchedule - Рабочее время члена банды
+ * @returns {Object}
+ */
 function freeTimeSchedule(workSchedule) {
     let from = 0;
     let freeTimes = [];
@@ -147,13 +180,27 @@ function freeTimeSchedule(workSchedule) {
     return freeTimes;
 }
 
-function formatSchedule(schedule, bankTimezone) {
+/**
+ * Переводит расписание в часовой пояс банка
+ * @param {Array} schedule – Расписание одного объекта
+ * @param {Number} bankTimeZone - Часовой пояс банка
+ * @returns {Object}
+ */
+function formatSchedule(schedule, bankTimeZone) {
     return schedule.map(element => {
-        return { from: timeToTimezone(timeToMinutes(element.from), bankTimezone),
-            to: timeToTimezone(timeToMinutes(element.to), bankTimezone) };
+        return { from: timeToTimezone(timeToMinutes(element.from), bankTimeZone),
+            to: timeToTimezone(timeToMinutes(element.to), bankTimeZone) };
     });
 }
 
+/**
+ * @param {Object} formattedTime – Форматируемое время
+ * @param {String} formattedTime.day – День, например, 'ПН'
+ * @param {Number} formattedTime.minutes - Время дня в минутах
+ * @param {Number} formattedTime.timezone - Часовой пояс форматируемого времени
+ * @param {Number} bankTimeZone - Часовой пояс банка
+ * @returns {Object}
+ */
 function timeToTimezone(formattedTime, bankTimeZone) {
     const difference = (bankTimeZone - formattedTime.timezone) * 60;
     let minutes = 0;
@@ -169,6 +216,10 @@ function timeToTimezone(formattedTime, bankTimeZone) {
     return minutes;
 }
 
+/**
+ * @param {String} dayAndTime – Время, например, 'ПН 12:00+5'
+ * @returns {Object}
+ */
 function timeToMinutes(dayAndTime) {
     return {
         day: dayAndTime.slice(0, 2),
