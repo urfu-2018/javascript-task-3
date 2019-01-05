@@ -23,7 +23,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
         { from: 'СР ' + workingHours.from, to: 'СР ' + workingHours.to }
     ];
 
-    let findedTime = findTime(schedule, duration, bankSchedule);
+    const findedTime = findTime(schedule, duration, bankSchedule);
 
     return {
 
@@ -74,7 +74,7 @@ function getAppropriateMoment(schedule, duration, workingHours) {
  * @returns {Number}
  */
 function findTime(schedule, duration, bankSchedule) {
-    let times = joinGangAndBankSchedules(schedule, bankSchedule);
+    const times = joinGangAndBankSchedules(schedule, bankSchedule);
 
     for (let i = 0; i < times.length; i++) {
         if (times[i].to >= times[i].from + duration) {
@@ -92,7 +92,7 @@ function findTime(schedule, duration, bankSchedule) {
  * @returns {Array}
  */
 function joinGangAndBankSchedules(schedule, bankSchedule) {
-    let bankTimeZone = parseInt(bankSchedule[0].from.split('+')[1]);
+    const bankTimeZone = parseInt(bankSchedule[0].from.split('+')[1]);
 
     const gangSchedules = ['Danny', 'Rusty', 'Linus'].map(name => {
         const scheduleOfGangMember = formatSchedule(schedule[name], bankTimeZone);
@@ -100,11 +100,11 @@ function joinGangAndBankSchedules(schedule, bankSchedule) {
         return freeTimeSchedule(scheduleOfGangMember);
     });
 
-    let formattedBankSchedule = formatSchedule(bankSchedule, bankTimeZone);
+    const formattedBankSchedule = formatSchedule(bankSchedule, bankTimeZone);
 
     let jointSchedule = [];
-    let DannyJointRusty = intersectSchedule(gangSchedules[0], gangSchedules[1]);
-    let LinusJointBank = intersectSchedule(gangSchedules[2], formattedBankSchedule);
+    const DannyJointRusty = intersectSchedule(gangSchedules[0], gangSchedules[1]);
+    const LinusJointBank = intersectSchedule(gangSchedules[2], formattedBankSchedule);
     if (DannyJointRusty.length !== 0 && LinusJointBank.length !== 0) {
         jointSchedule = intersectSchedule(DannyJointRusty, LinusJointBank);
     }
@@ -122,7 +122,7 @@ function intersectSchedule(firstSchedule, secondSchedule) {
     let intersectedSchedule = [];
     firstSchedule.forEach(firstElem => {
         secondSchedule.forEach(secondElem => {
-            let currentSchedule = intersectTimes(firstElem, secondElem);
+            const currentSchedule = intersectTimes(firstElem, secondElem);
             if (currentSchedule) {
                 intersectedSchedule.push(currentSchedule);
             }
