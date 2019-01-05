@@ -23,20 +23,16 @@ function sortByFrom(a, b) {
 
 function getTimeSections(sections, bankTimeZone) {
     sections.sort(sortByFrom);
-    const newSections = [];
     let lastBorder = 0;
-    for (let s = 0; s < sections.length; s++) {
-        let from = timeString(sections[s].from, bankTimeZone);
-        let to = timeString(sections[s].to, bankTimeZone);
-        newSections.push({ from: lastBorder, to: from });
+    const newSections = sections.reduce((acc, current) => {
+        const from = timeString(current.from, bankTimeZone);
+        const to = timeString(current.to, bankTimeZone);
+        acc.push({ from: lastBorder, to: from });
         lastBorder = to;
-        if (s === sections.length - 1) {
-            newSections.push({ from: lastBorder, to: wednesdayEnd });
-        }
-    }
-    if (newSections.length === 0) {
-        newSections.push({ from: 0, to: wednesdayEnd });
-    }
+
+        return acc;
+    }, []);
+    newSections.push({ from: lastBorder, to: wednesdayEnd });
 
     return newSections;
 }
