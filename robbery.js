@@ -77,8 +77,9 @@ function findTime(schedule, duration, bankSchedule) {
     const times = joinGangAndBankSchedules(schedule, bankSchedule);
 
     for (let i = 0; i < times.length; i++) {
-        if (times[i].to >= times[i].from + duration) {
-            return times[i].from;
+        const { to, from } = times[i];
+        if (to >= from + duration) {
+            return from;
         }
     }
 
@@ -102,12 +103,10 @@ function joinGangAndBankSchedules(schedule, bankSchedule) {
 
     const formattedBankSchedule = formatSchedule(bankSchedule, bankTimeZone);
 
-    let jointSchedule = [];
-    const DannyJointRusty = intersectSchedule(gangSchedules[0], gangSchedules[1]);
-    const LinusJointBank = intersectSchedule(gangSchedules[2], formattedBankSchedule);
-    if (DannyJointRusty.length && LinusJointBank.length) {
-        jointSchedule = intersectSchedule(DannyJointRusty, LinusJointBank);
-    }
+    let jointSchedule = gangSchedules.reduce((result, currentSchedule) => {
+        return result.length
+            ? intersectSchedule(result, currentSchedule) : [];
+    }, formattedBankSchedule);
 
     return jointSchedule;
 }
@@ -143,22 +142,29 @@ function intersectSchedule(firstSchedule, secondSchedule) {
  * @returns {Object|null} - null, если не пересекаются
  */
 function intersectTimes(firstSchedule, secondSchedule) {
-    if (firstSchedule.from > secondSchedule.from) {
-        if (firstSchedule.from > secondSchedule.to) {
+    return firstSchedule.from > secondSchedule.from
+        ? intersectIntervalsFirstLaterSecond(firstSchedule, secondSchedule)
+        : intersectIntervalsFirstLaterSecond(secondSchedule, firstSchedule);
+
+    /**
+     * Возвращает пересечение двух отрезков, при условии, что начало первого больше начала второго
+     * @param {Object} firstInterval – Первый отрезок
+     * @param {Object} secondInterval - Второй отрезок
+     * @returns {Object|null} - null, если не пересекаются
+     */
+    function intersectIntervalsFirstLaterSecond(firstInterval, secondInterval) {
+        if (firstInterval.from > secondInterval.to) {
             return null;
         }
+        if (firstInterval.to > secondInterval.to) {
+            return {
+                from: firstInterval.from,
+                to: secondInterval.to
+            };
+        }
 
-        return firstSchedule.to > secondSchedule.to
-            ? { from: firstSchedule.from, to: secondSchedule.to }
-            : firstSchedule;
+        return firstInterval;
     }
-    if (secondSchedule.from > firstSchedule.to) {
-        return null;
-    }
-
-    return secondSchedule.to > firstSchedule.to
-        ? { from: secondSchedule.from, to: firstSchedule.to }
-        : secondSchedule;
 }
 
 /**
@@ -170,63 +176,59 @@ function freeTimeSchedule(workSchedule) {
     let from = 0;
     const freeTimes = [];
 
-    workSchedule.forEach((time, i) => {
-        freeTimes[i] = { from, to: time.from };
+    workSchedule.forEach(time => {
+        freeTimes.push({
+            from,
+            to: time.from
+        });
+
         from = time.to;
     });
-    freeTimes[workSchedule.length] = { from: workSchedule.length
-        ? workSchedule[workSchedule.length - 1].to : from, to: 3 * 24 * 60 - 1 };
+    freeTimes.push({
+        from: workSchedule.length ? workSchedule[workSchedule.length - 1].to : from,
+        to: 3 * 24 * 60 - 1
+    });
 
     return freeTimes;
 }
 
 /**
- * Переводит расписание в часовой пояс банка
+ * Переводит расписание в часовой пояс
  * @param {Array} schedule – Расписание одного объекта
- * @param {Number} bankTimeZone - Часовой пояс банка
+ * @param {Number} timeZone - Часовой пояс
  * @returns {Array}
  */
-function formatSchedule(schedule, bankTimeZone) {
-    return schedule.map(element => {
-        return { from: timeToTimezone(timeToMinutes(element.from), bankTimeZone),
-            to: timeToTimezone(timeToMinutes(element.to), bankTimeZone) };
-    });
+function formatSchedule(schedule, timeZone) {
+    return schedule.map(({ from, to }) => ({
+        from: formatTime(from, timeZone),
+        to: formatTime(to, timeZone)
+    }));
 }
 
 /**
- * @param {Object} formattedTime – Форматируемое время
+ * Возвращает время в минутах прошедшее с понедельника 00:00 требуемого часового пояса
+ * @param {Object} time – Форматируемое время
  * @param {String} formattedTime.day – День, например, 'ПН'
- * @param {Number} formattedTime.minutes - Время дня в минутах
+* @param {Number} formattedTime.hours - Часы
+ * @param {Number} formattedTime.minutes - Минуты
  * @param {Number} formattedTime.timezone - Часовой пояс форматируемого времени
- * @param {Number} bankTimeZone - Часовой пояс банка
+ * @param {Number} timeZone - Требуемый часовой пояс
  * @returns {Number}
  */
-function timeToTimezone(formattedTime, bankTimeZone) {
-    const difference = (bankTimeZone - formattedTime.timezone) * 60;
-    let minutes = 0;
+function formatTime(time, timeZone) {
+    const [day, hours, minutes, tz] = time.split(/\s|:|\+/);
+    const difference = (timeZone - parseInt(tz)) * 60;
+    let timeInMinutes = 0;
 
-    if (formattedTime.day === 'ВТ') {
-        minutes += 24 * 60;
-    } else if (formattedTime.day === 'СР') {
-        minutes += 48 * 60;
+    if (day === 'ВТ') {
+        timeInMinutes += 24 * 60;
+    } else if (day === 'СР') {
+        timeInMinutes += 48 * 60;
     }
 
-    minutes += formattedTime.minutes + difference;
+    timeInMinutes += parseInt(hours) * 60 + parseInt(minutes) + difference;
 
-    return minutes;
-}
-
-/**
- * @param {String} dayAndTime – Время, например, 'ПН 12:00+5'
- * @returns {Object}
- */
-function timeToMinutes(dayAndTime) {
-    return {
-        day: dayAndTime.split(/\s|:|\+/)[0],
-        minutes: parseInt(dayAndTime.split(/\s|:|\+/)[1]) * 60 +
-            parseInt(dayAndTime.split(/\s|:|\+/)[2]),
-        timezone: parseInt(dayAndTime.split(/\s|:|\+/)[3])
-    };
+    return timeInMinutes;
 }
 
 module.exports = {
